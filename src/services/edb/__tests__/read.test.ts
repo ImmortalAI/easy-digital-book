@@ -23,6 +23,43 @@ describe("readEdb", () => {
     ).rejects.toMatchObject({ code: "edb.tooNew" });
   });
 
+  it("rejects malformed JSON envelopes as bad manifests while preserving foreign detection", async () => {
+    for (const value of [{}, [], { format: 42 }, { format: null }]) {
+      await expect(
+        readEdb(await archive({ "manifest.json": JSON.stringify(value) }), deps),
+      ).rejects.toMatchObject({ code: "edb.badManifest" });
+    }
+    await expect(
+      readEdb(await archive({ "manifest.json": manifest({ format: "other" }) }), deps),
+    ).rejects.toMatchObject({ code: "edb.foreignFormat" });
+  });
+
+  it("rejects invalid and unsupported format versions with AppError", async () => {
+    for (const version of [-1, 1.5, -0.5]) {
+      const error = await readEdb(
+        await archive({ "manifest.json": manifest({ formatVersion: version }) }),
+        deps,
+      ).catch((value) => value);
+      expect(error).toBeInstanceOf(Error);
+      expect(error).toMatchObject({ code: "edb.badManifest" });
+    }
+    const error = await readEdb(
+      await archive({ "manifest.json": manifest({ formatVersion: -2 }) }),
+      deps,
+    ).catch((value) => value);
+    expect(error).toBeInstanceOf(Error);
+    expect(error).toMatchObject({ code: "edb.badManifest" });
+  });
+
+  it("rejects chapter IDs that could escape the chapter directory", async () => {
+    await expect(
+      readEdb(
+        await archive({ "manifest.json": manifest({ chapters: [{ id: "../evil" }] }) }),
+        deps,
+      ),
+    ).rejects.toMatchObject({ code: "edb.badManifest" });
+  });
+
   it("recovers missing and orphan chapters, normalizes CRLF, and missing cover", async () => {
     const result = await readEdb(
       await archive({

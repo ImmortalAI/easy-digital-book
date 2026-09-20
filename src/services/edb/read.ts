@@ -38,8 +38,9 @@ export async function readEdb(bytes: Uint8Array, deps: ReadEdbDeps): Promise<Rea
     throw new AppError("edb.badJson", "Manifest JSON is invalid");
   }
   if (
-    !raw ||
-    typeof raw !== "object" ||
+    raw &&
+    typeof raw === "object" &&
+    typeof (raw as Record<string, unknown>).format === "string" &&
     (raw as Record<string, unknown>).format !== "easy-digital-book"
   )
     throw new AppError("edb.foreignFormat", "Not an Easy Digital Book project");

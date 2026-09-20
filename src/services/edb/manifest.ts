@@ -16,6 +16,10 @@ export function parseManifest(value: unknown): {
 } {
   const envelope = safeParse(ManifestSchema, value);
   if (!envelope.success) throw new AppError("edb.badManifest", "Invalid manifest structure");
+  if (!Number.isInteger(envelope.output.formatVersion) || envelope.output.formatVersion < 0)
+    throw new AppError("edb.badManifest", "Invalid format version");
+  if (envelope.output.chapters.some(({ id }) => !/^[a-z0-9]{8}$/.test(id)))
+    throw new AppError("edb.badManifest", "Invalid chapter ID");
   if (envelope.output.formatVersion > CURRENT_EDB_FORMAT_VERSION)
     throw new AppError("edb.tooNew", "Project format is newer than this application");
   const migrated = envelope.output.formatVersion < CURRENT_EDB_FORMAT_VERSION;
