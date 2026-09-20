@@ -1,8 +1,6 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
-// @ts-expect-error type error without @types/node package
 import process from "node:process";
-// @ts-expect-error type error without @types/node package
 import { fileURLToPath, URL } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 const host = process.env.TAURI_DEV_HOST;
