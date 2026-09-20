@@ -62,6 +62,35 @@ describe("browser image worker contract", () => {
     globalThis.OffscreenCanvas = originalOffscreenCanvas;
   });
 
+  it("passes the image plan JPEG quality to canvas encoding", async () => {
+    let encodingOptions: unknown;
+    const originalCreateImageBitmap = globalThis.createImageBitmap;
+    const originalOffscreenCanvas = globalThis.OffscreenCanvas;
+    globalThis.createImageBitmap = async () =>
+      ({ width: 10, height: 10, close: () => {} }) as ImageBitmap;
+    globalThis.OffscreenCanvas = class {
+      width = 10;
+      height = 10;
+      getContext() {
+        return { drawImage: () => {} };
+      }
+      convertToBlob(options: unknown) {
+        encodingOptions = options;
+        return Promise.resolve(new Blob(["encoded-jpeg"], { type: "image/jpeg" }));
+      }
+    } as unknown as typeof OffscreenCanvas;
+    await processImage(transparentPng, {
+      width: 10,
+      height: 10,
+      format: "jpeg",
+      quality: 0.85,
+      grayscale: false,
+    });
+    expect(encodingOptions).toEqual({ type: "image/jpeg", quality: 0.85 });
+    globalThis.createImageBitmap = originalCreateImageBitmap;
+    globalThis.OffscreenCanvas = originalOffscreenCanvas;
+  });
+
   it("sends cancellation to the worker when a request is aborted", async () => {
     let cancelMessage: { type?: "cancel"; id: number } | undefined;
     const processor = new BrowserImageProcessor(() => {
