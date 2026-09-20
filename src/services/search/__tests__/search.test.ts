@@ -75,4 +75,22 @@ describe("book search", () => {
     if ("error" in result) throw new Error(result.error);
     expect(result.changes[0]?.matches[0]?.replacementPreview).toBe("a <hero> b");
   });
+
+  it("matches String.replace semantics for named captures and numeric fallback", () => {
+    const named = replaceMatches(
+      { ...book(), chapters: [{ id: "chapter1", source: "hero" }] },
+      { text: "(?<word>hero)", regex: true, wholeWord: false, caseSensitive: true },
+      "$<word>",
+    );
+    if ("error" in named) throw new Error(named.error);
+    expect(named.changes[0]?.matches[0]?.replacementPreview).toBe("hero");
+
+    const numeric = replaceMatches(
+      { ...book(), chapters: [{ id: "chapter1", source: "hero" }] },
+      { text: "(hero)", regex: true, wholeWord: false, caseSensitive: true },
+      "$10",
+    );
+    if ("error" in numeric) throw new Error(numeric.error);
+    expect(numeric.changes[0]?.matches[0]?.replacementPreview).toBe("hero0");
+  });
 });

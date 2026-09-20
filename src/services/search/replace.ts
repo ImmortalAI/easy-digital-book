@@ -55,12 +55,19 @@ export function replaceMatches(
 }
 
 function expandReplacement(replacement: string, match: RegExpExecArray, source: string): string {
-  return replacement.replace(/\$([$&`']|\d{1,2})/g, (token, key: string) => {
+  return replacement.replace(/\$([$&`']|<[^>]*>|\d{1,2})/g, (token, key: string) => {
     if (key === "$") return "$";
     if (key === "&") return match[0];
     if (key === "`") return source.slice(0, match.index);
     if (key === "'") return source.slice(match.index + match[0].length);
+    if (key.startsWith("<")) {
+      if (!match.groups) return token;
+      return match.groups[key.slice(1, -1)] ?? "";
+    }
     const group = Number(key);
-    return group > 0 && group < match.length ? (match[group] ?? token) : token;
+    if (group > 0 && group < match.length) return match[group] ?? "";
+    if (key.length === 2 && Number(key[0]) > 0 && Number(key[0]) < match.length)
+      return `${match[Number(key[0])] ?? ""}${key[1]}`;
+    return token;
   });
 }
