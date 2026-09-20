@@ -41,4 +41,13 @@ describe("planImage", () => {
       ),
     ).toEqual({ width: 800, height: 600, format: "jpeg", grayscale: false, passthrough: true });
   });
+  it("does not mark original JPEG as passthrough when grayscale is enabled", () => {
+    expect(
+      planImage(
+        { mediaType: "image/jpeg", width: 800, height: 600 },
+        { imagePreset: "original", grayscale: true },
+        false,
+      ).passthrough,
+    ).toBe(false);
+  });
 });

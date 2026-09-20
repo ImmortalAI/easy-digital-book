@@ -36,7 +36,7 @@ export function planImage(meta: ImageMeta, options: ImagePlanOptions, isCover: b
       ? { quality: 0.85 }
       : {}),
     ...(options.imagePreset === "original" && meta.mediaType === "image/jpeg"
-      ? { passthrough: true }
+      ? { passthrough: !options.grayscale }
       : {}),
     grayscale: options.grayscale,
   };
