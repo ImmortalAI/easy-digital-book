@@ -6,6 +6,7 @@ import { createInMemoryPlatformServices } from "@/services/platform";
 import { useProjectStore } from "@/stores/project";
 import { useNotificationsStore } from "@/stores/notifications";
 import { useLayoutStore } from "@/stores/layout";
+import { useSettingsStore } from "@/stores/settings";
 
 const book = () =>
   createBook({
@@ -71,5 +72,47 @@ describe("application stores", () => {
     expect(project.savedRevision).toBe(1);
     expect(project.revision).toBe(2);
     expect(project.dirty).toBe(true);
+  });
+
+  it("uses atomic file writes and isolates recovery cleanup failures", async () => {
+    setActivePinia(createPinia());
+    const services = createInMemoryPlatformServices();
+    let atomicCalls = 0;
+    services.files.writeFileAtomic = async (path, bytes) => {
+      atomicCalls++;
+      await services.files.writeFile(path, bytes);
+    };
+    services.recovery.remove = async () => {
+      throw new Error("recovery unavailable");
+    };
+    const project = useProjectStore();
+    project.configure(services);
+    project.setBook(book(), "book.edb");
+    project.applyMutation(addChapter(project.book!, { newId: () => "chapter2" }));
+    expect(await project.save()).toBe(true);
+    expect(atomicCalls).toBe(1);
+    expect(project.dirty).toBe(false);
+  });
+
+  it("persists complete export settings with approved defaults", async () => {
+    setActivePinia(createPinia());
+    const services = createInMemoryPlatformServices();
+    const settings = useSettingsStore();
+    settings.configure(services.settings);
+    await settings.load();
+    expect(settings.exportSettings).toEqual({
+      imagePreset: "kindle-paperwhite",
+      grayscale: false,
+      titlePage: true,
+      versionInTitle: true,
+      lastDir: null,
+    });
+    settings.exportSettings.imagePreset = "original";
+    settings.exportSettings.lastDir = "/tmp";
+    await settings.persist();
+    expect(await services.settings.get("export", null)).toMatchObject({
+      imagePreset: "original",
+      lastDir: "/tmp",
+    });
   });
 });

@@ -1,4 +1,5 @@
 import { exists, readFile, stat, writeFile } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 import { appErrorFromUnknown } from "@/types/errors";
 import type { FileSystem } from "@/types/platform";
 
@@ -12,6 +13,7 @@ const adapt = async <T>(run: () => Promise<T>): Promise<T> => {
 export const tauriFileSystem: FileSystem = {
   readFile: (path) => adapt(() => readFile(path)),
   writeFile: (path, bytes) => adapt(() => writeFile(path, bytes)),
+  writeFileAtomic: (path, bytes) => adapt(() => invoke("write_file_atomic", { path, bytes })),
   exists: (path) => adapt(() => exists(path)),
   stat: async (path) => {
     const info = await adapt(() => stat(path));

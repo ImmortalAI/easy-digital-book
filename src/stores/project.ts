@@ -82,11 +82,15 @@ export const useProjectStore = defineStore("project", () => {
     saving.value = true;
     const snapshotRevision = revision.value;
     const snapshot = copyBook(book.value);
+    const savedAt = new Date();
     try {
-      const bytes = await writeEdb(snapshot, new Date());
-      await services.files.writeFile(path, bytes);
+      const bytes = await writeEdb(snapshot, savedAt);
+      await services.files.writeFileAtomic(path, bytes);
       filePath.value = path;
       savedRevision.value = snapshotRevision;
+      if (revision.value === snapshotRevision && book.value) {
+        book.value.metadata.modified = savedAt.toISOString();
+      }
       try {
         fileMtime.value = (await services.files.stat(path)).mtime;
       } catch {
@@ -94,7 +98,11 @@ export const useProjectStore = defineStore("project", () => {
       }
       if (revision.value === snapshotRevision) {
         clearDelta();
-        await services.recovery.remove(snapshot.metadata.id);
+        try {
+          await services.recovery.remove(snapshot.metadata.id);
+        } catch (error) {
+          services.logger.warn("Saved project but failed to remove recovery session", { error });
+        }
       }
       return true;
     } catch (error) {

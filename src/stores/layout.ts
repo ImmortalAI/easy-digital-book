@@ -18,7 +18,7 @@ export interface LayoutSettings {
 }
 const defaults: LayoutSettings = {
   sidebarVisible: true,
-  sidebarWidth: 240,
+  sidebarWidth: 250,
   splitRatio: 0.5,
   mode: "split",
   activeView: "explorer",

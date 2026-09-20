@@ -2,12 +2,23 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import type { SettingsRepository } from "@/types/platform";
 export interface ExportSettings {
+  imagePreset: "kindle-paperwhite" | "original";
+  grayscale: boolean;
   titlePage: boolean;
+  versionInTitle: boolean;
+  lastDir: string | null;
 }
+const defaultExport: ExportSettings = {
+  imagePreset: "kindle-paperwhite",
+  grayscale: false,
+  titlePage: true,
+  versionInTitle: true,
+  lastDir: null,
+};
 export const useSettingsStore = defineStore("settings", () => {
   const confirmDelete = ref(true),
     recentFiles = ref<string[]>([]),
-    exportSettings = ref<ExportSettings>({ titlePage: true });
+    exportSettings = ref<ExportSettings>({ ...defaultExport });
   let repository: SettingsRepository | undefined;
   function configure(value: SettingsRepository) {
     repository = value;
@@ -15,8 +26,9 @@ export const useSettingsStore = defineStore("settings", () => {
   async function load() {
     confirmDelete.value = (await repository?.get("confirmDelete", true)) ?? true;
     recentFiles.value = ((await repository?.get("recentFiles", [])) ?? []).slice(0, 10);
-    exportSettings.value = (await repository?.get("export", { titlePage: true })) ?? {
-      titlePage: true,
+    exportSettings.value = {
+      ...defaultExport,
+      ...(await repository?.get<Partial<ExportSettings>>("export", {})),
     };
   }
   async function persist() {
