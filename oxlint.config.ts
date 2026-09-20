@@ -1,11 +1,29 @@
 export const restrictedImports = [
   {
     target: "src/services/{book,edb,epub,search,checks}/**",
-    paths: ["vue", "pinia", "@tauri-apps/api"],
+    paths: ["vue", "pinia", "@tauri-apps/*"],
   },
-  { target: "src/utils/**", paths: ["vue", "pinia", "@tauri-apps/api"] },
-  { target: "src/{stores,composables,components,views}/**", patterns: ["@tauri-apps/*"] },
+  { target: "src/utils/**", paths: ["vue", "pinia", "@tauri-apps/*"] },
 ] as const;
+
+const domGlobals = [
+  "window",
+  "document",
+  "navigator",
+  "location",
+  "localStorage",
+  "sessionStorage",
+  "fetch",
+  "XMLHttpRequest",
+  "HTMLElement",
+  "Element",
+  "Node",
+  "Blob",
+  "File",
+  "FormData",
+  "URL",
+  "URLSearchParams",
+];
 
 export default {
   plugins: ["eslint", "typescript", "vue", "vitest"],
@@ -23,6 +41,19 @@ export default {
       },
     }))
     .concat([
+      {
+        files: ["src/**"],
+        excludeFiles: ["src/services/platform/**"],
+        rules: {
+          "eslint/no-restricted-imports": ["error", { patterns: ["@tauri-apps/*"] }],
+        },
+      },
+      {
+        files: ["src/services/{book,edb,epub,search,checks}/**", "src/utils/**"],
+        rules: {
+          "eslint/no-restricted-globals": ["error", { globals: domGlobals }],
+        },
+      },
       { files: ["vite.config.ts"], env: { browser: false, node: true } },
       { files: ["**/__tests__/**"], env: { vitest: true } },
     ]),
