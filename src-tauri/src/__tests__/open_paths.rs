@@ -10,6 +10,15 @@ fn takes_each_pending_open_path_once() {
 }
 
 #[test]
+fn deduplicates_repeated_paths_while_pending() {
+    let queue = OpenPathQueue::from(["/tmp/a.edb"]);
+    queue.push("/tmp/a.edb");
+    queue.push("/tmp/b.edb");
+    queue.push("/tmp/b.edb");
+    assert_eq!(queue.take(), vec!["/tmp/a.edb", "/tmp/b.edb"]);
+}
+
+#[test]
 fn concurrent_drains_deliver_each_path_once() {
     let queue = Arc::new(OpenPathQueue::from(["/tmp/a.edb", "/tmp/b.edb"]));
     let first = Arc::clone(&queue);

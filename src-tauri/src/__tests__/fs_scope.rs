@@ -35,7 +35,7 @@ fn does_not_follow_a_preexisting_temporary_symlink() {
     let outside = directory.path().join("outside.txt");
     let candidate = directory
         .path()
-        .join(format!(".novel.edb-tmp-{}-0", std::process::id()));
+        .join(format!(".novel.edb.edb-tmp-{}-0", std::process::id()));
     std::fs::write(&outside, b"safe").unwrap();
     std::os::unix::fs::symlink(&outside, &candidate).unwrap();
 
@@ -60,7 +60,7 @@ fn rejects_a_path_not_in_scope() {
             .unwrap()
             .file_name()
             .to_string_lossy()
-            .starts_with(".outside.edb-tmp-")));
+            .starts_with(".outside.edb.edb-tmp-")));
 }
 
 #[test]
@@ -87,7 +87,7 @@ fn removes_temporary_file_when_replacement_fails() {
             .unwrap()
             .file_name()
             .to_string_lossy()
-            .starts_with(".novel.edb-tmp-")));
+            .starts_with(".novel.edb.edb-tmp-")));
 }
 
 struct TestValidator(Vec<PathBuf>);

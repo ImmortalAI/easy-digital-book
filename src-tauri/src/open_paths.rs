@@ -23,9 +23,13 @@ where
     S: Into<String>,
 {
     fn from(paths: I) -> Self {
-        Self {
-            paths: Mutex::new(paths.into_iter().map(Into::into).collect()),
+        let queue = Self {
+            paths: Mutex::new(Vec::new()),
+        };
+        for path in paths {
+            queue.push(path);
         }
+        queue
     }
 }
 
@@ -37,10 +41,11 @@ impl Default for OpenPathQueue {
 
 impl OpenPathQueue {
     pub fn push(&self, path: impl Into<String>) {
-        self.paths
-            .lock()
-            .expect("open path queue poisoned")
-            .push(path.into());
+        let mut paths = self.paths.lock().expect("open path queue poisoned");
+        let path = path.into();
+        if !paths.iter().any(|pending| pending == &path) {
+            paths.push(path);
+        }
     }
 
     pub fn take(&self) -> Vec<String> {

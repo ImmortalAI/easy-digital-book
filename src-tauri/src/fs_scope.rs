@@ -43,12 +43,17 @@ pub fn write_file_atomic<V: PathValidator>(
 ) -> Result<(), CommandError> {
     validator.validate(path)?;
     let (temporary, mut file) = temporary_file(path)?;
-    let result = (|| {
+    let mut result = (|| {
         std::io::Write::write_all(&mut file, bytes)?;
         file.sync_all()?;
-        drop(file);
-        replace_with_retry(&temporary, path)
+        Ok(())
     })();
+    // Always close the temporary file before cleanup or rename. This is
+    // required for removal on Windows when write or sync fails.
+    drop(file);
+    if result.is_ok() {
+        result = replace_with_retry(&temporary, path);
+    }
     if result.is_err() {
         // Best effort only: preserve the original operation error if cleanup
         // itself fails (for example, on a platform holding the file open).
