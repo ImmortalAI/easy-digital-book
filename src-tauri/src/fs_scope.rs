@@ -10,8 +10,7 @@ use std::{
     time::Duration,
 };
 
-use serde::Serialize;
-use thiserror::Error;
+pub use crate::error::CommandError;
 
 pub trait PathValidator {
     fn validate(&self, path: &Path) -> Result<(), CommandError>;
@@ -34,57 +33,6 @@ pub(crate) fn admit_file(scope: &tauri::fs::Scope, path: &Path) -> Result<(), Co
     scope.allow_file(path).map_err(|error| CommandError::Scope {
         message: error.to_string(),
     })
-}
-
-#[derive(Debug, Error)]
-pub enum CommandError {
-    #[error("path is not in the filesystem scope: {path}")]
-    PermissionDenied { path: String },
-    #[error("filesystem operation failed: {source}")]
-    Io {
-        #[source]
-        source: io::Error,
-    },
-    #[error("filesystem scope operation failed: {message}")]
-    #[allow(dead_code)]
-    Scope { message: String },
-}
-
-impl CommandError {
-    pub fn code(&self) -> &'static str {
-        match self {
-            Self::PermissionDenied { .. } => "fs.permissionDenied",
-            Self::Io { .. } => "fs.ioError",
-            Self::Scope { .. } => "fs.scopeError",
-        }
-    }
-
-    fn permission_denied(path: &Path) -> Self {
-        Self::PermissionDenied {
-            path: path.display().to_string(),
-        }
-    }
-}
-
-impl Serialize for CommandError {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        #[derive(Serialize)]
-        struct Wire<'a> {
-            code: &'a str,
-            message: String,
-        }
-        Wire {
-            code: self.code(),
-            message: self.to_string(),
-        }
-        .serialize(serializer)
-    }
-}
-
-impl From<io::Error> for CommandError {
-    fn from(source: io::Error) -> Self {
-        Self::Io { source }
-    }
 }
 
 #[allow(dead_code)]
