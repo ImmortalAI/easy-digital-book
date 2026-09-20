@@ -3,6 +3,7 @@ export type ImagePlan = {
   height: number;
   format: "png" | "jpeg";
   quality?: number;
+  passthrough?: boolean;
   grayscale: boolean;
 };
 

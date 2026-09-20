@@ -21,6 +21,14 @@ export async function processImage(
   signal?: AbortSignal,
 ): Promise<ProcessedImage> {
   if (signal?.aborted) throw new DOMException("The operation was aborted", "AbortError");
+  if (plan.passthrough) {
+    return {
+      bytes: bytes.slice(),
+      mediaType: "image/jpeg",
+      width: plan.width,
+      height: plan.height,
+    };
+  }
   const key = `${await digest(bytes)}:${JSON.stringify(plan)}`;
   const cached = cache.get(key);
   if (cached) return { ...cached, bytes: cached.bytes.slice() };

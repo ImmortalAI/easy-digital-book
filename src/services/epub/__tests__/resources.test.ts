@@ -39,6 +39,6 @@ describe("planImage", () => {
         },
         false,
       ),
-    ).toEqual({ width: 800, height: 600, format: "jpeg", grayscale: false });
+    ).toEqual({ width: 800, height: 600, format: "jpeg", grayscale: false, passthrough: true });
   });
 });

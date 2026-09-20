@@ -91,6 +91,50 @@ describe("browser image worker contract", () => {
     globalThis.OffscreenCanvas = originalOffscreenCanvas;
   });
 
+  it("passes through unchanged source JPEG bytes only when explicitly planned", async () => {
+    const bytes = Uint8Array.from([0xff, 0xd8, 0xff, 0x01, 0x02]);
+    const result = await processImage(bytes, {
+      width: 800,
+      height: 600,
+      format: "jpeg",
+      passthrough: true,
+      grayscale: false,
+    });
+    expect(result.bytes).toEqual(bytes);
+    expect(result.mediaType).toBe("image/jpeg");
+  });
+
+  it("does not pass through when a source JPEG requires a transform", async () => {
+    let decoded = false;
+    const originalCreateImageBitmap = globalThis.createImageBitmap;
+    const originalOffscreenCanvas = globalThis.OffscreenCanvas;
+    globalThis.createImageBitmap = async () => {
+      decoded = true;
+      return { width: 10, height: 10, close: () => {} } as ImageBitmap;
+    };
+    globalThis.OffscreenCanvas = class {
+      width = 5;
+      height = 5;
+      getContext() {
+        return { drawImage: () => {} };
+      }
+      convertToBlob() {
+        return Promise.resolve(new Blob(["transformed"], { type: "image/jpeg" }));
+      }
+    } as unknown as typeof OffscreenCanvas;
+    const result = await processImage(Uint8Array.from([0xff, 0xd8, 0xff]), {
+      width: 5,
+      height: 5,
+      format: "jpeg",
+      passthrough: false,
+      grayscale: false,
+    });
+    expect(decoded).toBe(true);
+    expect(new TextDecoder().decode(result.bytes)).toBe("transformed");
+    globalThis.createImageBitmap = originalCreateImageBitmap;
+    globalThis.OffscreenCanvas = originalOffscreenCanvas;
+  });
+
   it("sends cancellation to the worker when a request is aborted", async () => {
     let cancelMessage: { type?: "cancel"; id: number } | undefined;
     const processor = new BrowserImageProcessor(() => {

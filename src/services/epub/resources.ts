@@ -35,6 +35,9 @@ export function planImage(meta: ImageMeta, options: ImagePlanOptions, isCover: b
     (options.imagePreset === "kindle-paperwhite" || meta.mediaType === "image/webp")
       ? { quality: 0.85 }
       : {}),
+    ...(options.imagePreset === "original" && meta.mediaType === "image/jpeg"
+      ? { passthrough: true }
+      : {}),
     grayscale: options.grayscale,
   };
 }
