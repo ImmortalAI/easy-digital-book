@@ -1,7 +1,9 @@
 # easy-digital-book — спецификация v1
 
 - **Дата:** 2026-09-15
-- **Статус:** дизайн утверждён по секциям, спецификация на ревью
+- **Обновлено:** 2026-09-20
+- **Статус:** дизайн утверждён по секциям; технический bootstrap начат,
+  новый implementation plan ещё не написан
 - **Источник решений:** брейнсторминг 2026-09-14/15 (контекст — `AGENTS.md`)
 
 ## 1. Цель и границы
@@ -34,19 +36,20 @@ Paperwhite. Существующие инструменты (FB2 Editor + Calibr
 
 ## 2. Стек
 
-| Слой           | Выбор                                                                     |
-| -------------- | ------------------------------------------------------------------------- |
-| Оболочка       | Tauri 2 (Rust только там, где нет готового плагина)                       |
-| UI             | Vue 3 (`<script setup>`), Vite, TypeScript, pnpm                          |
-| Состояние      | Pinia                                                                     |
-| Редактор       | CodeMirror 6                                                              |
-| Разметка       | `novlang-js` (npm)                                                        |
-| Контейнеры     | JSZip (`.edb` и `.epub`)                                                  |
-| Схема manifest | valibot                                                                   |
-| i18n           | vue-i18n                                                                  |
-| Автосохранение | IndexedDB через `idb`                                                     |
-| Проверка XML   | `fast-xml-parser` (`XMLValidator`)                                        |
-| Тесты          | Vitest, @vue/test-utils, happy-dom, fake-indexeddb, Playwright, epubcheck |
+| Слой           | Выбор                                                                        |
+| -------------- | ---------------------------------------------------------------------------- |
+| Оболочка       | Tauri 2 (Rust только там, где нет готового плагина)                          |
+| UI             | Vue 3 (`<script setup>`), Vite, TypeScript, pnpm, Tailwind CSS 4, shadcn-vue |
+| Состояние      | Pinia                                                                        |
+| Редактор       | CodeMirror 6                                                                 |
+| Разметка       | `novlang-js` (npm)                                                           |
+| Контейнеры     | JSZip (`.edb` и `.epub`)                                                     |
+| Схема manifest | valibot                                                                      |
+| i18n           | vue-i18n                                                                     |
+| Автосохранение | IndexedDB через `idb`                                                        |
+| Проверка XML   | `fast-xml-parser` (`XMLValidator`)                                           |
+| Тесты          | Vitest, @vue/test-utils, happy-dom, fake-indexeddb, Playwright, epubcheck    |
+| Качество кода  | Oxfmt (`pnpm format:check`), Oxlint (`pnpm lint`)                            |
 
 **Плагины Tauri:** `opener`, `dialog`, `fs`, `store`, `log`,
 `single-instance`, `persisted-scope`, `window-state`.
@@ -87,6 +90,7 @@ src/
 │   ├── styles/        стили UI
 │   └── epub/          theme.css книги, preview.css, шаблоны XHTML и custom.css (?raw)
 ├── components/
+│   ├── ui/            компоненты, добавленные CLI shadcn-vue
 │   ├── layout/        AppToolbar, ResizableSplit, StatusBadge, Breadcrumbs
 │   ├── sidebar/       ActivityBar, ExplorerView, ExplorerSection, ChapterItem,
 │   │                  ImageItem, SearchView, SearchResultItem
@@ -117,7 +121,8 @@ e2e/                   Playwright
 scripts/               сборка тестовых EPUB для epubcheck
 ```
 
-**Правила (проверяет ESLint `no-restricted-imports`):**
+**Правила (границы импортов должны проверяться Oxlint через
+`eslint/no-restricted-imports`):**
 
 - `services/{book,edb,epub,search,checks}` и `utils` не импортируют `vue`,
   `pinia`, `@tauri-apps/*` и не используют DOM. Всё, что зависит от окружения
@@ -128,6 +133,8 @@ scripts/               сборка тестовых EPUB для epubcheck
   реализации.
 - Компоненты работают через stores и composables и не вызывают
   `services/platform` напрямую.
+- `src/components/ui/**` добавляет CLI shadcn-vue. Oxfmt не форматирует эти
+  файлы, чтобы сохранять минимальный diff с реестром; Oxlint их не исключает.
 - Тесты лежат рядом с кодом в `__tests__/`.
 
 ## 5. Модель данных и формат `.edb`
@@ -775,8 +782,8 @@ connect-src ipc: http://ipc.localhost https://api.github.com`.
 
 ### 16.1. `ci.yml` (pull request и push)
 
-- **ubuntu:** pnpm install с кэшем → `vue-tsc --noEmit` → ESLint (включая
-  границы импортов) → Prettier `--check` → Vitest с покрытием → сборка
+- **ubuntu:** pnpm install с кэшем → `vue-tsc --noEmit` → Oxlint (включая
+  границы импортов) → `pnpm format:check` → Vitest с покрытием → сборка
   тестовых EPUB + epubcheck → Playwright.
 - **Rust, матрица ubuntu / macOS / windows:** `cargo fmt --check`,
   `cargo clippy -- -D warnings`, `cargo test`.

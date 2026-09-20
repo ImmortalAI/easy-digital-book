@@ -4,13 +4,16 @@
 чтобы в будущей сессии можно было продолжить с текущей точки, не
 восстанавливая рассуждения заново.
 
-**Статус (2026-09-15):** идёт `superpowers:brainstorming` по архитектуре
-приложения, путь — **architectural**. Уточняющие вопросы закрыты, подход
-выбран, все дизайн-секции 1–6 утверждены. **Спецификация написана и
-закоммичена** (ветка `docs/design-spec`):
-`docs/superpowers/specs/2026-09-15-easy-digital-book-design.md` — она
-теперь главный источник, этот файл хранит историю решений. Ждём ревью
-спецификации пользователем, затем `superpowers:writing-plans`.
+**Статус (2026-09-20):** все дизайн-секции утверждены, а
+`docs/superpowers/specs/2026-09-15-easy-digital-book-design.md` остаётся
+главным источником архитектурных решений. На ветке `docs/design-spec` начат
+технический bootstrap: Tailwind CSS 4, shadcn-vue, Pinia, Oxfmt, Oxlint и
+Vitest уже подключены. Демонстрационная страница со счётчиком Pinia нужна
+только для проверки этой основы, она не является будущим экраном приложения.
+
+Старый план прототипов пользователь удалил; нового implementation plan пока
+нет. Следующая содержательная задача — написать его заново по спецификации,
+до дальнейшей продуктовой разработки.
 
 ## О проекте
 
@@ -73,6 +76,7 @@ Calibre, Sigil) для этой узкой задачи избыточны. Пр
 | Архитектурный подход | **A: вся книга в памяти** (JSZip → реактивная модель)                                                                  |
 | Редактор             | CodeMirror 6                                                                                                           |
 | Состояние            | Pinia                                                                                                                  |
+| UI                   | Tailwind CSS 4 + shadcn-vue; сгенерированные компоненты лежат в `src/components/ui/`                                   |
 
 ### Раскладка главного окна (B v2, утверждена; сайдбар заменён в 4a)
 
@@ -107,6 +111,7 @@ src/
 │   ├── styles/      стили UI приложения
 │   └── epub/        theme.css книги + шаблоны XHTML (?raw)
 ├── components/
+│   ├── ui/           компоненты, добавленные CLI shadcn-vue
 │   ├── layout/      AppToolbar, ResizableSplit, StatusBadge
 │   ├── sidebar/     ChapterSidebar, ChapterItem
 │   ├── editor/      SourceEditor, PreviewPane, WarningsPopover
@@ -133,12 +138,15 @@ src/
 
 - Тесты лежат рядом с кодом в `__tests__/` (как в create-vue), Vitest.
 - `services/{book,edb,epub,checks}` и `utils` не импортируют `vue`, `pinia`,
-  `@tauri-apps/*`. Это проверяет ESLint `no-restricted-imports`.
+  `@tauri-apps/*`. Границы импортов должны проверяться Oxlint правилом
+  `eslint/no-restricted-imports`.
 - `@tauri-apps/*` импортируется **только** в `services/platform/`.
   Stores и composables получают сервисы через интерфейсы из
   `types/platform.ts`; в тестах подставляются in-memory фейки.
 - Компоненты работают через stores и composables, `services/platform`
   напрямую не вызывают.
+- `src/components/ui/**` добавляет CLI shadcn-vue. Oxfmt его не форматирует,
+  чтобы сохранять минимальный diff с реестром; Oxlint продолжает проверку.
 - `services/epub` получает `ImageProcessor` параметром (воркер в проде,
   процессор без изменений в тестах).
 - Текущая глава парсится с debounce ~150 мс, все главы — при открытии.
@@ -495,7 +503,7 @@ c-<id>.xhtml, images/…}`. Детерминированный zip, как у `.
   - epubcheck: скрипт собирает фикстурные книги → epubcheck (Java,
     версия закреплена) → ошибки и предупреждения валят CI.
 - **CI (`ci.yml`, PR и push):** ubuntu: install с кэшем pnpm, `vue-tsc`,
-  ESLint (с границами импортов), Prettier, Vitest + coverage, epubcheck,
+  Oxlint (с границами импортов), `pnpm format:check`, Vitest + coverage, epubcheck,
   Playwright. Rust на матрице 3 ОС: `cargo fmt --check`, `clippy -D
 warnings`, `cargo test` (атомарная запись ведёт себя по-разному на
   Windows). Dependabot/Renovate раз в неделю, группами.
@@ -516,14 +524,11 @@ warnings`, `cargo test` (атомарная запись ведёт себя п�
 
 1. ~~Подтвердить секции~~ — сделано.
 2. ~~Написать и закоммитить спецификацию~~ — сделано (коммит d62e839).
-3. Ревью спецификации пользователем. При написании добавлены уточнения,
-   которые пользователь ещё не видел отдельно: `fast-xml-parser` вместо
-   `DOMParser` (services без DOM, тесты в node), `tauri-plugin-store` для
-   настроек, `center.kind = 'settings'` + SettingsView, Mod+E — экспорт,
-   очередь путей `take_pending_open_paths`, CSP приложения, минимальные ОС
-   (macOS 12 / Windows 10 / ubuntu-22.04), правила имени файла, прототип
-   Send to Kindle.
-4. `superpowers:writing-plans` (вероятно, разбить на этапы).
+3. Технический bootstrap завершён: подключены Tailwind CSS 4, shadcn-vue,
+   Pinia, Oxfmt, Oxlint и Vitest. Доступные локальные проверки: `pnpm format:check`,
+   `pnpm lint`, `pnpm test`, `pnpm build`.
+4. Старый план удалён. Написать новый implementation plan по актуальной
+   спецификации и только затем продолжать продуктовую разработку.
 
 ## Прочее
 
