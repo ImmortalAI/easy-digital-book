@@ -1,37 +1,21 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { invoke } from "@tauri-apps/api/core";
+import { Button } from "@/components/ui/button";
+import { useCounterStore } from "@/stores/counter";
 
-const greetMsg = ref("");
-const name = ref("");
-
-async function greet() {
-  // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-  greetMsg.value = await invoke("greet", { name: name.value });
-}
+const counter = useCounterStore();
 </script>
 
 <template>
-  <main>
-    <h1 class="font-bold">Welcome to Tauri + Vue</h1>
+  <main class="flex min-h-screen items-center justify-center bg-muted/30 p-6">
+    <section class="w-full max-w-md space-y-6 rounded-xl border bg-background p-8 shadow-sm">
+      <div class="space-y-2">
+        <h1 class="text-3xl font-semibold tracking-tight">Счётчик</h1>
+        <p class="text-muted-foreground">Нажмите кнопку, чтобы увеличить текущее значение.</p>
+      </div>
 
-    <div>
-      <a href="https://vite.dev" target="_blank">
-        <img src="/vite.svg" />
-      </a>
-      <a href="https://tauri.app" target="_blank">
-        <img src="/tauri.svg" />
-      </a>
-      <a href="https://vuejs.org/" target="_blank">
-        <img src="./assets/vue.svg" />
-      </a>
-    </div>
-    <p>Click on the Tauri, Vite, and Vue logos to learn more.</p>
+      <p class="text-5xl font-semibold tabular-nums">{{ counter.count }}</p>
 
-    <form @submit.prevent="greet">
-      <input id="greet-input" v-model="name" placeholder="Enter a name..." />
-      <button type="submit">Greet</button>
-    </form>
-    <p>{{ greetMsg }}</p>
+      <Button type="button" @click="counter.increment">Увеличить</Button>
+    </section>
   </main>
 </template>
