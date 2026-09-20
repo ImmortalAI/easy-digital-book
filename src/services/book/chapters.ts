@@ -1,4 +1,4 @@
-import type { Book, BookMutation, Chapter } from "@/types/book";
+import type { Book, BookMutation } from "@/types/book";
 const mutation = (
   book: Book,
   changedChapters = new Set<string>(),
@@ -10,17 +10,32 @@ const mutation = (
   changedResources: new Set(),
   removedResources: new Set(),
 });
+export interface AddChapterOptions {
+  locale?: string;
+  newId: () => string;
+}
 export function addChapter(
   book: Book,
-  chapter: Chapter,
+  options: AddChapterOptions,
   index = book.chapters.length,
 ): BookMutation {
+  const chapterId = options.newId();
+  if (!/^[a-z0-9]{8}$/.test(chapterId) || book.chapters.some((chapter) => chapter.id === chapterId))
+    throw new Error("Invalid or colliding chapter ID");
+  const locale = options.locale ?? book.metadata.language;
+  const number = book.chapters.length + 1;
+  const heading =
+    locale === "ru"
+      ? `Глава ${number}`
+      : locale === "zh-CN"
+        ? `第 ${number} 章`
+        : `Chapter ${number}`;
   const chapters = book.chapters.slice();
   chapters.splice(Math.max(0, Math.min(index, chapters.length)), 0, {
-    ...chapter,
-    source: chapter.source.replace(/\r\n?/g, "\n"),
+    id: chapterId,
+    source: `# ${heading}`,
   });
-  return mutation({ ...book, chapters }, new Set([chapter.id]));
+  return mutation({ ...book, chapters }, new Set([chapterId]));
 }
 export function removeChapter(book: Book, chapterId: string): BookMutation {
   const chapters = book.chapters.filter((chapter) => chapter.id !== chapterId);

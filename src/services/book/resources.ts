@@ -55,7 +55,8 @@ export async function importImage(
         changedResources: new Set(),
         removedResources: new Set(),
       };
-  const path = uniqueResourcePath(book.resources.keys(), fileName);
+  const extension = mediaType === "image/jpeg" ? "jpg" : mediaType.slice("image/".length);
+  const path = uniqueResourcePath(book.resources.keys(), fileName, extension);
   const resources = new Map(book.resources);
   resources.set(path, { bytes: bytes.slice(), mediaType });
   return {

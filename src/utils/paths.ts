@@ -11,9 +11,17 @@ export function normalizeResourceName(fileName: string): string {
       .toLowerCase() || "image";
   return `${stem}${extension ? `.${extension}` : ""}`;
 }
-export function uniqueResourcePath(existing: Iterable<string>, fileName: string): string {
+export function uniqueResourcePath(
+  existing: Iterable<string>,
+  fileName: string,
+  extension?: string,
+): string {
   const used = new Set(existing);
-  const safe = normalizeResourceName(fileName);
+  const safeName = normalizeResourceName(fileName);
+  const nameDot = safeName.lastIndexOf(".");
+  const safe = extension
+    ? `${nameDot > 0 ? safeName.slice(0, nameDot) : safeName}.${extension}`
+    : safeName;
   if (!used.has(`images/${safe}`)) return `images/${safe}`;
   const dot = safe.lastIndexOf(".");
   const stem = dot > 0 ? safe.slice(0, dot) : safe;
