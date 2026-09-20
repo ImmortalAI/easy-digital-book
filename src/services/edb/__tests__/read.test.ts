@@ -1,0 +1,67 @@
+import { describe, expect, it } from "vitest";
+import { readEdb } from "@/services/edb/read";
+import { archive, manifest } from "./fixtures";
+
+const deps = { now: () => new Date("2026-02-01T00:00:00.000Z") };
+
+describe("readEdb", () => {
+  it("rejects non-zips, missing manifests, bad JSON, foreign and future formats", async () => {
+    await expect(readEdb(new Uint8Array([1, 2]), deps)).rejects.toMatchObject({
+      code: "edb.notZip",
+    });
+    await expect(readEdb(await archive({}), deps)).rejects.toMatchObject({
+      code: "edb.noManifest",
+    });
+    await expect(readEdb(await archive({ "manifest.json": "{" }), deps)).rejects.toMatchObject({
+      code: "edb.badJson",
+    });
+    await expect(
+      readEdb(await archive({ "manifest.json": manifest({ format: "other" }) }), deps),
+    ).rejects.toMatchObject({ code: "edb.foreignFormat" });
+    await expect(
+      readEdb(await archive({ "manifest.json": manifest({ formatVersion: 2 }) }), deps),
+    ).rejects.toMatchObject({ code: "edb.tooNew" });
+  });
+
+  it("recovers missing and orphan chapters, normalizes CRLF, and missing cover", async () => {
+    const result = await readEdb(
+      await archive({
+        "manifest.json": manifest({
+          book: { ...JSON.parse(manifest()).book, cover: "images/no.png" },
+          chapters: [{ id: "missing1" }],
+        }),
+        "chapters/orphan01.nov": "# Orphan\r\ntext\r\n",
+      }),
+      deps,
+    );
+    expect(result.book.chapters).toEqual([
+      { id: "missing1", source: "" },
+      { id: "orphan01", source: "# Orphan\ntext\n" },
+    ]);
+    expect(result.book.metadata.cover).toBeNull();
+    expect(result.warnings.map((warning) => warning.code)).toEqual(
+      expect.arrayContaining(["edb.missingChapter", "edb.orphanChapter", "edb.missingCover"]),
+    );
+  });
+
+  it("defaults invalid metadata fields and reports warnings", async () => {
+    const badBook = { ...JSON.parse(manifest()).book, title: 42, authors: "bad", language: 3 };
+    const result = await readEdb(
+      await archive({ "manifest.json": manifest({ book: badBook }) }),
+      deps,
+    );
+    expect(result.book.metadata.title).toBe("Untitled");
+    expect(result.book.metadata.authors).toEqual([]);
+    expect(result.book.metadata.language).toBe("en");
+    expect(result.warnings.map((warning) => warning.code)).toEqual(
+      expect.arrayContaining(["edb.invalidMetadata"]),
+    );
+  });
+
+  it("migrates an older manifest in memory", async () => {
+    const old = { ...JSON.parse(manifest()), formatVersion: 0 };
+    const result = await readEdb(await archive({ "manifest.json": JSON.stringify(old) }), deps);
+    expect(result.migrated).toBe(true);
+    expect(result.book.metadata.version).toBeNull();
+  });
+});
