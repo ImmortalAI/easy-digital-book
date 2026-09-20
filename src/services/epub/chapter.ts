@@ -71,6 +71,7 @@ export function renderChapter(
   index: number,
   book: Book,
   resourceMap: ResourceMap,
+  includeCustomCss = true,
 ): RenderedChapter {
   const parsed = parse(chapter.source);
   const referencedPaths: string[] = [];
@@ -84,7 +85,7 @@ export function renderChapter(
     textOfHeading(document.children[0]) || fallbackTitle(book.metadata.language, index + 1);
   const body = renderToHTML(document, { xhtmlMode: true });
   const language = book.metadata.language || "en";
-  const xhtml = `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${escapeXml(language)}" lang="${escapeXml(language)}">\n<head><meta charset="UTF-8"/><title>${escapeXml(title)}</title><link rel="stylesheet" type="text/css" href="theme.css"/><link rel="stylesheet" type="text/css" href="custom.css"/></head>\n<body><section epub:type="chapter" role="doc-chapter">${body}</section></body>\n</html>`;
+  const xhtml = `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${escapeXml(language)}" lang="${escapeXml(language)}">\n<head><meta charset="UTF-8"/><title>${escapeXml(title)}</title><link rel="stylesheet" type="text/css" href="theme.css"/>${includeCustomCss ? '<link rel="stylesheet" type="text/css" href="custom.css"/>' : ""}</head>\n<body><section epub:type="chapter" role="doc-chapter">${body}</section></body>\n</html>`;
   const validation = XMLValidator.validate(xhtml);
   if (validation !== true) {
     const issue = validation.err;
