@@ -2,11 +2,12 @@
 
 ## Decision
 
-The frontend never receives an unrestricted filesystem API. A Rust-side
-`admit_file_path` command admits a path supplied by a native dialog or OS-open
-event with the real Tauri `fs_scope().allow_file` API; persisted-scope observes
-that admission. `write_file_atomic` then checks the path against the Tauri `fs`
-scope, securely creates a unique sibling temporary file with `create_new`,
+The frontend never receives an unrestricted filesystem API. A private Rust
+helper admits a path supplied by trusted native-dialog/OS-open handling with
+the real Tauri `fs_scope().allow_file` API; persisted-scope observes that
+admission. It is intentionally not an invoke command. `write_file_atomic` then
+checks the path against the Tauri `fs` scope, securely creates a unique sibling
+temporary file with `create_new`,
 writes through its open handle, calls `sync_all`, and atomically renames it over
 the target. Windows sharing violations are retried five times with a 20 ms
 bound between attempts. Command failures serialize as
@@ -80,8 +81,9 @@ pnpm tauri build --debug
 For each platform, perform these as separate checks:
 
 1. Start the app with the development command, use the native open/save dialog
-   to select `dialog-selected.edb`, invoke the Rust `admit_file_path` command,
-   then invoke `write_file_atomic`; expect the custom command to succeed.
+   to select `dialog-selected.edb`, have trusted Rust dialog handling call the
+   private `admit_file` helper, then invoke `write_file_atomic`; expect the
+   custom command to succeed. Do not expose admission as a renderer command.
 2. Quit and restart the app. Invoke `write_file_atomic` for the same selected
    path without re-admitting it; expect success, proving persisted scope.
 3. Launch a fresh process with the OS-open argument shown above (`os-open.edb`),

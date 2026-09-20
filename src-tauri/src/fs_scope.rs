@@ -13,50 +13,27 @@ use std::{
 use serde::Serialize;
 use thiserror::Error;
 
-#[derive(Clone, Debug, Default)]
-#[allow(dead_code)]
-pub struct Scope {
-    allowed: Vec<PathBuf>,
+pub trait PathValidator {
+    fn validate(&self, path: &Path) -> Result<(), CommandError>;
 }
 
-pub trait ScopeAccess {
-    fn allow_file(&self, path: &Path) -> Result<(), String>;
-}
-
-impl ScopeAccess for Scope {
-    fn allow_file(&self, _path: &Path) -> Result<(), String> {
-        Ok(())
-    }
-}
-
-impl ScopeAccess for tauri::fs::Scope {
-    fn allow_file(&self, path: &Path) -> Result<(), String> {
-        self.allow_file(path).map_err(|error| error.to_string())
-    }
-}
-
-pub fn admit_file(scope: &impl ScopeAccess, path: &Path) -> Result<(), CommandError> {
-    scope
-        .allow_file(path)
-        .map_err(|message| CommandError::Scope { message })
-}
-
-impl Scope {
-    #[allow(dead_code)]
-    pub fn from_paths(paths: impl IntoIterator<Item = PathBuf>) -> Self {
-        Self {
-            allowed: paths.into_iter().collect(),
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn validate(&self, path: &Path) -> Result<(), CommandError> {
-        if self.allowed.iter().any(|allowed| allowed == path) {
+impl PathValidator for tauri::fs::Scope {
+    fn validate(&self, path: &Path) -> Result<(), CommandError> {
+        if self.is_allowed(path) {
             Ok(())
         } else {
             Err(CommandError::permission_denied(path))
         }
     }
+}
+
+/// Trusted Rust-side admission for native-dialog/OS-open handlers.
+/// Renderer commands must not expose this helper directly.
+#[allow(dead_code)]
+pub(crate) fn admit_file(scope: &tauri::fs::Scope, path: &Path) -> Result<(), CommandError> {
+    scope.allow_file(path).map_err(|error| CommandError::Scope {
+        message: error.to_string(),
+    })
 }
 
 #[derive(Debug, Error)]
@@ -69,6 +46,7 @@ pub enum CommandError {
         source: io::Error,
     },
     #[error("filesystem scope operation failed: {message}")]
+    #[allow(dead_code)]
     Scope { message: String },
 }
 
@@ -110,8 +88,12 @@ impl From<io::Error> for CommandError {
 }
 
 #[allow(dead_code)]
-pub fn write_file_atomic(scope: &Scope, path: &Path, bytes: &[u8]) -> Result<(), CommandError> {
-    scope.validate(path)?;
+pub fn write_file_atomic<V: PathValidator>(
+    validator: &V,
+    path: &Path,
+    bytes: &[u8],
+) -> Result<(), CommandError> {
+    validator.validate(path)?;
     let (temporary, mut file) = temporary_file(path)?;
     std::io::Write::write_all(&mut file, bytes)?;
     file.sync_all()?;
@@ -177,18 +159,5 @@ pub fn write_file_atomic_command(
     bytes: Vec<u8>,
 ) -> Result<(), CommandError> {
     use tauri_plugin_fs::FsExt;
-    let path = PathBuf::from(path);
-    if !app.fs_scope().is_allowed(&path) {
-        return Err(CommandError::permission_denied(&path));
-    }
-    let (temporary, mut file) = temporary_file(&path)?;
-    std::io::Write::write_all(&mut file, &bytes)?;
-    file.sync_all()?;
-    replace_with_retry(&temporary, &path)
-}
-
-#[tauri::command(rename = "admit_file_path")]
-pub fn admit_file_path_command(app: tauri::AppHandle, path: String) -> Result<(), CommandError> {
-    use tauri_plugin_fs::FsExt;
-    admit_file(&app.fs_scope(), Path::new(&path))
+    write_file_atomic(&app.fs_scope(), Path::new(&path), &bytes)
 }

@@ -1,11 +1,8 @@
-use std::{
-    path::{Path, PathBuf},
-    sync::Mutex,
-};
+use std::path::{Path, PathBuf};
 
 use tempfile::tempdir;
 
-use crate::fs_scope::{admit_file, write_file_atomic, Scope, ScopeAccess};
+use crate::fs_scope::{write_file_atomic, CommandError, PathValidator};
 
 fn scoped_temp_path(name: &str) -> PathBuf {
     let dir = tempdir().unwrap();
@@ -14,12 +11,12 @@ fn scoped_temp_path(name: &str) -> PathBuf {
     path
 }
 
-fn scope_with(path: &Path) -> Scope {
-    Scope::from_paths([path.to_path_buf()])
+fn scope_with(path: &Path) -> TestValidator {
+    TestValidator(vec![path.to_path_buf()])
 }
 
-fn empty_scope() -> Scope {
-    Scope::from_paths([])
+fn empty_scope() -> TestValidator {
+    TestValidator(Vec::new())
 }
 
 #[test]
@@ -36,10 +33,9 @@ fn does_not_follow_a_preexisting_temporary_symlink() {
     let directory = tempdir().unwrap();
     let path = directory.path().join("novel.edb");
     let outside = directory.path().join("outside.txt");
-    let candidate = directory.path().join(format!(
-        ".novel.edb-tmp-{}-0",
-        std::process::id()
-    ));
+    let candidate = directory
+        .path()
+        .join(format!(".novel.edb-tmp-{}-0", std::process::id()));
     std::fs::write(&outside, b"safe").unwrap();
     std::os::unix::fs::symlink(&outside, &candidate).unwrap();
 
@@ -68,26 +64,23 @@ fn rejects_a_path_not_in_scope() {
 }
 
 #[test]
-fn admits_a_dialog_path_through_the_scope_seam() {
+fn writes_only_after_injected_scope_validation() {
     let path = scoped_temp_path("dialog.edb");
-    let admitted = Mutex::new(Vec::new());
-    admit_file(
-        &RecordingScope {
-            admitted: &admitted,
-        },
-        &path,
-    )
-    .unwrap();
-    assert_eq!(admitted.into_inner().unwrap(), vec![path]);
+    let validator = scope_with(&path);
+    write_file_atomic(&validator, &path, b"new").unwrap();
+    assert_eq!(std::fs::read(path).unwrap(), b"new");
 }
 
-struct RecordingScope<'a> {
-    admitted: &'a Mutex<Vec<PathBuf>>,
-}
+struct TestValidator(Vec<PathBuf>);
 
-impl ScopeAccess for RecordingScope<'_> {
-    fn allow_file(&self, path: &Path) -> Result<(), String> {
-        self.admitted.lock().unwrap().push(path.to_path_buf());
-        Ok(())
+impl PathValidator for TestValidator {
+    fn validate(&self, path: &Path) -> Result<(), CommandError> {
+        if self.0.iter().any(|allowed| allowed == path) {
+            Ok(())
+        } else {
+            Err(CommandError::PermissionDenied {
+                path: path.display().to_string(),
+            })
+        }
     }
 }
