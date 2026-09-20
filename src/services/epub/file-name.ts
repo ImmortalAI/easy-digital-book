@@ -11,13 +11,12 @@ export function makeEpubFileName(
     .replace(/[<>:"/\\|?*]/g, "_")
     .split("")
     .map((char) => {
-      const code = char.charCodeAt(0);
-      return code < 0x20 || code === 0x7f ? "_" : char;
+      return /\p{Cc}/u.test(char) ? "_" : char;
     })
     .join("")
     .trim()
     .replace(/[. ]+$/g, "");
   if (!basename) basename = "book";
   if (reserved.test(basename)) basename = `_${basename}`;
-  return `${basename.slice(0, 120)}.epub`;
+  return `${basename.slice(0, 120).replace(/[. ]+$/g, "") || "book"}.epub`;
 }

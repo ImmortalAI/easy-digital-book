@@ -54,7 +54,7 @@ export async function processImage(
       plan.format === "jpeg" ? "image/jpeg" : "image/png";
     const blob = await canvas.convertToBlob({
       type: mediaType,
-      quality: plan.format === "jpeg" ? 0.9 : undefined,
+      quality: plan.format === "jpeg" ? (plan.quality ?? 0.9) : undefined,
     });
     const result = { bytes: new Uint8Array(await blob.arrayBuffer()), mediaType, width, height };
     cache.set(key, result);

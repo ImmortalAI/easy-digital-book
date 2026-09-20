@@ -29,4 +29,16 @@ describe("planImage", () => {
       planImage({ mediaType: "image/gif", width: 10, height: 10 }, paperwhite, false).format,
     ).toBe("png");
   });
+  it("does not request JPEG re-encoding for the original preset", () => {
+    expect(
+      planImage(
+        { mediaType: "image/jpeg", width: 800, height: 600 },
+        {
+          imagePreset: "original",
+          grayscale: false,
+        },
+        false,
+      ),
+    ).toEqual({ width: 800, height: 600, format: "jpeg", grayscale: false });
+  });
 });

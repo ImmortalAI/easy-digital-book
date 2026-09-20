@@ -10,4 +10,11 @@ describe("makeEpubFileName", () => {
     expect(name.endsWith(".epub")).toBe(true);
     expect(name.slice(0, -5).length).toBeLessThanOrEqual(120);
   });
+  it("replaces Unicode control characters and trims after truncation", () => {
+    const name = makeEpubFileName(
+      { title: `${"a".repeat(119)}. ` + String.fromCharCode(0x85), version: null },
+      false,
+    );
+    expect(name).toBe(`${"a".repeat(119)}.epub`);
+  });
 });
