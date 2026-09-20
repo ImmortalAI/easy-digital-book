@@ -1,4 +1,13 @@
-import type { FileSystem, PlatformServices, SettingsRepository } from "@/types/platform";
+import type {
+  FileSystem,
+  PlatformServices,
+  RecoveredBook,
+  RecoveryDelta,
+  RecoverySessionSummary,
+  RecoveryStore,
+  SettingsRepository,
+} from "@/types/platform";
+import type { Book, Resource } from "@/types/book";
 import { createRecoveryStore } from "./recovery";
 import { tauriDialogs } from "./dialogs";
 import { tauriFileSystem } from "./fs";
@@ -46,6 +55,96 @@ class MemorySettings implements SettingsRepository {
     this.data.delete(key);
   }
 }
+
+class MemoryRecovery implements RecoveryStore {
+  readonly sessions = new Map<
+    string,
+    RecoverySessionSummary & {
+      metadata: Book["metadata"];
+      chapterOrder: string[];
+      customCss: string | null;
+    }
+  >();
+  readonly chapters = new Map<string, Map<string, string>>();
+  readonly resources = new Map<string, Map<string, Resource>>();
+
+  async list() {
+    return [...this.sessions.values()].map(
+      ({ bookId, originalPath, title, version, updatedAt }) => ({
+        bookId,
+        originalPath,
+        title,
+        version,
+        updatedAt,
+      }),
+    );
+  }
+  async writeChanges(book: Book, delta: RecoveryDelta, originalPath?: string | null) {
+    const old = this.sessions.get(book.metadata.id);
+    this.sessions.set(book.metadata.id, {
+      bookId: book.metadata.id,
+      originalPath: originalPath ?? old?.originalPath ?? null,
+      title: book.metadata.title,
+      version: book.metadata.version,
+      updatedAt: Date.now(),
+      metadata: structuredClone(book.metadata),
+      chapterOrder: book.chapters.map(({ id }) => id),
+      customCss: book.customCss,
+    });
+    const chapters = this.chapters.get(book.metadata.id) ?? new Map<string, string>();
+    const resources = this.resources.get(book.metadata.id) ?? new Map<string, Resource>();
+    for (const id of delta.removedChapters) chapters.delete(id);
+    for (const id of delta.changedChapters) {
+      const chapter = book.chapters.find((item) => item.id === id);
+      if (chapter) chapters.set(id, chapter.source);
+    }
+    for (const path of delta.removedResources) resources.delete(path);
+    for (const path of delta.changedResources) {
+      const resource = book.resources.get(path);
+      if (resource)
+        resources.set(path, {
+          bytes: new Uint8Array(resource.bytes),
+          mediaType: resource.mediaType,
+        });
+    }
+    if (!old) {
+      for (const chapter of book.chapters)
+        if (!delta.changedChapters.has(chapter.id)) chapters.set(chapter.id, chapter.source);
+      for (const [path, resource] of book.resources)
+        if (!delta.changedResources.has(path))
+          resources.set(path, {
+            bytes: new Uint8Array(resource.bytes),
+            mediaType: resource.mediaType,
+          });
+    }
+    this.chapters.set(book.metadata.id, chapters);
+    this.resources.set(book.metadata.id, resources);
+  }
+  async restore(bookId: string): Promise<RecoveredBook | null> {
+    const session = this.sessions.get(bookId);
+    if (!session) return null;
+    const chapters = this.chapters.get(bookId);
+    if (!chapters) return null;
+    return {
+      metadata: structuredClone(session.metadata),
+      chapters: session.chapterOrder.map((id) => ({ id, source: chapters.get(id) ?? "" })),
+      resources: new Map(
+        [...(this.resources.get(bookId) ?? new Map()).entries()].map(([path, resource]) => [
+          path,
+          { bytes: new Uint8Array(resource.bytes), mediaType: resource.mediaType },
+        ]),
+      ),
+      customCss: session.customCss,
+      originalPath: session.originalPath,
+    };
+  }
+  async remove(bookId: string) {
+    this.sessions.delete(bookId);
+    this.chapters.delete(bookId);
+    this.resources.delete(bookId);
+  }
+}
+
 export function createInMemoryPlatformServices(): PlatformServices {
   const files = new MemoryFiles();
   const settings = new MemorySettings();
@@ -65,7 +164,7 @@ export function createInMemoryPlatformServices(): PlatformServices {
       },
       async message() {},
     },
-    recovery: createRecoveryStore(logger),
+    recovery: new MemoryRecovery(),
     logger,
     opener: { async reveal() {}, async open() {} },
     updates: noUpdates,

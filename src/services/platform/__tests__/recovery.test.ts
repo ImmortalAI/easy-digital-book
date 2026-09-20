@@ -99,5 +99,23 @@ describe("indexeddb recovery", () => {
     expect(await services.settings.get("locale", "en")).toBe("ru");
     expect(await services.dialogs.open()).toBeNull();
     expect(await services.updates.check()).toBe(false);
+
+    await services.recovery.writeChanges(book(), {
+      changedChapters: new Set(["one", "two"]),
+      removedChapters: new Set(),
+      changedResources: new Set(["images/a.png"]),
+      removedResources: new Set(),
+    });
+    const next = book();
+    next.chapters[0].source = "memory update";
+    await services.recovery.writeChanges(next, {
+      changedChapters: new Set(["one"]),
+      removedChapters: new Set(),
+      changedResources: new Set(),
+      removedResources: new Set(),
+    });
+    expect((await services.recovery.restore("book"))?.chapters[1].source).toBe("unchanged");
+    await services.recovery.remove("book");
+    expect(await services.recovery.restore("book")).toBeNull();
   });
 });
