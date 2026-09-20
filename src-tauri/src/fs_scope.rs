@@ -3,7 +3,7 @@
 mod tests;
 
 use std::{
-    fs::File,
+    fs::{File, OpenOptions},
     io,
     path::{Path, PathBuf},
     thread,
@@ -14,17 +14,42 @@ use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Clone, Debug, Default)]
+#[allow(dead_code)]
 pub struct Scope {
     allowed: Vec<PathBuf>,
 }
 
+pub trait ScopeAccess {
+    fn allow_file(&self, path: &Path) -> Result<(), String>;
+}
+
+impl ScopeAccess for Scope {
+    fn allow_file(&self, _path: &Path) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+impl ScopeAccess for tauri::fs::Scope {
+    fn allow_file(&self, path: &Path) -> Result<(), String> {
+        self.allow_file(path).map_err(|error| error.to_string())
+    }
+}
+
+pub fn admit_file(scope: &impl ScopeAccess, path: &Path) -> Result<(), CommandError> {
+    scope
+        .allow_file(path)
+        .map_err(|message| CommandError::Scope { message })
+}
+
 impl Scope {
+    #[allow(dead_code)]
     pub fn from_paths(paths: impl IntoIterator<Item = PathBuf>) -> Self {
         Self {
             allowed: paths.into_iter().collect(),
         }
     }
 
+    #[allow(dead_code)]
     pub fn validate(&self, path: &Path) -> Result<(), CommandError> {
         if self.allowed.iter().any(|allowed| allowed == path) {
             Ok(())
@@ -43,6 +68,8 @@ pub enum CommandError {
         #[source]
         source: io::Error,
     },
+    #[error("filesystem scope operation failed: {message}")]
+    Scope { message: String },
 }
 
 impl CommandError {
@@ -50,6 +77,7 @@ impl CommandError {
         match self {
             Self::PermissionDenied { .. } => "fs.permissionDenied",
             Self::Io { .. } => "fs.ioError",
+            Self::Scope { .. } => "fs.scopeError",
         }
     }
 
@@ -81,19 +109,44 @@ impl From<io::Error> for CommandError {
     }
 }
 
+#[allow(dead_code)]
 pub fn write_file_atomic(scope: &Scope, path: &Path, bytes: &[u8]) -> Result<(), CommandError> {
     scope.validate(path)?;
-    let temporary = temporary_neighbor(path)?;
-    std::fs::write(&temporary, bytes)?;
-    File::open(&temporary)?.sync_all()?;
+    let (temporary, mut file) = temporary_file(path)?;
+    std::io::Write::write_all(&mut file, bytes)?;
+    file.sync_all()?;
     replace_with_retry(&temporary, path)
 }
 
-fn temporary_neighbor(path: &Path) -> Result<PathBuf, CommandError> {
+fn temporary_file(path: &Path) -> Result<(PathBuf, File), CommandError> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "path has no parent"))?;
     let name = path
         .file_name()
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "path has no filename"))?;
-    Ok(path.with_file_name(format!(".{}.edb-tmp", name.to_string_lossy())))
+    for attempt in 0..16 {
+        let candidate = parent.join(format!(
+            ".{}.edb-tmp-{}-{}",
+            name.to_string_lossy(),
+            std::process::id(),
+            attempt
+        ));
+        match OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&candidate)
+        {
+            Ok(file) => return Ok((candidate, file)),
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(error.into()),
+        }
+    }
+    Err(io::Error::new(
+        io::ErrorKind::AlreadyExists,
+        "could not allocate unique temporary file",
+    )
+    .into())
 }
 
 fn replace_with_retry(temporary: &Path, target: &Path) -> Result<(), CommandError> {
@@ -128,8 +181,14 @@ pub fn write_file_atomic_command(
     if !app.fs_scope().is_allowed(&path) {
         return Err(CommandError::permission_denied(&path));
     }
-    let temporary = temporary_neighbor(&path)?;
-    std::fs::write(&temporary, &bytes)?;
-    File::open(&temporary)?.sync_all()?;
+    let (temporary, mut file) = temporary_file(&path)?;
+    std::io::Write::write_all(&mut file, &bytes)?;
+    file.sync_all()?;
     replace_with_retry(&temporary, &path)
+}
+
+#[tauri::command(rename = "admit_file_path")]
+pub fn admit_file_path_command(app: tauri::AppHandle, path: String) -> Result<(), CommandError> {
+    use tauri_plugin_fs::FsExt;
+    admit_file(&app.fs_scope(), Path::new(&path))
 }

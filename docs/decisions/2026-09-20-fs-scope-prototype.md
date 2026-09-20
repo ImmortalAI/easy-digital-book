@@ -2,12 +2,15 @@
 
 ## Decision
 
-The frontend never receives an unrestricted filesystem API. `write_file_atomic`
-is a Rust command. It accepts a path and bytes, checks the path against the
-Tauri `fs` scope, writes a sibling temporary file, calls `sync_all`, and then
-renames the temporary file over the target. Windows sharing violations are
-retried five times with a 20 ms bound between attempts. Command failures
-serialize as `{ "code": "…", "message": "…" }`.
+The frontend never receives an unrestricted filesystem API. A Rust-side
+`admit_file_path` command admits a path supplied by a native dialog or OS-open
+event with the real Tauri `fs_scope().allow_file` API; persisted-scope observes
+that admission. `write_file_atomic` then checks the path against the Tauri `fs`
+scope, securely creates a unique sibling temporary file with `create_new`,
+writes through its open handle, calls `sync_all`, and atomically renames it over
+the target. Windows sharing violations are retried five times with a 20 ms
+bound between attempts. Command failures serialize as
+`{ "code": "…", "message": "…" }`.
 
 `tauri-plugin-fs` is initialized before `tauri-plugin-persisted-scope` because
 the persisted-scope plugin restores and listens to the fs scope. This ordering
@@ -74,7 +77,18 @@ pnpm tauri build --debug
 # restart the app, then repeat with /tmp/os-open.edb
 ```
 
-These three native-dialog/OS-open/restart sequences are release-blocking
+For each platform, perform these as separate checks:
+
+1. Start the app with the development command, use the native open/save dialog
+   to select `dialog-selected.edb`, invoke the Rust `admit_file_path` command,
+   then invoke `write_file_atomic`; expect the custom command to succeed.
+2. Quit and restart the app. Invoke `write_file_atomic` for the same selected
+   path without re-admitting it; expect success, proving persisted scope.
+3. Launch a fresh process with the OS-open argument shown above (`os-open.edb`),
+   then invoke `write_file_atomic`; expect success. Restart once more and
+   repeat the write to prove the OS-open admission is persisted.
+
+These native-dialog, OS-open, and restart sequences are release-blocking
 checklist entries. Platform-specific scope behavior remains a release
 validation concern until all rows have evidence.
 

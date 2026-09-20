@@ -14,7 +14,8 @@ pub fn run() {
         .plugin(tauri_plugin_persisted_scope::init())
         .invoke_handler(tauri::generate_handler![
             greet,
-            fs_scope::write_file_atomic_command
+            fs_scope::write_file_atomic_command,
+            fs_scope::admit_file_path_command
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
