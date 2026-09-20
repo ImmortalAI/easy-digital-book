@@ -65,6 +65,13 @@ export async function readEdb(bytes: Uint8Array, deps: ReadEdbDeps): Promise<Rea
   const chapterFiles = Object.keys(zip.files).filter((path) => /^chapters\/[^/]+\.nov$/.test(path));
   for (const path of chapterFiles) {
     const id = path.slice("chapters/".length, -4);
+    if (!/^[a-z0-9]{8}$/.test(id)) {
+      warnings.push({
+        code: "edb.invalidChapterFile",
+        message: `Invalid chapter filename ignored: ${path}`,
+      });
+      continue;
+    }
     if (!listed.has(id)) {
       chapters.push({ id, source: normalized(await zip.file(path)!.async("string")) });
       warnings.push({

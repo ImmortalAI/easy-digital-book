@@ -60,6 +60,19 @@ describe("readEdb", () => {
     ).rejects.toMatchObject({ code: "edb.badManifest" });
   });
 
+  it("skips invalid orphan chapter filenames and recovers valid orphans", async () => {
+    const result = await readEdb(
+      await archive({
+        "manifest.json": manifest({ chapters: [] }),
+        "chapters/orphan01.nov": "# Valid",
+        "chapters/invalid!.nov": "# Unsafe",
+      }),
+      deps,
+    );
+    expect(result.book.chapters).toEqual([{ id: "orphan01", source: "# Valid" }]);
+    expect(result.warnings.map((warning) => warning.code)).toContain("edb.invalidChapterFile");
+  });
+
   it("recovers missing and orphan chapters, normalizes CRLF, and missing cover", async () => {
     const result = await readEdb(
       await archive({
