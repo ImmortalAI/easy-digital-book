@@ -32,25 +32,27 @@
 
 ## File Structure
 
-| Area | Files | Responsibility |
-| --- | --- | --- |
-| Tooling | `package.json`, `vite.config.ts`, `oxlint.config.ts`, `vitest.config.ts`, `src/test/setup.ts` | dependencies, aliases, DOM test environment, import boundaries |
-| Domain | `src/types/{book,manifest,diagnostics,errors,platform}.ts`, `src/utils/**`, `src/services/book/**` | environment-free model, errors, stable IDs, metadata, chapter/resource operations |
-| Containers | `src/services/edb/**`, `src/services/epub/**`, `src/assets/epub/**` | deterministic project read/write and EPUB construction |
-| Platform | `src/services/platform/**`, `src-tauri/**` | the sole Tauri/IndexedDB boundary and Rust commands/plugins |
-| State | `src/stores/{project,layout,diagnostics,settings,notifications}.ts` | application state, revisions, UI layout, notifications |
-| Editing | `src/composables/**`, `src/components/editor/**`, `src/components/layout/**` | CodeMirror, parse lifecycle, preview, shortcuts and resizable window |
-| UI | `src/views/**`, `src/components/{sidebar,metadata,export,settings,common}/**` | welcome, editor, explorer, forms, export and dialogs |
-| Delivery | `e2e/**`, `scripts/**`, `.github/workflows/**`, `docs/release-checklist.md` | browser e2e, epubcheck fixtures, CI, releases and manual checks |
+| Area       | Files                                                                                              | Responsibility                                                                    |
+| ---------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Tooling    | `package.json`, `vite.config.ts`, `oxlint.config.ts`, `vitest.config.ts`, `src/test/setup.ts`      | dependencies, aliases, DOM test environment, import boundaries                    |
+| Domain     | `src/types/{book,manifest,diagnostics,errors,platform}.ts`, `src/utils/**`, `src/services/book/**` | environment-free model, errors, stable IDs, metadata, chapter/resource operations |
+| Containers | `src/services/edb/**`, `src/services/epub/**`, `src/assets/epub/**`                                | deterministic project read/write and EPUB construction                            |
+| Platform   | `src/services/platform/**`, `src-tauri/**`                                                         | the sole Tauri/IndexedDB boundary and Rust commands/plugins                       |
+| State      | `src/stores/{project,layout,diagnostics,settings,notifications}.ts`                                | application state, revisions, UI layout, notifications                            |
+| Editing    | `src/composables/**`, `src/components/editor/**`, `src/components/layout/**`                       | CodeMirror, parse lifecycle, preview, shortcuts and resizable window              |
+| UI         | `src/views/**`, `src/components/{sidebar,metadata,export,settings,common}/**`                      | welcome, editor, explorer, forms, export and dialogs                              |
+| Delivery   | `e2e/**`, `scripts/**`, `.github/workflows/**`, `docs/release-checklist.md`                        | browser e2e, epubcheck fixtures, CI, releases and manual checks                   |
 
 ## Task 1: Establish the application test and dependency foundation
 
 **Files:**
+
 - Modify: `package.json`, `pnpm-lock.yaml`, `vite.config.ts`, `tsconfig.json`, `src/main.ts`, `src/App.vue`
 - Create: `vitest.config.ts`, `oxlint.config.ts`, `src/test/setup.ts`, `src/plugins/i18n.ts`, `src/plugins/__tests__/i18n.test.ts`, `src/locales/{ru,en,zh-CN}.json`, `src/views/WelcomeView.vue`
 - Remove: `src/stores/counter.ts`, `src/stores/__tests__/counter.test.ts`
 
 **Interfaces:**
+
 - Produces `createI18nPlugin(initialLocale: SupportedLocale)` and a Vitest `happy-dom` environment used by all Vue tests.
 - Produces package scripts `test:coverage`, `test:e2e`, `check`, and `build:fixture-epubs`.
 
@@ -69,7 +71,11 @@ import ru from "@/locales/ru.json";
 import zhCN from "@/locales/zh-CN.json";
 
 function keys(value: Record<string, unknown>, prefix = ""): string[] {
-  return Object.entries(value).flatMap(([key, child]) => child && typeof child === "object" ? keys(child as Record<string, unknown>, `${prefix}${key}.`) : [`${prefix}${key}`]);
+  return Object.entries(value).flatMap(([key, child]) =>
+    child && typeof child === "object"
+      ? keys(child as Record<string, unknown>, `${prefix}${key}.`)
+      : [`${prefix}${key}`],
+  );
 }
 
 it("keeps every locale key aligned with English", () => {
@@ -82,7 +88,10 @@ it("keeps every locale key aligned with English", () => {
 
 ```ts
 export const restrictedImports = [
-  { target: "src/services/{book,edb,epub,search,checks}/**", paths: ["vue", "pinia", "@tauri-apps/api"] },
+  {
+    target: "src/services/{book,edb,epub,search,checks}/**",
+    paths: ["vue", "pinia", "@tauri-apps/api"],
+  },
   { target: "src/utils/**", paths: ["vue", "pinia", "@tauri-apps/api"] },
   { target: "src/{stores,composables,components,views}/**", patterns: ["@tauri-apps/*"] },
 ];
@@ -105,10 +114,12 @@ git commit -m "chore: establish application tooling"
 ## Task 2: Prove filesystem scope and atomic-write behavior before product wiring
 
 **Files:**
+
 - Modify: `src-tauri/Cargo.toml`, `src-tauri/src/lib.rs`, `src-tauri/capabilities/default.json`
 - Create: `src-tauri/src/fs_scope.rs`, `src-tauri/src/__tests__/fs_scope.rs`, `docs/decisions/2026-09-20-fs-scope-prototype.md`
 
 **Interfaces:**
+
 - Produces `write_file_atomic(path: String, bytes: Vec<u8>) -> Result<(), CommandError>` and a documented scope decision for Tasks 3 and 14.
 - Consumes a persisted-scope plugin and an allowlisted path supplied by a native dialog or OS-open event.
 
@@ -164,10 +175,12 @@ git commit -m "feat(platform): prototype scoped atomic writes"
 ## Task 3: Prove the browser image-processing capability and select its adapter
 
 **Files:**
+
 - Create: `src/workers/image.worker.ts`, `src/services/platform/image-processor.ts`, `src/workers/__tests__/image.worker.test.ts`, `docs/decisions/2026-09-20-image-worker-prototype.md`
 - Modify: `src/types/platform.ts`, `vite.config.ts`
 
 **Interfaces:**
+
 - Produces `ImageProcessor.process(input: ImageProcessInput, signal?: AbortSignal): Promise<ProcessedImage>`.
 - Produces a recorded choice: worker adapter on all targets, or a Rust `image` adapter with the same TypeScript interface.
 
@@ -175,7 +188,10 @@ git commit -m "feat(platform): prototype scoped atomic writes"
 
 ```ts
 it("returns a PNG with constrained dimensions and preserves alpha", async () => {
-  const result = await processor.process({ bytes: transparentPng, plan: { width: 10, height: 10, format: "png", grayscale: false } });
+  const result = await processor.process({
+    bytes: transparentPng,
+    plan: { width: 10, height: 10, format: "png", grayscale: false },
+  });
   expect(result.mediaType).toBe("image/png");
   expect(result.width).toBeLessThanOrEqual(10);
 });
@@ -202,7 +218,12 @@ pnpm tauri dev
 ```ts
 export type ImageProcessInput = { bytes: Uint8Array; plan: ImagePlan };
 export type BrowserImageMediaType = "image/jpeg" | "image/png";
-export type ProcessedImage = { bytes: Uint8Array; mediaType: BrowserImageMediaType; width: number; height: number };
+export type ProcessedImage = {
+  bytes: Uint8Array;
+  mediaType: BrowserImageMediaType;
+  width: number;
+  height: number;
+};
 ```
 
 - [ ] **Step 5: Commit the adapter and evidence.**
@@ -215,9 +236,11 @@ git commit -m "feat(images): establish portable processing adapter"
 ## Task 4: Build core types, utilities, and pure book operations
 
 **Files:**
+
 - Create: `src/types/{book,manifest,diagnostics,errors,platform}.ts`, `src/utils/{bytes,paths,uuid,xml-escape,plural}.ts`, `src/services/book/{create,chapters,metadata,resources,extract-title}.ts` and colocated tests
 
 **Interfaces:**
+
 - Produces `Book`, `Chapter`, `Resource`, `BookMetadata`, `AppError`, `createBook`, `addChapter`, `removeChapter`, `moveChapter`, `updateMetadata`, `importImage`, `removeResource`, `setCover`, `setCustomCss`, and `extractTitle`.
 - Consumes injected `now`, `newId`, and `sha256` rather than environment globals.
 
@@ -233,15 +256,32 @@ it("reuses a resource when its SHA-256 matches", async () => {
 - [ ] **Step 2: Define immutable-facing model contracts and test fixtures.** Model resource bytes as `Uint8Array`, paths as `images/<safe-name>.<extension>`, `Series.index` as a number, and nullable metadata fields exactly as the spec states.
 
 ```ts
-export interface Book { metadata: BookMetadata; chapters: Chapter[]; resources: Map<string, Resource>; customCss: string | null; }
-export interface Chapter { id: string; source: string; }
-export interface Resource { bytes: Uint8Array; mediaType: ImageMediaType; }
+export interface Book {
+  metadata: BookMetadata;
+  chapters: Chapter[];
+  resources: Map<string, Resource>;
+  customCss: string | null;
+}
+export interface Chapter {
+  id: string;
+  source: string;
+}
+export interface Resource {
+  bytes: Uint8Array;
+  mediaType: ImageMediaType;
+}
 ```
 
 - [ ] **Step 3: Implement the smallest pure transformations.** Detect JPEG/PNG/GIF/WebP from magic bytes, normalize filenames to ASCII lowercase dash names, append `-2`/`-3`, normalize LF, and make every operation return a new `Book` plus changed/removed keys.
 
 ```ts
-export type BookMutation = { book: Book; changedChapters: Set<string>; removedChapters: Set<string>; changedResources: Set<string>; removedResources: Set<string> };
+export type BookMutation = {
+  book: Book;
+  changedChapters: Set<string>;
+  removedChapters: Set<string>;
+  changedResources: Set<string>;
+  removedResources: Set<string>;
+};
 ```
 
 - [ ] **Step 4: Run the domain suite and complete type checking.**
@@ -261,10 +301,12 @@ git commit -m "feat(book): add pure book model operations"
 ## Task 5: Implement `.edb` manifest validation, migration, and deterministic ZIP serialization
 
 **Files:**
+
 - Create: `src/services/edb/{manifest,migrations,read,write,zip}.ts`, `src/services/edb/__tests__/{read,write,fixtures}.test.ts`
 - Modify: `src/types/manifest.ts`, `src/types/errors.ts`
 
 **Interfaces:**
+
 - Produces `readEdb(bytes, deps): Promise<ReadEdbResult>` and `writeEdb(book, now): Promise<Uint8Array>`.
 - `ReadEdbResult = { book: Book; warnings: AppWarning[]; migrated: boolean }`; fatal errors throw `AppError`.
 
@@ -280,7 +322,12 @@ expect(result.warnings.map((warning) => warning.code)).toContain("edb.missingCha
 
 ```ts
 export const CURRENT_EDB_FORMAT_VERSION = 1;
-export const ManifestSchema = object({ format: literal("easy-digital-book"), formatVersion: number(), book: unknown(), chapters: array(object({ id: string() })) });
+export const ManifestSchema = object({
+  format: literal("easy-digital-book"),
+  formatVersion: number(),
+  book: unknown(),
+  chapters: array(object({ id: string() })),
+});
 ```
 
 - [ ] **Step 3: Implement reader and deterministic writer.** Sort entries as manifest, chapters in manifest order, images lexically, CSS last; set one fixed ZIP date; DEFLATE text and STORE image media types. Serialize `modified` only when ProjectStore requests a save with changes.
@@ -307,23 +354,35 @@ git commit -m "feat(edb): read and write deterministic projects"
 ## Task 6: Add book checks and the pure book-wide search/replace engine
 
 **Files:**
+
 - Create: `src/services/checks/{book-checks,image-usage}.ts`, `src/services/search/{query,find,replace}.ts` and colocated tests
 
 **Interfaces:**
+
 - Produces `checkBook(book): AppWarning[]`, `findInBook(book, query): SearchResult[]`, `replaceMatches(book, query, replacement): ReplacementPlan`.
 - `SearchQuery` contains `text`, `caseSensitive`, `wholeWord`, and `regex`; invalid regex returns `{ error: "search.invalidRegex" }`, never throws to UI.
 
 - [ ] **Step 1: Write failing tests for Cyrillic whole words, regex captures, missing images, and unused images.**
 
 ```ts
-expect(findInBook(book, { text: "герой", wholeWord: true, caseSensitive: false, regex: false })).toHaveLength(1);
-expect(replaceMatches(book, regexQuery("(глава) (\\d+)"), "$2. $1").changes[0].source).toContain("1. глава");
+expect(
+  findInBook(book, { text: "герой", wholeWord: true, caseSensitive: false, regex: false }),
+).toHaveLength(1);
+expect(replaceMatches(book, regexQuery("(глава) (\\d+)"), "$2. $1").changes[0].source).toContain(
+  "1. глава",
+);
 ```
 
 - [ ] **Step 2: Implement query compilation with Unicode boundaries and non-overlapping ranges.** Use `(?<![\\p{L}\\p{N}_])` / `(?![\\p{L}\\p{N}_])` with `u`; retain original offsets and replacement text so the editor integration can apply ranges from end to start.
 
 ```ts
-export interface SearchResult { chapterId: string; from: number; to: number; matched: string; replacementPreview?: string; }
+export interface SearchResult {
+  chapterId: string;
+  from: number;
+  to: number;
+  matched: string;
+  replacementPreview?: string;
+}
 ```
 
 - [ ] **Step 3: Implement checks from one image-usage scan.** Emit warnings for blank title, missing cover, missing title, and each image reference absent from `book.resources`; make image usage return all referencing chapter IDs.
@@ -348,9 +407,11 @@ git commit -m "feat(book): add checks and book search"
 ## Task 7: Build XHTML chapter rendering and EPUB image planning
 
 **Files:**
+
 - Create: `src/assets/epub/{theme.css,preview.css,chapter.xhtml,title.xhtml,custom.css}.ts`, `src/services/epub/{chapter,resources,file-name,labels}.ts` and colocated tests
 
 **Interfaces:**
+
 - Produces `renderChapter(chapter, index, book, resourceMap): RenderedChapter`, `planImage(meta, options, isCover): ImagePlan`, `makeEpubFileName(metadata, versionInTitle): string`.
 
 - [ ] **Step 1: Write failing tests for XHTML, image substitution, labels, and Windows-safe names.**
@@ -358,19 +419,32 @@ git commit -m "feat(book): add checks and book search"
 ```ts
 expect(rendered.xhtml).toContain('xmlns:epub="http://www.idpf.org/2007/ops"');
 expect(makeEpubFileName({ title: "CON", version: null }, false)).toBe("_CON.epub");
-expect(planImage({ mediaType: "image/webp", width: 2000, height: 1000 }, paperwhite, false).format).toBe("jpeg");
+expect(
+  planImage({ mediaType: "image/webp", width: 2000, height: 1000 }, paperwhite, false).format,
+).toBe("jpeg");
 ```
 
 - [ ] **Step 2: Implement AST image rewriting and XHTML validation.** Parse with `novlang-js`, remove an image node that lacks a mapped resource, render in XHTML mode, wrap it in the exact XML/XHTML shell, then call `XMLValidator.validate`; turn failure into `export.invalidXhtml` with chapter number and position.
 
 ```ts
-export type RenderedChapter = { id: string; title: string; xhtml: string; referencedPaths: string[] };
+export type RenderedChapter = {
+  id: string;
+  title: string;
+  xhtml: string;
+  referencedPaths: string[];
+};
 ```
 
 - [ ] **Step 3: Implement image plan rules and pure filename/label helpers.** Limit only downward; map GIF to PNG; map WebP to JPEG unless alpha requires PNG; use book-language labels for ru/en/zh-CN and English otherwise; sanitize control characters, reserved names, and the 120-character basename limit.
 
 ```ts
-export type ImagePlan = { width: number; height: number; format: "jpeg" | "png"; quality?: number; grayscale: boolean };
+export type ImagePlan = {
+  width: number;
+  height: number;
+  format: "jpeg" | "png";
+  quality?: number;
+  grayscale: boolean;
+};
 ```
 
 - [ ] **Step 4: Run chapter and plan tests.**
@@ -389,26 +463,53 @@ git commit -m "feat(epub): render chapters and plan images"
 ## Task 8: Assemble deterministic EPUB3 archives
 
 **Files:**
+
 - Create: `src/services/epub/{build,container,opf,nav,ncx,title-page,zip}.ts`, `src/services/epub/__tests__/build.test.ts`, `scripts/build-fixture-epubs.mts`, `scripts/epubcheck.sh`
 
 **Interfaces:**
+
 - Produces the public `buildEpub(book, options, deps): Promise<Uint8Array>` API from the design spec.
 - Consumes `ImageProcessor`, `now`, `AbortSignal`, and progress callback injected by caller.
 
 - [ ] **Step 1: Write a failing full-export test that opens the ZIP and validates structural invariants.**
 
 ```ts
-const bytes = await buildEpub(bookWithCoverAndFootnote, options, { imageProcessor: identityProcessor, now: () => new Date("2026-01-02T03:04:05Z") });
-expect(await firstZipEntry(bytes)).toEqual({ name: "mimetype", compression: "STORE", extra: undefined });
+const bytes = await buildEpub(bookWithCoverAndFootnote, options, {
+  imageProcessor: identityProcessor,
+  now: () => new Date("2026-01-02T03:04:05Z"),
+});
+expect(await firstZipEntry(bytes)).toEqual({
+  name: "mimetype",
+  compression: "STORE",
+  extra: undefined,
+});
 expect(await textEntry(bytes, "OEBPS/content.opf")).toContain("dcterms:modified");
 ```
 
 - [ ] **Step 2: Implement title page, OPF, nav, NCX, container, and archive order.** Include title page in spine/landmarks only when selected, nav outside spine, all creator/contributor roles, Calibre series metadata, cover properties, and `book.id` unchanged.
 
 ```ts
-export interface ExportOptions { imagePreset: "kindle-paperwhite" | "original"; grayscale: boolean; titlePage: boolean; versionInTitle: boolean; }
-export interface BuildEpubDependencies { imageProcessor: ImageProcessor; now: () => Date; onProgress?: (progress: { stage: "chapters" | "images" | "zip"; done: number; total: number }) => void; signal?: AbortSignal; }
-export async function buildEpub(book: Book, options: ExportOptions, deps: BuildEpubDependencies): Promise<Uint8Array>;
+export interface ExportOptions {
+  imagePreset: "kindle-paperwhite" | "original";
+  grayscale: boolean;
+  titlePage: boolean;
+  versionInTitle: boolean;
+}
+export interface BuildEpubDependencies {
+  imageProcessor: ImageProcessor;
+  now: () => Date;
+  onProgress?: (progress: {
+    stage: "chapters" | "images" | "zip";
+    done: number;
+    total: number;
+  }) => void;
+  signal?: AbortSignal;
+}
+export async function buildEpub(
+  book: Book,
+  options: ExportOptions,
+  deps: BuildEpubDependencies,
+): Promise<Uint8Array>;
 ```
 
 - [ ] **Step 3: Implement cancellation, progress, and image cache semantics.** Check the signal between every chapter/image/ZIP stage; emit `{ stage, done, total }`; cache processor output by source SHA-256 and stable JSON of its plan; include only used images plus cover.
@@ -435,10 +536,12 @@ git commit -m "feat(epub): build validated EPUB3 archives"
 ## Task 9: Complete Rust platform integration and constrained application configuration
 
 **Files:**
+
 - Modify: `src-tauri/{Cargo.toml,tauri.conf.json,capabilities/default.json,src/lib.rs}`, `package.json`, `pnpm-lock.yaml`
 - Create: `src-tauri/src/{error,open_paths}.rs`, `src-tauri/src/__tests__/open_paths.rs`
 
 **Interfaces:**
+
 - Produces `take_pending_open_paths() -> Vec<String>`, `open-paths` event, and production `write_file_atomic` command.
 - Registers opener, dialog, fs, store, log, single-instance, persisted-scope, and window-state in the specified order.
 
@@ -486,16 +589,23 @@ git commit -m "feat(tauri): configure secure desktop platform"
 ## Task 10: Add frontend platform adapters, settings, recovery, and app errors
 
 **Files:**
+
 - Create: `src/services/platform/{fs,dialogs,settings,recovery,logger,opener,updates,index}.ts`, tests for memory adapters and recovery
 - Modify: `src/types/{platform,errors}.ts`, `src/test/setup.ts`
 
 **Interfaces:**
+
 - Produces `PlatformServices`, `RecoveryStore`, `SettingsRepository`, `Logger`, `AppError`, and in-memory test implementations.
 
 - [ ] **Step 1: Write failing fake-indexeddb tests for incremental recovery writes and corrupt session deletion.**
 
 ```ts
-await recovery.writeChanges(book, { changedChapters: new Set(["one"]), removedChapters: new Set(), changedResources: new Set(), removedResources: new Set() });
+await recovery.writeChanges(book, {
+  changedChapters: new Set(["one"]),
+  removedChapters: new Set(),
+  changedResources: new Set(),
+  removedResources: new Set(),
+});
 expect(await recovery.readChapter(book.metadata.id, "two")).toEqual("unchanged");
 await expect(recovery.restore("corrupt")).resolves.toBeNull();
 ```
@@ -503,13 +613,26 @@ await expect(recovery.restore("corrupt")).resolves.toBeNull();
 - [ ] **Step 2: Define ports before Tauri imports.** Put only interfaces and DTOs in `types/platform.ts`; make adapters translate Tauri `{ code, message }` failures to `AppError`, and expose an `InMemoryPlatformServices` object for all store/component tests.
 
 ```ts
-export interface PlatformServices { files: FileSystem; dialogs: Dialogs; settings: SettingsRepository; recovery: RecoveryStore; logger: Logger; opener: Opener; updates: Updates; }
+export interface PlatformServices {
+  files: FileSystem;
+  dialogs: Dialogs;
+  settings: SettingsRepository;
+  recovery: RecoveryStore;
+  logger: Logger;
+  opener: Opener;
+  updates: Updates;
+}
 ```
 
 - [ ] **Step 3: Implement adapters.** Use Tauri dialog/fs/store/log/opener only in this directory; store settings in `settings.json`; create the three IndexedDB stores and make one transaction update the session plus changed/removed rows. Log recovery corruption without source contents.
 
 ```ts
-export interface RecoveryStore { list(): Promise<RecoverySessionSummary[]>; restore(bookId: string): Promise<RecoveredBook | null>; writeChanges(book: Book, delta: RecoveryDelta): Promise<void>; remove(bookId: string): Promise<void>; }
+export interface RecoveryStore {
+  list(): Promise<RecoverySessionSummary[]>;
+  restore(bookId: string): Promise<RecoveredBook | null>;
+  writeChanges(book: Book, delta: RecoveryDelta): Promise<void>;
+  remove(bookId: string): Promise<void>;
+}
 ```
 
 - [ ] **Step 4: Run adapter tests.**
@@ -528,9 +651,11 @@ git commit -m "feat(platform): add frontend service adapters"
 ## Task 11: Create Pinia stores for project state, layout, diagnostics, settings, and notifications
 
 **Files:**
+
 - Create: `src/stores/{project,layout,diagnostics,settings,notifications}.ts` and colocated tests
 
 **Interfaces:**
+
 - Produces `useProjectStore`, `useLayoutStore`, `useDiagnosticsStore`, `useSettingsStore`, `useNotificationsStore`.
 - Project state is `{ book, filePath, revision, savedRevision, fileMtime, saving }`; `dirty` is derived only from revisions.
 
@@ -553,7 +678,12 @@ const dirty = computed(() => revision.value !== savedRevision.value);
 - [ ] **Step 3: Implement persisted layout/settings and diagnostic aggregation.** Persist sidebar visibility/width, split ratio, mode, active view, recent files, confirm-delete, and export settings; cap recent files at ten; aggregate parse, book-check, and read warnings.
 
 ```ts
-export type CenterView = { kind: "chapter"; id: string } | { kind: "metadata" } | { kind: "css" } | { kind: "image"; path: string } | { kind: "settings" };
+export type CenterView =
+  | { kind: "chapter"; id: string }
+  | { kind: "metadata" }
+  | { kind: "css" }
+  | { kind: "image"; path: string }
+  | { kind: "settings" };
 ```
 
 - [ ] **Step 4: Run store tests with fake timers.**
@@ -572,23 +702,30 @@ git commit -m "feat(state): add project and application stores"
 ## Task 12: Implement parsing, CodeMirror commands, and resilient editor state
 
 **Files:**
+
 - Create: `src/composables/{use-novlang-parse,use-shortcuts}.ts`, `src/components/editor/{SourceEditor.vue,novlang-language.ts,editor-commands.ts}`, and colocated tests
 
 **Interfaces:**
+
 - Produces `useNovlangParse(chapterId)`, `createChapterEditor`, `toggleMarkup`, `insertFootnote`, and per-chapter `Map<string, EditorState>`.
 
 - [ ] **Step 1: Write failing tests for 150 ms parsing, diagnostic offset, bold/italic toggling, and footnote numbering.**
 
 ```ts
-vi.advanceTimersByTime(149); expect(parse).not.toHaveBeenCalled();
-vi.advanceTimersByTime(1); expect(parse).toHaveBeenCalledOnce();
+vi.advanceTimersByTime(149);
+expect(parse).not.toHaveBeenCalled();
+vi.advanceTimersByTime(1);
+expect(parse).toHaveBeenCalledOnce();
 expect(insertFootnote(state).state.doc.toString()).toContain("[^2]: ");
 ```
 
 - [ ] **Step 2: Implement the visual NovLang stream language and commands.** Use a `StreamLanguage` solely for visual tokens, retain soft wrapping/no line numbers, use `@codemirror/lint.setDiagnostics`, and calculate parser-column offsets from `# `, `> `, and `[^id]: ` prefixes.
 
 ```ts
-export function diagnosticRange(source: string, position: { line: number; column: number }): { from: number; to: number };
+export function diagnosticRange(
+  source: string,
+  position: { line: number; column: number },
+): { from: number; to: number };
 ```
 
 - [ ] **Step 3: Implement parse scheduling and global shortcut filtering.** Call `project.updateChapterSource` synchronously; call VueUse `useDebounceFn(parseCurrent, 150)` only for the parse work; use VueUse `useEventListener(window, "keydown", handler)` and ignore editable controls when a shortcut is not handled by CodeMirror.
@@ -613,10 +750,12 @@ git commit -m "feat(editor): add NovLang CodeMirror editing"
 ## Task 13: Implement preview, resizable layout, and the main editor shell
 
 **Files:**
+
 - Create: `src/components/layout/{AppToolbar,ResizableSplit,Breadcrumbs,StatusBadge}.vue`, `src/components/editor/{PreviewPane,WarningsPopover}.vue`, `src/composables/use-resizable.ts`, `src/views/EditorView.vue` and tests
 - Modify: `src/App.vue`, `src/assets/style.css`
 
 **Interfaces:**
+
 - Produces the Text/Split/Preview shell around `layoutStore.center` and a single retained sandboxed preview iframe.
 
 - [ ] **Step 1: Write failing component tests for divider constraints, reset, and iframe security.**
@@ -656,26 +795,33 @@ git commit -m "feat(ui): add editor shell and secure preview"
 ## Task 14: Implement save/open/new guards, autosave, recovery UI, and OS paths
 
 **Files:**
+
 - Create: `src/composables/{use-autosave,use-unsaved-guard,use-project-files}.ts`, `src/components/common/UnsavedChangesDialog.vue`, tests
 - Modify: `src/views/WelcomeView.vue`
 - Modify: `src/stores/project.ts`, `src/App.vue`
 
 **Interfaces:**
+
 - Produces `save`, `saveAs`, `openPath`, `newBook`, `guardUnsaved`, recovery restore/discard actions, and open-path listener disposal.
 
 - [ ] **Step 1: Write failing tests for unsaved choices, external mtime, save race, and autosave cadence.**
 
 ```ts
 await expect(guardUnsaved("open")).resolves.toBe(false); // dialog chose Cancel
-deferredWrite.resolve(); await flushPromises();
+deferredWrite.resolve();
+await flushPromises();
 expect(project.savedRevision).toBe(revisionAtSerialization);
-vi.advanceTimersByTime(30_000); expect(recovery.writeChanges).toHaveBeenCalled();
+vi.advanceTimersByTime(30_000);
+expect(recovery.writeChanges).toHaveBeenCalled();
 ```
 
 - [ ] **Step 2: Implement save lifecycle against the ports.** Read mtime before overwriting, show overwrite dialog on mismatch, ignore duplicate save during `saving`, preserve `dirty` on failure, remove recovery only after success, and never write on Mod+S when clean.
 
 ```ts
-async function save(): Promise<boolean> { const revisionAtSerialization = project.revision; /* serialize, atomic write, mark exactly this revision */ }
+async function save(): Promise<boolean> {
+  const revisionAtSerialization =
+    project.revision; /* serialize, atomic write, mark exactly this revision */
+}
 ```
 
 - [ ] **Step 3: Implement bounded autosave and restoration.** Use VueUse `useDebounceFn(writeIncrementalRecovery, 5_000, { maxWait: 30_000 })` while dirty; first write is full; use recovery newer than file mtime as the restore predicate; notify a failed write once per session while retrying later.
@@ -702,9 +848,11 @@ git commit -m "feat(files): add save recovery and open workflows"
 ## Task 15: Build explorer, metadata, CSS, and image workflows
 
 **Files:**
+
 - Create: `src/components/sidebar/{ActivityBar,ExplorerView,ExplorerSection,ChapterItem,ImageItem}.vue`, `src/components/metadata/{MetadataForm,CoverPicker,ContributorsList,LanguageCombobox}.vue`, `src/components/editor/{CssEditor,ImageView}.vue`, `src/composables/use-image-import.ts`, and tests
 
 **Interfaces:**
+
 - Produces explorer navigation, chapter/image operations, metadata validation, CSS editing, and image import insertion.
 
 - [ ] **Step 1: Write failing tests for language validation, contributor reordering, imported image insertion, and chapter move.**
@@ -742,16 +890,19 @@ git commit -m "feat(ui): add explorer metadata and images"
 ## Task 16: Integrate search/replacement and undoable destructive mutations
 
 **Files:**
+
 - Create: `src/composables/use-book-search.ts`, `src/components/sidebar/{SearchView,SearchResultItem}.vue`, `src/components/common/{ContextMenu,ConfirmDialog,UndoToast,ToastStack}.vue`, tests
 - Modify: `src/stores/notifications.ts`, `src/stores/project.ts`, `src/components/editor/SourceEditor.vue`
 
 **Interfaces:**
+
 - Produces editor-backed `replaceOne`, `replaceChapter`, `replaceAll`, and generalized notification `{ undo?: () => void; expiresAt }`.
 
 - [ ] **Step 1: Write failing tests for stale replace undo, deletion undo position, animation close, focus/visibility pause, and max-three queue.**
 
 ```ts
-replaceAll(); project.updateChapterSource("a", "later edit");
+replaceAll();
+project.updateChapterSource("a", "later edit");
 expect(notification.undoEnabled).toBe(false);
 await wrapper.find(".undo-progress").trigger("animationend");
 expect(notifications.items).toHaveLength(0);
@@ -787,10 +938,12 @@ git commit -m "feat(ui): add book search and undo notifications"
 ## Task 17: Add export workflow, settings, logging, and user-facing errors
 
 **Files:**
+
 - Create: `src/components/export/ExportDialog.vue`, `src/components/settings/SettingsView.vue`, `src/composables/use-export.ts`, `src/components/common/ErrorDetailsDialog.vue`, tests
 - Modify: `src/services/platform/{logger,updates}.ts`, `src/main.ts`, `src/components/layout/AppToolbar.vue`
 
 **Interfaces:**
+
 - Produces cancellable `exportEpub()` and app-level error capture that turns unexpected errors into logging plus a localized detail dialog.
 
 - [ ] **Step 1: Write failing tests for filename preview, cancellation, persisted export choices, and error privacy.**
@@ -804,7 +957,12 @@ expect(logger.error).toHaveBeenCalledWith(expect.not.stringContaining(book.chapt
 - [ ] **Step 2: Implement `ExportDialog` and export composable.** Present non-blocking warnings, preset/grayscale/title-page/version options, disable version option without a version, choose a native output path, pass snapshot/deps to `buildEpub`, show progress, remember last directory/options, and offer `revealItemInDir` after success.
 
 ```ts
-await buildEpub(snapshotBook(project.book), exportOptions, { imageProcessor, now: () => new Date(), signal, onProgress });
+await buildEpub(snapshotBook(project.book), exportOptions, {
+  imageProcessor,
+  now: () => new Date(),
+  signal,
+  onProgress,
+});
 ```
 
 - [ ] **Step 3: Implement settings and error paths.** Settings changes persist through SettingsStore; update checks occur at most daily and only log network errors; global Vue/window/unhandled rejection handlers map errors to `errors.<code>`, copy details, reveal log directory, and create a GitHub issue URL without book content.
@@ -829,10 +987,12 @@ git commit -m "feat(export): add EPUB export and settings"
 ## Task 18: Add integration coverage, CI, release automation, and manual validation
 
 **Files:**
+
 - Create: `e2e/{playwright.config.ts,app.spec.ts,fixtures/platform.ts}`, `.github/workflows/{ci,release}.yml`, `docs/release-checklist.md`, `CHANGELOG.md`
 - Modify: `package.json`, `README.md`, `.gitignore`
 
 **Interfaces:**
+
 - Produces `pnpm test:e2e`, `pnpm check`, reproducible EPUB fixture validation, and cross-platform CI/release workflows.
 
 - [ ] **Step 1: Write the failing browser flow against the in-memory platform.**
@@ -849,7 +1009,13 @@ test("new book, save/open, search/replace, undo delete, and export", async ({ pa
 - [ ] **Step 2: Configure an e2e Vite mode and test command.** Swap only `PlatformServices` for deterministic in-memory adapters; do not mock pure services or render a different app. Add coverage thresholds for pure services/stores and make the fixture script run epubcheck.
 
 ```json
-{ "scripts": { "check": "vue-tsc --noEmit && pnpm lint && pnpm format:check && pnpm test", "test:e2e": "playwright test", "build:fixture-epubs": "tsx scripts/build-fixture-epubs.mts" } }
+{
+  "scripts": {
+    "check": "vue-tsc --noEmit && pnpm lint && pnpm format:check && pnpm test",
+    "test:e2e": "playwright test",
+    "build:fixture-epubs": "tsx scripts/build-fixture-epubs.mts"
+  }
+}
 ```
 
 - [ ] **Step 3: Add CI and release workflows.** CI runs pnpm cache/install, typecheck, lint, format, unit coverage, fixture EPUB + epubcheck, Playwright, then Rust fmt/clippy/test across Ubuntu/macOS/Windows. Release on `v*` uses Tauri Action for universal macOS DMG, Windows NSIS, and Ubuntu 22.04 AppImage/deb/rpm, with signing steps conditional on secrets.
@@ -859,7 +1025,13 @@ on: [push, pull_request]
 jobs:
   frontend:
     runs-on: ubuntu-latest
-    steps: [{ uses: actions/checkout@v4 }, { run: corepack enable && pnpm install --frozen-lockfile && pnpm check && pnpm build:fixture-epubs && pnpm test:e2e }]
+    steps:
+      [
+        { uses: actions/checkout@v4 },
+        {
+          run: corepack enable && pnpm install --frozen-lockfile && pnpm check && pnpm build:fixture-epubs && pnpm test:e2e,
+        },
+      ]
 ```
 
 - [ ] **Step 4: Run the complete local verification and complete the release checklist.** Verify the actual manual scenarios on all three OS targets: first launch, OS open, HTML DnD, clipboard image, scoped save, recovery, export, epubcheck, and Send to Kindle on Paperwhite.
