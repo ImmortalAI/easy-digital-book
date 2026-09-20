@@ -45,6 +45,7 @@ Calibre, Sigil) для этой узкой задачи избыточны. Пр
   AST нет.**
 
 Важные для приложения детали из README библиотеки:
+
 - `# заголовок` допустим только в первой строке главы.
 - `column` в диагностиках отсчитывается от текста блока без префикса
   (`# `, `> `, `[^id]: `), поэтому приложение само прибавляет ширину префикса.
@@ -59,19 +60,19 @@ Calibre, Sigil) для этой узкой задачи избыточны. Пр
 
 ## Решения брейнсторминга по приложению (2026-09-14/15)
 
-| Тема | Решение |
-|---|---|
-| Экспорт | Только `.epub` на диск + кнопка «Показать в папке» (opener). Отправки на Kindle по почте или USB нет |
-| Сохранение | Ручное (Mod+S) + автосейв в хранилище восстановления |
-| Язык UI | RU + EN + zh-CN через vue-i18n, по умолчанию локаль ОС, переключатель в настройках |
-| Раскладка | Вариант «B v2», см. ниже |
-| Название главы | Только из `# заголовка`; нет заголовка → «Глава N» + предупреждение |
-| Изображения | Всегда копируются внутрь `.edb` (`images/`); оптимизация **при экспорте** |
-| Метаданные | Название, авторы, язык, обложка, UUID (авто) + серия/номер тома, переводчики, аннотация, версия книги |
-| Стили EPUB | Встроенная тема под Kindle (без жёстких шрифтов/размеров) + необязательный `styles/custom.css`, применяется и в превью |
-| Архитектурный подход | **A: вся книга в памяти** (JSZip → реактивная модель) |
-| Редактор | CodeMirror 6 |
-| Состояние | Pinia |
+| Тема                 | Решение                                                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Экспорт              | Только `.epub` на диск + кнопка «Показать в папке» (opener). Отправки на Kindle по почте или USB нет                   |
+| Сохранение           | Ручное (Mod+S) + автосейв в хранилище восстановления                                                                   |
+| Язык UI              | RU + EN + zh-CN через vue-i18n, по умолчанию локаль ОС, переключатель в настройках                                     |
+| Раскладка            | Вариант «B v2», см. ниже                                                                                               |
+| Название главы       | Только из `# заголовка`; нет заголовка → «Глава N» + предупреждение                                                    |
+| Изображения          | Всегда копируются внутрь `.edb` (`images/`); оптимизация **при экспорте**                                              |
+| Метаданные           | Название, авторы, язык, обложка, UUID (авто) + серия/номер тома, переводчики, аннотация, версия книги                  |
+| Стили EPUB           | Встроенная тема под Kindle (без жёстких шрифтов/размеров) + необязательный `styles/custom.css`, применяется и в превью |
+| Архитектурный подход | **A: вся книга в памяти** (JSZip → реактивная модель)                                                                  |
+| Редактор             | CodeMirror 6                                                                                                           |
+| Состояние            | Pinia                                                                                                                  |
 
 ### Раскладка главного окна (B v2, утверждена; сайдбар заменён в 4a)
 
@@ -129,6 +130,7 @@ src/
 ```
 
 Правила:
+
 - Тесты лежат рядом с кодом в `__tests__/` (как в create-vue), Vitest.
 - `services/{book,edb,epub,checks}` и `utils` не импортируют `vue`, `pinia`,
   `@tauri-apps/*`. Это проверяет ESLint `no-restricted-imports`.
@@ -201,17 +203,22 @@ my-novel.edb (zip)
 - Схема manifest описана на valibot, TS-типы выводятся из неё.
 
 Модель в памяти:
+
 ```ts
 interface Book {
-  metadata: BookMetadata            // = manifest.book
-  chapters: Chapter[]               // порядок = порядок массива
-  resources: Map<string, Resource>  // "images/x.png" → { bytes, mediaType }
-  customCss: string | null
+  metadata: BookMetadata; // = manifest.book
+  chapters: Chapter[]; // порядок = порядок массива
+  resources: Map<string, Resource>; // "images/x.png" → { bytes, mediaType }
+  customCss: string | null;
 }
-interface Chapter { id: string; source: string }
+interface Chapter {
+  id: string;
+  source: string;
+}
 ```
 
 Чтение (данные пользователя не теряем):
+
 - **Фатально:** не zip, нет manifest, битый JSON, чужой `format`,
   `formatVersion` новее поддерживаемой («обновите приложение»).
 - `formatVersion` старше → цепочка миграций в памяти, сохраняется в новой
@@ -227,6 +234,7 @@ interface Chapter { id: string; source: string }
 названия», язык по языку UI, новый UUID.
 
 Экспорт (решено попутно, детали — в секции 5):
+
 - `dcterms:modified` = момент экспорта.
 - `book.id` не меняется между версиями.
 - Имя файла по умолчанию: `{название} ({version}).epub` или
@@ -267,6 +275,7 @@ interface Chapter { id: string; source: string }
 **Автосейв — IndexedDB, не файлы и не localStorage.** Пользователь
 предложил хранилище WebView. localStorage отклонён: лимит ~5 МБ, только
 строки, синхронный API.
+
 - Обёртка `idb`, код в `services/platform/recovery.ts` за интерфейсом
   `RecoveryStore`. База `edb-recovery`:
   - `sessions` [bookId] → `{ originalPath, title, version, updatedAt, metadata, chapterOrder, customCss }`
@@ -318,6 +327,7 @@ interface Chapter { id: string; source: string }
 **Сайдбар в стиле VS Code (утверждён по макету
 `.superpowers/brainstorm/15995-1789456783/content/sidebar-vscode.html`,
 пользователь: «так бы уже им и пользовался»):**
+
 - Панель активности 48 px вместо кнопки ☰: **Проводник** (Mod+Shift+E),
   **Поиск** (Mod+Shift+F), внизу ⚙ Настройки. Клик по активной иконке
   скрывает сайдбар. На иконке поиска — счётчик найденного.
@@ -335,6 +345,7 @@ Mod+Shift+F — вид «Поиск» в сайдбаре: опции Aa / сл�
 замена одного вхождения / в главе / «Заменить все» (Mod+Alt+Enter),
 скрытие вхождения, результаты сгруппированы по главам, клик открывает
 главу на вхождении.
+
 - `services/search/` — чистые функции поиска и замены над `Book` (тесты),
   `composables/useBookSearch`, `components/sidebar/`: `ActivityBar`,
   `ExplorerView`, `SearchView`, `SearchResultItem`.
@@ -349,7 +360,7 @@ Mod+Shift+F — вид «Поиск» в сайдбаре: опции Aa / сл�
 
 - **Центральная область** переключается по `layoutStore.center`:
   `{ kind: 'chapter', id } | { kind: 'metadata' } | { kind: 'css' } |
-  { kind: 'image', path }`. Без vue-router.
+{ kind: 'image', path }`. Без vue-router.
 - **Операции** — чистые функции в `services/book/` (addChapter, removeChapter,
   moveChapter, updateMetadata, importImage, removeResource, setCover,
   setCustomCss); действия `projectStore` вызывают их, делают `revision++` и
@@ -362,10 +373,10 @@ Mod+Shift+F — вид «Поиск» в сайдбаре: опции Aa / сл�
 - **Метаданные** (`MetadataForm`): название, версия (свободный текст),
   язык (комбобокс BCP 47, проверка `Intl.getCanonicalLocales`), авторы и
   переводчики (`ContributorsList`: строки, +, удалить, ↑/↓), серия (название
-  + номер, номер активен только при названии), аннотация (plain text),
-  обложка (`CoverPicker`: миниатюра, «Выбрать…», drop, «Убрать»; подсказка
-  1600×2560), UUID и даты — только чтение, UUID копируется. Каждое изменение
-  сразу в store, ошибки — под полем.
+  - номер, номер активен только при названии), аннотация (plain text),
+    обложка (`CoverPicker`: миниатюра, «Выбрать…», drop, «Убрать»; подсказка
+    1600×2560), UUID и даты — только чтение, UUID копируется. Каждое изменение
+    сразу в store, ошибки — под полем.
 - **Импорт изображений** (`services/book/importImage`): тип по сигнатуре
   байтов (JPEG, PNG, GIF, WebP), имя очищается, SHA-256 через
   `crypto.subtle` для дедупликации. Источники: кнопка + в секции
@@ -408,14 +419,14 @@ Mod+Shift+F — вид «Поиск» в сайдбаре: опции Aa / сл�
   иначе en), не UI.
 
 - `services/epub/buildEpub(book, options, { imageProcessor, now, onProgress,
-  signal }) → Uint8Array`. Работает на снимке `Book`: можно редактировать во
+signal }) → Uint8Array`. Работает на снимке `Book`: можно редактировать во
   время экспорта; `dirty` не меняется, сохранять перед экспортом не нужно.
 - Модули: `resources.ts` (план картинок и карта путей), `chapter.ts`,
   `opf.ts`, `nav.ts`, `ncx.ts`, `container.ts`, `zip.ts`, `fileName.ts`.
 - **Структура плоская**, чтобы `images/x.png` из разметки работали без
   переписывания: `mimetype` (первым, STORE) · `META-INF/container.xml` ·
   `OEBPS/{content.opf, nav.xhtml, toc.ncx, theme.css, custom.css?,
-  c-<id>.xhtml, images/…}`. Детерминированный zip, как у `.edb`.
+c-<id>.xhtml, images/…}`. Детерминированный zip, как у `.edb`.
 - **Глава:** `parse` → обход AST: `src` картинок по карте путей (смена
   формата меняет расширение), ссылка на отсутствующую картинку — узел
   удаляется → `renderToHTML({ xhtmlMode: true })` → шаблон
@@ -428,7 +439,7 @@ Mod+Shift+F — вид «Поиск» в сайдбаре: опции Aa / сл�
   `dc:description`, `dcterms:modified` = момент экспорта, серия:
   `belongs-to-collection` + `collection-type=series` + `group-position` и
   `calibre:series` / `calibre:series_index`; обложка: `properties=
-  "cover-image"` + `<meta name="cover">`, отдельной cover.xhtml нет.
+"cover-image"` + `<meta name="cover">`, отдельной cover.xhtml нет.
 - **Навигация:** `nav.xhtml` (toc + landmarks `bodymatter`), не в spine;
   `toc.ncx` для старых читалок и Calibre.
 - **theme.css:** без `font-family` и размеров шрифта у body; `p` без
@@ -486,7 +497,7 @@ Mod+Shift+F — вид «Поиск» в сайдбаре: опции Aa / сл�
 - **CI (`ci.yml`, PR и push):** ubuntu: install с кэшем pnpm, `vue-tsc`,
   ESLint (с границами импортов), Prettier, Vitest + coverage, epubcheck,
   Playwright. Rust на матрице 3 ОС: `cargo fmt --check`, `clippy -D
-  warnings`, `cargo test` (атомарная запись ведёт себя по-разному на
+warnings`, `cargo test` (атомарная запись ведёт себя по-разному на
   Windows). Dependabot/Renovate раз в неделю, группами.
 - **Релизы (`release.yml`, тег `v*`):** `tauri-apps/tauri-action`, матрица:
   macOS universal (dmg), Windows (NSIS .exe), ubuntu-22.04 (AppImage, deb,

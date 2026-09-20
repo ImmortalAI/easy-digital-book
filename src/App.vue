@@ -12,18 +12,18 @@ async function greet() {
 </script>
 
 <template>
-  <main >
+  <main>
     <h1 class="font-bold">Welcome to Tauri + Vue</h1>
 
-    <div >
+    <div>
       <a href="https://vite.dev" target="_blank">
-        <img src="/vite.svg"  />
+        <img src="/vite.svg" />
       </a>
       <a href="https://tauri.app" target="_blank">
-        <img src="/tauri.svg"  />
+        <img src="/tauri.svg" />
       </a>
       <a href="https://vuejs.org/" target="_blank">
-        <img src="./assets/vue.svg"  />
+        <img src="./assets/vue.svg" />
       </a>
     </div>
     <p>Click on the Tauri, Vite, and Vue logos to learn more.</p>

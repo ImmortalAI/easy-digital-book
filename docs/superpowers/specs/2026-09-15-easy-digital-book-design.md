@@ -34,19 +34,19 @@ Paperwhite. Существующие инструменты (FB2 Editor + Calibr
 
 ## 2. Стек
 
-| Слой | Выбор |
-|---|---|
-| Оболочка | Tauri 2 (Rust только там, где нет готового плагина) |
-| UI | Vue 3 (`<script setup>`), Vite, TypeScript, pnpm |
-| Состояние | Pinia |
-| Редактор | CodeMirror 6 |
-| Разметка | `novlang-js` (npm) |
-| Контейнеры | JSZip (`.edb` и `.epub`) |
-| Схема manifest | valibot |
-| i18n | vue-i18n |
-| Автосохранение | IndexedDB через `idb` |
-| Проверка XML | `fast-xml-parser` (`XMLValidator`) |
-| Тесты | Vitest, @vue/test-utils, happy-dom, fake-indexeddb, Playwright, epubcheck |
+| Слой           | Выбор                                                                     |
+| -------------- | ------------------------------------------------------------------------- |
+| Оболочка       | Tauri 2 (Rust только там, где нет готового плагина)                       |
+| UI             | Vue 3 (`<script setup>`), Vite, TypeScript, pnpm                          |
+| Состояние      | Pinia                                                                     |
+| Редактор       | CodeMirror 6                                                              |
+| Разметка       | `novlang-js` (npm)                                                        |
+| Контейнеры     | JSZip (`.edb` и `.epub`)                                                  |
+| Схема manifest | valibot                                                                   |
+| i18n           | vue-i18n                                                                  |
+| Автосохранение | IndexedDB через `idb`                                                     |
+| Проверка XML   | `fast-xml-parser` (`XMLValidator`)                                        |
+| Тесты          | Vitest, @vue/test-utils, happy-dom, fake-indexeddb, Playwright, epubcheck |
 
 **Плагины Tauri:** `opener`, `dialog`, `fs`, `store`, `log`,
 `single-instance`, `persisted-scope`, `window-state`.
@@ -188,12 +188,15 @@ my-novel.edb (zip)
 
 ```ts
 interface Book {
-  metadata: BookMetadata            // = manifest.book
-  chapters: Chapter[]               // порядок = порядок массива
-  resources: Map<string, Resource>  // "images/x.png" → { bytes, mediaType }
-  customCss: string | null
+  metadata: BookMetadata; // = manifest.book
+  chapters: Chapter[]; // порядок = порядок массива
+  resources: Map<string, Resource>; // "images/x.png" → { bytes, mediaType }
+  customCss: string | null;
 }
-interface Chapter { id: string; source: string }
+interface Chapter {
+  id: string;
+  source: string;
+}
 ```
 
 Название главы — текст `# заголовка` из первой строки
@@ -248,7 +251,7 @@ UI, новый UUID, `created` = сейчас.
 - **Сайдбар** шириной 160–400 px, граница перетаскивается.
 - **Центральная область** — по `layoutStore.center`:
   `{ kind: 'chapter', id } | { kind: 'metadata' } | { kind: 'css' } |
-  { kind: 'image', path } | { kind: 'settings' }`.
+{ kind: 'image', path } | { kind: 'settings' }`.
   Над ней строка-«хлебные крошки» («Главы › N Название»). Вкладок нет — у
   новелл 50–300 глав.
 - **Режимы** Текст / Сплит / Превью (кнопки и Mod+1/2/3) действуют для
@@ -270,20 +273,20 @@ UI, новый UUID, `created` = сейчас.
 
 ### 6.3. Горячие клавиши
 
-| Клавиши | Действие |
-|---|---|
-| Mod+N / Mod+O | Новая книга / Открыть |
-| Mod+S / Mod+Shift+S | Сохранить / Сохранить как |
-| Mod+E | Экспорт EPUB |
-| Mod+\ | Показать/скрыть сайдбар |
-| Mod+Shift+E / Mod+Shift+F | Проводник / Поиск по книге |
-| Mod+1 / 2 / 3 | Текст / Сплит / Превью |
-| Mod+B / Mod+I | Полужирный `**` / курсив `*` |
-| Mod+Alt+F | Сноска |
-| Mod+F | Поиск и замена в главе |
-| Mod+Alt+Enter | Заменить все (в виде «Поиск») |
-| Alt+↑ / Alt+↓ | Переместить выбранную главу (в Проводнике) |
-| Delete | Удалить выбранную главу или изображение (в Проводнике) |
+| Клавиши                   | Действие                                               |
+| ------------------------- | ------------------------------------------------------ |
+| Mod+N / Mod+O             | Новая книга / Открыть                                  |
+| Mod+S / Mod+Shift+S       | Сохранить / Сохранить как                              |
+| Mod+E                     | Экспорт EPUB                                           |
+| Mod+\                     | Показать/скрыть сайдбар                                |
+| Mod+Shift+E / Mod+Shift+F | Проводник / Поиск по книге                             |
+| Mod+1 / 2 / 3             | Текст / Сплит / Превью                                 |
+| Mod+B / Mod+I             | Полужирный `**` / курсив `*`                           |
+| Mod+Alt+F                 | Сноска                                                 |
+| Mod+F                     | Поиск и замена в главе                                 |
+| Mod+Alt+Enter             | Заменить все (в виде «Поиск»)                          |
+| Alt+↑ / Alt+↓             | Переместить выбранную главу (в Проводнике)             |
+| Delete                    | Удалить выбранную главу или изображение (в Проводнике) |
 
 ## 7. Редактор и превью
 
@@ -397,16 +400,16 @@ NovLang) и «Книга» (`services/checks`: нет заголовка гла�
 
 ### 9.3. Метаданные (`MetadataForm`, центральная область)
 
-| Поле | Поведение |
-|---|---|
-| Название | Пустое → предупреждение книги |
-| Версия | Свободный текст, подсказка «например, гл. 1–150» |
-| Язык | `LanguageCombobox`: список распространённых языков + свободный ввод, проверка `Intl.getCanonicalLocales` |
-| Авторы, переводчики | `ContributorsList`: строки, «+», удалить, ↑/↓ |
-| Серия | Название + номер; номер доступен только при заданном названии |
-| Аннотация | Простой текст, абзацы разделяются пустой строкой |
-| Обложка | `CoverPicker`: миниатюра, «Выбрать…», drop файла, «Убрать»; подсказка «рекомендуется 1600×2560» |
-| UUID, создана, изменена | Только чтение; UUID можно скопировать |
+| Поле                    | Поведение                                                                                                |
+| ----------------------- | -------------------------------------------------------------------------------------------------------- |
+| Название                | Пустое → предупреждение книги                                                                            |
+| Версия                  | Свободный текст, подсказка «например, гл. 1–150»                                                         |
+| Язык                    | `LanguageCombobox`: список распространённых языков + свободный ввод, проверка `Intl.getCanonicalLocales` |
+| Авторы, переводчики     | `ContributorsList`: строки, «+», удалить, ↑/↓                                                            |
+| Серия                   | Название + номер; номер доступен только при заданном названии                                            |
+| Аннотация               | Простой текст, абзацы разделяются пустой строкой                                                         |
+| Обложка                 | `CoverPicker`: миниатюра, «Выбрать…», drop файла, «Убрать»; подсказка «рекомендуется 1600×2560»          |
+| UUID, создана, изменена | Только чтение; UUID можно скопировать                                                                    |
 
 Каждое изменение сразу уходит в store; ошибки валидации — под полем.
 
@@ -512,7 +515,7 @@ saving }`, `dirty = revision !== savedRevision`. Одно окно — один 
   окна, смены проекта.
 - **Старт:** WelcomeView показывает «Несохранённые изменения»
   («Восстановить» → книга из сессии, `filePath = originalPath`, `dirty =
-  true`; «Удалить»). При открытии `.edb`, для которого есть сессия с
+true`; «Удалить»). При открытии `.edb`, для которого есть сессия с
   `updatedAt` новее mtime файла, предлагается восстановить.
 - Повреждённая сессия удаляется, ошибка пишется в лог.
 - Ошибка записи (например, квота) — уведомление один раз за сессию, попытки
@@ -605,7 +608,7 @@ epub:type="titlepage">`. Содержимое: название, авторы, �
   `collection-type = series` + `group-position`; дополнительно
   `<meta name="calibre:series">` и `<meta name="calibre:series_index">`.
 - Обложка: ресурс с `properties="cover-image"` и `<meta name="cover"
-  content="…">`. Отдельной страницы обложки нет.
+content="…">`. Отдельной страницы обложки нет.
 - Manifest: все файлы архива; `nav.xhtml` с `properties="nav"`; `toc.ncx`
   указан в `<spine toc="ncx">`.
 - Spine: `title.xhtml` (если есть), затем главы по порядку. `nav.xhtml` в
@@ -614,7 +617,7 @@ epub:type="titlepage">`. Содержимое: название, авторы, �
 ### 11.6. Навигация
 
 - `nav.xhtml`: `<nav epub:type="toc">` — плоский список глав; `<nav
-  epub:type="landmarks">` — `titlepage` (если есть) и `bodymatter` (первая
+epub:type="landmarks">` — `titlepage` (если есть) и `bodymatter` (первая
   глава).
 - `toc.ncx`: тот же список для старых читалок и Calibre, `dtb:uid` = `book.id`.
 
@@ -638,10 +641,10 @@ epub:type="titlepage">`. Содержимое: название, авторы, �
   `workers/image.worker.ts`: `createImageBitmap` + `OffscreenCanvas`, в
   тестах — процессор, возвращающий байты без изменений).
 
-| Пресет | Размер | Формат |
-|---|---|---|
+| Пресет            | Размер                                                         | Формат                                                                                       |
+| ----------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | Kindle Paperwhite | Вписать в 1264×1680 (обложку — в 1600×2560), только уменьшение | JPEG → JPEG q85; PNG → PNG; GIF → PNG (первый кадр); WebP → JPEG q85, при альфа-канале → PNG |
-| Без изменений | Как есть | Как есть, но WebP конвертируется по правилу выше |
+| Без изменений     | Как есть                                                       | Как есть, но WebP конвертируется по правилу выше                                             |
 
 - «Оттенки серого» (по умолчанию выкл.) — ручной проход по `ImageData`
   (`ctx.filter` в Safari не поддерживается).
@@ -707,14 +710,14 @@ epub:type="titlepage">`. Содержимое: название, авторы, �
 `stores/settings.ts`, хранение — `tauri-plugin-store` (`settings.json` в
 папке конфигурации приложения) через `services/platform/settings.ts`.
 
-| Ключ | По умолчанию |
-|---|---|
-| `locale` | локаль ОС (ru / en / zh-CN, иначе en) |
-| `layout.sidebarVisible`, `layout.sidebarWidth`, `layout.splitRatio`, `layout.mode`, `layout.activeView` | `true`, 250, 0.5, `split`, `explorer` |
-| `recentFiles` | `[]` (до 10) |
-| `confirmDelete` | `true` |
+| Ключ                                                                                                    | По умолчанию                                         |
+| ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `locale`                                                                                                | локаль ОС (ru / en / zh-CN, иначе en)                |
+| `layout.sidebarVisible`, `layout.sidebarWidth`, `layout.splitRatio`, `layout.mode`, `layout.activeView` | `true`, 250, 0.5, `split`, `explorer`                |
+| `recentFiles`                                                                                           | `[]` (до 10)                                         |
+| `confirmDelete`                                                                                         | `true`                                               |
 | `export.imagePreset`, `export.grayscale`, `export.titlePage`, `export.versionInTitle`, `export.lastDir` | `kindle-paperwhite`, `false`, `true`, `true`, `null` |
-| `updates.lastCheckedAt` | `null` |
+| `updates.lastCheckedAt`                                                                                 | `null`                                               |
 
 `SettingsView` (⚙ на панели активности): язык интерфейса, «Подтверждать
 удаление», «Проверить обновления», «Открыть папку логов», версия приложения
@@ -734,8 +737,8 @@ epub:type="titlepage">`. Содержимое: название, авторы, �
   Следствие — открытие `.edb` перетаскиванием на окно в v1 не
   поддерживается.
 - **CSP приложения** (`tauri.conf.json`): `default-src 'self'; img-src 'self'
-  blob: data:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:;
-  connect-src ipc: http://ipc.localhost https://api.github.com`.
+blob: data:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:;
+connect-src ipc: http://ipc.localhost https://api.github.com`.
 - **Ассоциация файлов:** `bundle.fileAssociations` для `.edb`.
 - Окно: минимальный размер ~900×560.
 - **Минимальные ОС:** macOS 12 (`bundle.macOS.minimumSystemVersion`),
@@ -757,16 +760,16 @@ epub:type="titlepage">`. Содержимое: название, авторы, �
 
 ## 15. Тестирование
 
-| Уровень | Инструменты | Что покрывает |
-|---|---|---|
-| Unit | Vitest (node) | `services/*`, `utils`: чтение/запись `.edb` туда-обратно, битые фикстуры, миграции; `buildEpub` (OPF, nav, ncx, title page, карта путей, удаление битых картинок, имя файла); `planImage`; поиск и замена (регистр, слово целиком с кириллицей, regex с `$1`); операции над книгой; `importImage` (сигнатуры, имена, дедупликация); проверки книги; совпадение наборов ключей ru / en / zh-CN |
-| Stores, composables | Vitest + фейки платформы, `fake-indexeddb`, fake timers | dirty/revision, guard, автосохранение (инкрементальность, частота), восстановление, удаление с отменой, уведомления |
-| Компоненты (выборочно) | @vue/test-utils + happy-dom | ContributorsList, UndoToast (закрытие по `animationend`, пауза), ExportDialog, диалог несохранённых изменений, ConfirmDialog с «Больше не спрашивать» |
-| Команды редактора | Vitest + `EditorState` без view | полужирный/курсив, сноска, замена по книге с историей undo |
-| e2e | Playwright против `vite --mode e2e` (Chromium, in-memory платформа) | новая книга → текст → сохранить → открыть → поиск и замена → удаление и отмена → экспорт |
-| EPUB | `scripts/build-fixture-epubs` + epubcheck (Java, версия закреплена) | тестовые книги: серия, переводчики, сноски, картинки, обложка, глава без заголовка, титульная страница; любые ошибки и предупреждения валят CI |
-| Rust | `cargo test` | `write_file_atomic` (замена существующего файла, отказ вне scope), очередь путей |
-| Реальные WebView | ручной чеклист `docs/release-checklist.md` | запуск на 3 ОС, открытие из ОС, drag&drop, вставка картинки из буфера, экспорт с оптимизацией, проверка EPUB на Kindle через Send to Kindle |
+| Уровень                | Инструменты                                                         | Что покрывает                                                                                                                                                                                                                                                                                                                                                                                 |
+| ---------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit                   | Vitest (node)                                                       | `services/*`, `utils`: чтение/запись `.edb` туда-обратно, битые фикстуры, миграции; `buildEpub` (OPF, nav, ncx, title page, карта путей, удаление битых картинок, имя файла); `planImage`; поиск и замена (регистр, слово целиком с кириллицей, regex с `$1`); операции над книгой; `importImage` (сигнатуры, имена, дедупликация); проверки книги; совпадение наборов ключей ru / en / zh-CN |
+| Stores, composables    | Vitest + фейки платформы, `fake-indexeddb`, fake timers             | dirty/revision, guard, автосохранение (инкрементальность, частота), восстановление, удаление с отменой, уведомления                                                                                                                                                                                                                                                                           |
+| Компоненты (выборочно) | @vue/test-utils + happy-dom                                         | ContributorsList, UndoToast (закрытие по `animationend`, пауза), ExportDialog, диалог несохранённых изменений, ConfirmDialog с «Больше не спрашивать»                                                                                                                                                                                                                                         |
+| Команды редактора      | Vitest + `EditorState` без view                                     | полужирный/курсив, сноска, замена по книге с историей undo                                                                                                                                                                                                                                                                                                                                    |
+| e2e                    | Playwright против `vite --mode e2e` (Chromium, in-memory платформа) | новая книга → текст → сохранить → открыть → поиск и замена → удаление и отмена → экспорт                                                                                                                                                                                                                                                                                                      |
+| EPUB                   | `scripts/build-fixture-epubs` + epubcheck (Java, версия закреплена) | тестовые книги: серия, переводчики, сноски, картинки, обложка, глава без заголовка, титульная страница; любые ошибки и предупреждения валят CI                                                                                                                                                                                                                                                |
+| Rust                   | `cargo test`                                                        | `write_file_atomic` (замена существующего файла, отказ вне scope), очередь путей                                                                                                                                                                                                                                                                                                              |
+| Реальные WebView       | ручной чеклист `docs/release-checklist.md`                          | запуск на 3 ОС, открытие из ОС, drag&drop, вставка картинки из буфера, экспорт с оптимизацией, проверка EPUB на Kindle через Send to Kindle                                                                                                                                                                                                                                                   |
 
 ## 16. CI и релизы
 
@@ -810,7 +813,7 @@ epub:type="titlepage">`. Содержимое: название, авторы, �
    WebKitGTK (ubuntu-22.04). Запасной вариант — Rust-команда на crate
    `image` за тем же интерфейсом `ImageProcessor`.
 3. **HTML5 drag&drop и вставка картинок из буфера** при `dragDropEnabled:
-   false` на трёх ОС.
+false` на трёх ОС.
 4. **Send to Kindle:** тестовый EPUB (сноски, картинки, серия, титульная
    страница) принимается и корректно отображается на Paperwhite.
 
