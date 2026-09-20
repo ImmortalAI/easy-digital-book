@@ -1,0 +1,1 @@
+export const themeCss = `p { margin: 0; text-indent: 1.5em; }\np:first-child, h1 + p, p.novlang-scene-break + p { text-indent: 0; }\nh1 { text-align: center; margin: 1em 0; }\np.novlang-scene-break { text-align: center; text-indent: 0; margin: 1em 0; }\nblockquote { margin: 1em 2em; }\nimg { max-width: 100%; height: auto; }\naside[epub|type~="footnote"] { display: none; }`;

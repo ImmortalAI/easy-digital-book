@@ -2,6 +2,7 @@ export type ImagePlan = {
   width: number;
   height: number;
   format: "png" | "jpeg";
+  quality?: number;
   grayscale: boolean;
 };
 
