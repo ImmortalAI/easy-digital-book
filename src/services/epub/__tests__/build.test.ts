@@ -1,6 +1,7 @@
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 import { buildEpub } from "@/services/epub/build";
+import { opf } from "@/services/epub/opf";
 import type { Book } from "@/types/book";
 import type { ImageProcessor } from "@/types/platform";
 
@@ -68,5 +69,14 @@ describe("buildEpub", () => {
       deps,
     );
     expect([...again]).toEqual([...bytes]);
+  });
+
+  it("uses unique translator refinement ids when names repeat", () => {
+    const duplicate = { ...book, metadata: { ...book.metadata, translators: ["Same", "Same"] } };
+    const output = opf(duplicate, [], [], false, new Date("2026-01-02T03:04:05Z"), false);
+    expect(output).toContain('id="translator-0"');
+    expect(output).toContain('id="translator-1"');
+    expect(output).toContain('refines="#translator-0"');
+    expect(output).toContain('refines="#translator-1"');
   });
 });

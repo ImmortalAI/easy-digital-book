@@ -23,8 +23,8 @@ export function opf(
     .join("");
   const contributors = m.translators
     .map(
-      (a) =>
-        `<dc:contributor id="translator-${m.translators.indexOf(a)}">${esc(a)}</dc:contributor><meta property="role" refines="#translator-${m.translators.indexOf(a)}" scheme="marc:relators">trl</meta>`,
+      (a, i) =>
+        `<dc:contributor id="translator-${i}">${esc(a)}</dc:contributor><meta property="role" refines="#translator-${i}" scheme="marc:relators">trl</meta>`,
     )
     .join("");
   const series = m.series
