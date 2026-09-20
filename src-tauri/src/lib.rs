@@ -4,7 +4,7 @@ mod open_paths;
 
 use std::path::Path;
 
-use open_paths::OpenPathQueue;
+use open_paths::{OpenPathQueue, OPEN_PATHS_EVENT};
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 
 fn handle_open_paths<R: Runtime>(app: &AppHandle<R>, paths: impl IntoIterator<Item = String>) {
@@ -33,7 +33,9 @@ fn handle_open_paths<R: Runtime>(app: &AppHandle<R>, paths: impl IntoIterator<It
         let _ = window.show();
         let _ = window.set_focus();
     }
-    let _ = app.emit("open-paths", accepted);
+    // Payload is deliberately unit: listeners drain the queue through the
+    // command, avoiding a subscribe/drain race or duplicate delivery.
+    let _ = app.emit(OPEN_PATHS_EVENT, ());
 }
 
 fn handle_open_args<R: Runtime>(app: &AppHandle<R>, args: Vec<String>, _cwd: String) {

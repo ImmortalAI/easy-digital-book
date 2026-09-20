@@ -4,6 +4,15 @@ mod tests;
 
 use std::sync::Mutex;
 
+/// Wakeup event emitted when one or more paths are available in the queue.
+///
+/// The event intentionally has no payload. Frontends must register their
+/// listener before the initial drain, then invoke `take_pending_open_paths`
+/// once after subscribing and again from each event callback. The queue's
+/// mutex-backed take operation makes concurrent drains consume each path once,
+/// including paths queued before subscription.
+pub const OPEN_PATHS_EVENT: &str = "open-paths";
+
 pub struct OpenPathQueue {
     paths: Mutex<Vec<String>>,
 }

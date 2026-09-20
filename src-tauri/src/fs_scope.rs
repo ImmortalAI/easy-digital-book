@@ -43,9 +43,18 @@ pub fn write_file_atomic<V: PathValidator>(
 ) -> Result<(), CommandError> {
     validator.validate(path)?;
     let (temporary, mut file) = temporary_file(path)?;
-    std::io::Write::write_all(&mut file, bytes)?;
-    file.sync_all()?;
-    replace_with_retry(&temporary, path)
+    let result = (|| {
+        std::io::Write::write_all(&mut file, bytes)?;
+        file.sync_all()?;
+        drop(file);
+        replace_with_retry(&temporary, path)
+    })();
+    if result.is_err() {
+        // Best effort only: preserve the original operation error if cleanup
+        // itself fails (for example, on a platform holding the file open).
+        let _ = std::fs::remove_file(&temporary);
+    }
+    result
 }
 
 fn temporary_file(path: &Path) -> Result<(PathBuf, File), CommandError> {

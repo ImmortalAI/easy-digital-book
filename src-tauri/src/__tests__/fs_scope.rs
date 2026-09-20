@@ -71,6 +71,25 @@ fn writes_only_after_injected_scope_validation() {
     assert_eq!(std::fs::read(path).unwrap(), b"new");
 }
 
+#[test]
+fn removes_temporary_file_when_replacement_fails() {
+    let directory = tempdir().unwrap();
+    let path = directory.path().join("novel.edb");
+    std::fs::create_dir(&path).unwrap();
+    std::fs::write(path.join("keep"), b"keep").unwrap();
+
+    let error = write_file_atomic(&scope_with(&path), &path, b"new").unwrap_err();
+
+    assert_eq!(error.code(), "fs.ioError");
+    assert!(!std::fs::read_dir(directory.path())
+        .unwrap()
+        .any(|entry| entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with(".novel.edb-tmp-")));
+}
+
 struct TestValidator(Vec<PathBuf>);
 
 impl PathValidator for TestValidator {
