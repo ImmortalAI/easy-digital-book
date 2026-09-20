@@ -43,4 +43,12 @@ describe("book checks", () => {
     );
     expect(warnings.find(({ code }) => code === "book.missingImage")?.chapterId).toBe("chapter1");
   });
+
+  it("uses NovLang image nodes, ignoring escaped syntax and accepting nested parentheses", () => {
+    const value = {
+      ...book(),
+      chapters: [{ id: "chapter1", source: "![](images/a(b).png)\n\\![](images/escaped.png)" }],
+    };
+    expect(collectImageUsage(value)).toEqual(new Map([["images/a(b).png", ["chapter1"]]]));
+  });
 });

@@ -1,5 +1,11 @@
 import type { Book } from "@/types/book";
-import { compileQuery, type SearchError, type SearchQuery, type SearchResult } from "./query";
+import {
+  advanceStringIndex,
+  compileQuery,
+  type SearchError,
+  type SearchQuery,
+  type SearchResult,
+} from "./query";
 
 export interface ReplacementChange {
   chapterId: string;
@@ -20,7 +26,6 @@ export function replaceMatches(
 ): ReplacementResult {
   const expression = compileQuery(query);
   if ("error" in expression) return expression;
-  const previewExpression = new RegExp(expression.source, expression.flags.replace("g", ""));
   const changes: ReplacementChange[] = [];
   for (const chapter of book.chapters) {
     expression.lastIndex = 0;
@@ -32,9 +37,10 @@ export function replaceMatches(
         from: match.index,
         to: match.index + match[0].length,
         matched: match[0],
-        replacementPreview: match[0].replace(previewExpression, replacement),
+        replacementPreview: expandReplacement(replacement, match, chapter.source),
       });
-      if (match[0].length === 0) expression.lastIndex++;
+      if (match[0].length === 0)
+        expression.lastIndex = advanceStringIndex(chapter.source, expression.lastIndex);
     }
     if (matches.length) {
       expression.lastIndex = 0;
@@ -46,4 +52,15 @@ export function replaceMatches(
     }
   }
   return { changes };
+}
+
+function expandReplacement(replacement: string, match: RegExpExecArray, source: string): string {
+  return replacement.replace(/\$([$&`']|\d{1,2})/g, (token, key: string) => {
+    if (key === "$") return "$";
+    if (key === "&") return match[0];
+    if (key === "`") return source.slice(0, match.index);
+    if (key === "'") return source.slice(match.index + match[0].length);
+    const group = Number(key);
+    return group > 0 && group < match.length ? (match[group] ?? token) : token;
+  });
 }

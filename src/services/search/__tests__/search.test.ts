@@ -50,4 +50,29 @@ describe("book search", () => {
       ),
     ).toEqual({ error: "search.invalidRegex" });
   });
+
+  it("advances zero-width unicode matches by code point", () => {
+    const value = { ...book(), chapters: [{ id: "chapter1", source: "😀" }] };
+    const query: SearchQuery = {
+      text: "(?=.)",
+      regex: true,
+      wholeWord: false,
+      caseSensitive: true,
+    };
+    expect(findInBook(value, query)).toHaveLength(1);
+    const result = replaceMatches(value, query, "X");
+    if ("error" in result) throw new Error(result.error);
+    expect(result.changes[0]?.source).toBe("X😀");
+  });
+
+  it("expands context replacement tokens against the original chapter", () => {
+    const value = { ...book(), chapters: [{ id: "chapter1", source: "a hero b" }] };
+    const result = replaceMatches(
+      value,
+      { text: "hero", regex: false, wholeWord: false, caseSensitive: true },
+      "$`<$&>$'",
+    );
+    if ("error" in result) throw new Error(result.error);
+    expect(result.changes[0]?.matches[0]?.replacementPreview).toBe("a <hero> b");
+  });
 });

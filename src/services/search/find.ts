@@ -1,5 +1,11 @@
 import type { Book } from "@/types/book";
-import { compileQuery, type SearchError, type SearchQuery, type SearchResult } from "./query";
+import {
+  advanceStringIndex,
+  compileQuery,
+  type SearchError,
+  type SearchQuery,
+  type SearchResult,
+} from "./query";
 
 export function findInBook(book: Book, query: SearchQuery): SearchResult[] | SearchError {
   const expression = compileQuery(query);
@@ -15,7 +21,8 @@ export function findInBook(book: Book, query: SearchQuery): SearchResult[] | Sea
         to: match.index + match[0].length,
         matched: match[0],
       });
-      if (match[0].length === 0) expression.lastIndex++;
+      if (match[0].length === 0)
+        expression.lastIndex = advanceStringIndex(chapter.source, expression.lastIndex);
     }
   }
   return results;
