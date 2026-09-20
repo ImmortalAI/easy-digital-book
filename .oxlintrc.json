@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint", "typescript", "vue"],
+  "plugins": ["eslint", "typescript", "vue", "vitest"],
   "categories": {
     "correctness": "error",
     "suspicious": "error"
@@ -15,6 +15,12 @@
       "env": {
         "browser": false,
         "node": true
+      }
+    },
+    {
+      "files": ["**/__tests__/**"],
+      "env": {
+        "vitest": true
       }
     }
   ]
