@@ -29,8 +29,9 @@ const domGlobals = [
   "Worker",
   "customElements",
   "crypto",
-  "globalThis",
 ];
+
+const restrictedPureGlobals = [...domGlobals, "globalThis"];
 
 export default {
   plugins: ["eslint", "typescript", "vue", "vitest"],
@@ -62,7 +63,7 @@ export default {
           "eslint/no-restricted-globals": [
             "error",
             {
-              globals: domGlobals,
+              globals: restrictedPureGlobals,
               checkGlobalObject: true,
               globalObjects: ["globalThis", "self", "window"],
             },
