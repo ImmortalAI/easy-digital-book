@@ -23,6 +23,13 @@ const domGlobals = [
   "FormData",
   "URL",
   "URLSearchParams",
+  "DOMParser",
+  "Event",
+  "Image",
+  "Worker",
+  "customElements",
+  "crypto",
+  "globalThis",
 ];
 
 export default {
@@ -50,8 +57,16 @@ export default {
       },
       {
         files: ["src/services/{book,edb,epub,search,checks}/**", "src/utils/**"],
+        env: { browser: false },
         rules: {
-          "eslint/no-restricted-globals": ["error", { globals: domGlobals }],
+          "eslint/no-restricted-globals": [
+            "error",
+            {
+              globals: domGlobals,
+              checkGlobalObject: true,
+              globalObjects: ["globalThis", "self", "window"],
+            },
+          ],
         },
       },
       { files: ["vite.config.ts"], env: { browser: false, node: true } },
