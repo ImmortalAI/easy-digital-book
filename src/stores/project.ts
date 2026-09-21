@@ -29,7 +29,8 @@ export const useProjectStore = defineStore("project", () => {
     revision = ref(0),
     savedRevision = ref(0),
     fileMtime = ref<number | null>(null),
-    saving = ref(false);
+    saving = ref(false),
+    bookGeneration = ref(0);
   const changedChapters = ref(new Set<string>()),
     removedChapters = ref(new Set<string>()),
     changedResources = ref(new Set<string>()),
@@ -43,6 +44,7 @@ export const useProjectStore = defineStore("project", () => {
     configure(value);
   }
   function setBook(value: Book, path: string | null = null) {
+    bookGeneration.value++;
     book.value = value;
     filePath.value = path;
     revision.value = 0;
@@ -67,6 +69,21 @@ export const useProjectStore = defineStore("project", () => {
     add(removedChapters.value, mutation.removedChapters);
     add(changedResources.value, mutation.changedResources);
     add(removedResources.value, mutation.removedResources);
+  }
+  function updateChapterSource(id: string, source: string) {
+    if (!book.value) throw new Error("No project is open");
+    const chapter = book.value.chapters.find((item) => item.id === id);
+    if (!chapter || chapter.source === source) return;
+    applyMutation({
+      book: {
+        ...book.value,
+        chapters: book.value.chapters.map((item) => (item.id === id ? { ...item, source } : item)),
+      },
+      changedChapters: new Set([id]),
+      removedChapters: new Set(),
+      changedResources: new Set(),
+      removedResources: new Set(),
+    });
   }
   const recoveryDelta = computed<RecoveryDelta>(() => ({
     changedChapters: changedChapters.value,
@@ -116,6 +133,7 @@ export const useProjectStore = defineStore("project", () => {
     return save(path);
   }
   function reset() {
+    bookGeneration.value++;
     book.value = null;
     filePath.value = null;
     revision.value = 0;
@@ -130,12 +148,14 @@ export const useProjectStore = defineStore("project", () => {
     savedRevision,
     fileMtime,
     saving,
+    bookGeneration,
     dirty,
     recoveryDelta,
     configure,
     setServices,
     setBook,
     applyMutation,
+    updateChapterSource,
     save,
     saveAs,
     reset,

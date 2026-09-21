@@ -29,6 +29,18 @@ describe("application stores", () => {
     expect(project.recoveryDelta.changedChapters).toContain("chapter2");
   });
 
+  it("updates one chapter source through the normal mutation delta", () => {
+    setActivePinia(createPinia());
+    const project = useProjectStore();
+    project.setBook(book());
+
+    project.updateChapterSource("chapter1", "# Changed");
+
+    expect(project.book?.chapters[0]?.source).toBe("# Changed");
+    expect(project.revision).toBe(1);
+    expect(project.recoveryDelta.changedChapters).toContain("chapter1");
+  });
+
   it("caps notifications at three items", () => {
     setActivePinia(createPinia());
     const notifications = useNotificationsStore();
