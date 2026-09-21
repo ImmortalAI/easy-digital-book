@@ -23,6 +23,9 @@ export const useDiagnosticsStore = defineStore("diagnostics", () => {
     next.delete(id);
     parse.value = next;
   }
+  function clearParse() {
+    parse.value = new Map();
+  }
   function setBookWarnings(value: AppWarning[]) {
     book.value = value;
   }
@@ -45,6 +48,7 @@ export const useDiagnosticsStore = defineStore("diagnostics", () => {
     count,
     setChapterDiagnostics,
     clearChapter,
+    clearParse,
     setBookWarnings,
     setReadWarnings,
     clear,
