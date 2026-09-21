@@ -1,0 +1,98 @@
+<script setup lang="ts">
+import { renderToHTML } from "novlang-js";
+import { computed, onBeforeUnmount, onMounted, ref, toRef, watchEffect } from "vue";
+import { chapterParseResults, useNovlangParse } from "@/composables/use-novlang-parse";
+import { useProjectStore } from "@/stores/project";
+import { previewCss } from "@/assets/epub/preview.css";
+import { themeCss } from "@/assets/epub/theme.css";
+import { createResourceUrlCache, rewriteResourcePaths } from "./preview-resources";
+
+const props = defineProps<{ chapterId: string; sourceScroller?: HTMLElement | null }>();
+const project = useProjectStore();
+const parser = useNovlangParse(toRef(props, "chapterId"));
+const frame = ref<HTMLIFrameElement>();
+const cache = createResourceUrlCache();
+const currentResult = computed(() => chapterParseResults.get(props.chapterId));
+let boundSourceScroller: HTMLElement | null = null;
+
+function styles() {
+  return `${themeCss}\ndiv.footnote-def { margin: 1em 0; padding: 0.75em 0; border-top: 1px solid #ddd; }\n${previewCss}\nbody { font-family: Georgia, 'Times New Roman', serif; }`;
+}
+
+function documentMarkup(html: string, css: string) {
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src blob:; style-src 'unsafe-inline'"><style data-preview>${css}</style></head><body>${html}</body></html>`;
+}
+
+function initialDocument() {
+  const book = project.book;
+  if (!book) return documentMarkup("", styles());
+  cache.sync(book.resources);
+  const css = rewriteResourcePaths(
+    `${styles()}\n${book.customCss ?? ""}`,
+    book.resources,
+    cache.resolve,
+  );
+  const html = currentResult.value ? renderToHTML(currentResult.value.document) : "";
+  return documentMarkup(rewriteResourcePaths(html, book.resources, cache.resolve), css);
+}
+
+const initialPreviewDocument = initialDocument();
+
+function renderPreview() {
+  const document = frame.value?.contentDocument;
+  const book = project.book;
+  if (!document?.body || !book) return;
+  cache.sync(book.resources);
+  const style = document.head?.querySelector<HTMLStyleElement>("style[data-preview]");
+  if (style)
+    style.textContent = rewriteResourcePaths(
+      `${styles()}\n${book.customCss ?? ""}`,
+      book.resources,
+      cache.resolve,
+    );
+  const html = currentResult.value ? renderToHTML(currentResult.value.document) : "";
+  document.body.innerHTML = rewriteResourcePaths(html, book.resources, cache.resolve);
+}
+
+function syncScroll() {
+  const preview = frame.value?.contentDocument?.documentElement;
+  if (!boundSourceScroller || !preview) return;
+  const sourceMax = boundSourceScroller.scrollHeight - boundSourceScroller.clientHeight;
+  const previewMax = preview.scrollHeight - preview.clientHeight;
+  if (sourceMax > 0 && previewMax > 0)
+    preview.scrollTop = (boundSourceScroller.scrollTop / sourceMax) * previewMax;
+}
+
+function bindSourceScroller(next: HTMLElement | null | undefined) {
+  boundSourceScroller?.removeEventListener("scroll", syncScroll);
+  boundSourceScroller = next ?? null;
+  boundSourceScroller?.addEventListener("scroll", syncScroll, { passive: true });
+}
+
+watchEffect(renderPreview);
+watchEffect(() => bindSourceScroller(props.sourceScroller));
+
+onMounted(() => {
+  frame.value?.addEventListener("load", renderPreview);
+  if (!currentResult.value) parser.parseCurrent();
+  renderPreview();
+});
+
+onBeforeUnmount(() => {
+  frame.value?.removeEventListener("load", renderPreview);
+  boundSourceScroller?.removeEventListener("scroll", syncScroll);
+  cache.releaseAll();
+  parser.dispose();
+});
+</script>
+
+<template>
+  <div class="preview-pane">
+    <iframe
+      ref="frame"
+      :srcdoc="initialPreviewDocument"
+      sandbox="allow-same-origin"
+      title="Preview"
+    />
+  </div>
+</template>
