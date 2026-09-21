@@ -1,5 +1,16 @@
-import { StreamLanguage } from "@codemirror/language";
+import { HighlightStyle, StreamLanguage } from "@codemirror/language";
 import type { StringStream } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
+
+const novlangTokenTags = {
+  heading: tags.heading,
+  quote: tags.quote,
+  meta: tags.meta,
+  link: tags.link,
+  atom: tags.atom,
+  emphasis: tags.emphasis,
+  monospace: tags.monospace,
+};
 
 const novlangParser = {
   token(stream: StringStream): string | null {
@@ -13,11 +24,23 @@ const novlangParser = {
     stream.next();
     return null;
   },
+  tokenTable: novlangTokenTags,
 };
 
 /** Visual-only NovLang highlighting; parsing remains the source of truth. */
 export const novlangLanguage = StreamLanguage.define(novlangParser);
 export const novlangStreamLanguage = novlangLanguage;
+
+/** Muted styling for NovLang markers; token classes are supplied by CodeMirror. */
+export const novlangHighlightStyle = HighlightStyle.define([
+  { tag: tags.heading, color: "#6b7280", fontWeight: "600" },
+  { tag: tags.quote, color: "#6b7280", fontStyle: "italic" },
+  { tag: tags.meta, color: "#9ca3af" },
+  { tag: tags.link, color: "#6b7280", textDecoration: "underline" },
+  { tag: tags.atom, color: "#6b7280" },
+  { tag: tags.emphasis, color: "#6b7280", fontStyle: "italic" },
+  { tag: tags.monospace, color: "#6b7280", fontFamily: "monospace" },
+]);
 
 export function diagnosticRange(
   source: string,

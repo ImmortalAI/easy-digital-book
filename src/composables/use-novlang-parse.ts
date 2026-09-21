@@ -1,5 +1,6 @@
 import { useDebounceFn } from "@vueuse/core";
-import { shallowReactive, ref, watch } from "vue";
+import { computed, onScopeDispose, ref, shallowReactive, toValue, watch } from "vue";
+import type { MaybeRefOrGetter } from "vue";
 import { storeToRefs } from "pinia";
 import { parse, type ParseResult } from "novlang-js";
 import { useDiagnosticsStore } from "@/stores/diagnostics";
@@ -23,41 +24,56 @@ function ensureBookLifecycle(bookId: string | null): void {
   activeBookId = bookId;
 }
 
-export function useNovlangParse(chapterId: string) {
+export function useNovlangParse(chapterId: MaybeRefOrGetter<string>) {
   const project = useProjectStore();
   const diagnostics = useDiagnosticsStore();
   const { revision, bookGeneration } = storeToRefs(project);
+  const currentChapterId = computed(() => toValue(chapterId));
   ensureBookLifecycle(project.book?.metadata.id ?? null);
-  const result = ref<ParseResult | null>(chapterParseResults.get(chapterId) ?? null);
-  watch(bookGeneration, () => {
-    if (revision.value !== 0) return;
-    chapterParseResults.clear();
-    resetChapterEditors();
-    activeBookId = project.book?.metadata.id ?? null;
-    result.value = chapterParseResults.get(chapterId) ?? null;
-  });
+  const result = ref<ParseResult | null>(chapterParseResults.get(currentChapterId.value) ?? null);
 
   function parseCurrent(): ParseResult | undefined {
-    const chapter = project.book?.chapters.find((item) => item.id === chapterId);
+    const id = currentChapterId.value;
+    const chapter = project.book?.chapters.find((item) => item.id === id);
     if (!chapter) return undefined;
     const parsed = parse(chapter.source);
-    chapterParseResults.set(chapterId, parsed);
+    chapterParseResults.set(id, parsed);
     result.value = parsed;
-    diagnostics.setChapterDiagnostics(chapterId, parsed.diagnostics);
+    diagnostics.setChapterDiagnostics(id, parsed.diagnostics);
     return parsed;
   }
 
   const scheduleParse = useDebounceFn(() => parseCurrent(), 150);
 
   function updateSource(source: string): void {
-    project.updateChapterSource(chapterId, source);
+    project.updateChapterSource(currentChapterId.value, source);
     scheduleParse();
   }
 
   function diagnosticEditorRange(position: { line: number; column: number }) {
-    const source = project.book?.chapters.find((item) => item.id === chapterId)?.source ?? "";
+    const source =
+      project.book?.chapters.find((item) => item.id === currentChapterId.value)?.source ?? "";
     return diagnosticRange(source, position);
   }
+
+  const stopChapterWatch = watch(currentChapterId, (id) => {
+    scheduleParse.cancel();
+    result.value = chapterParseResults.get(id) ?? null;
+  });
+  const stopGenerationWatch = watch(bookGeneration, () => {
+    if (revision.value !== 0) return;
+    scheduleParse.cancel();
+    chapterParseResults.clear();
+    resetChapterEditors();
+    activeBookId = project.book?.metadata.id ?? null;
+    result.value = chapterParseResults.get(currentChapterId.value) ?? null;
+  });
+  function dispose(): void {
+    scheduleParse.cancel();
+    stopChapterWatch();
+    stopGenerationWatch();
+  }
+  onScopeDispose(dispose, true);
 
   return {
     result,
@@ -65,6 +81,7 @@ export function useNovlangParse(chapterId: string) {
     parseCurrent,
     scheduleParse,
     diagnosticEditorRange,
+    dispose,
   };
 }
 

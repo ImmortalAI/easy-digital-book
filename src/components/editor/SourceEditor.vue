@@ -2,24 +2,25 @@
 import { defaultKeymap, historyKeymap } from "@codemirror/commands";
 import { openSearchPanel, searchKeymap } from "@codemirror/search";
 import { setDiagnostics } from "@codemirror/lint";
-import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { syntaxHighlighting } from "@codemirror/language";
 import { keymap, EditorView } from "@codemirror/view";
-import { onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { onBeforeUnmount, onMounted, ref, toRef, watch } from "vue";
 import {
   chapterEditorStates,
   createChapterEditor,
   insertFootnote,
   reconfigureChapterEditor,
+  resetChapterEditors,
   toggleMarkup,
 } from "./editor-commands";
-import { diagnosticRange, novlangLanguage } from "./novlang-language";
+import { diagnosticRange, novlangHighlightStyle, novlangLanguage } from "./novlang-language";
 import { chapterParseResults, useNovlangParse } from "@/composables/use-novlang-parse";
 import { useProjectStore } from "@/stores/project";
 
 const props = defineProps<{ chapterId: string }>();
 const host = ref<HTMLElement>();
 const project = useProjectStore();
-let parser = useNovlangParse(props.chapterId);
+const parser = useNovlangParse(toRef(props, "chapterId"));
 let view: EditorView | undefined;
 
 const editorTheme = EditorView.theme({
@@ -31,14 +32,13 @@ const editorTheme = EditorView.theme({
     padding: "1rem",
   },
   ".cm-line": { padding: "0" },
-  ".cm-content :is(.tok-meta, .tok-emphasis, .tok-link, .tok-atom)": { opacity: "0.65" },
 });
 
 function editorExtensions(chapterId: string) {
   const language = project.book?.metadata.language ?? "en";
   return [
     novlangLanguage,
-    syntaxHighlighting(defaultHighlightStyle),
+    syntaxHighlighting(novlangHighlightStyle),
     editorTheme,
     EditorView.lineWrapping,
     EditorView.contentAttributes.of({ spellcheck: "true", lang: language }),
@@ -97,15 +97,21 @@ function mountEditor(chapterId: string) {
   updateDiagnostics();
 }
 
+function remountEditor(chapterId: string) {
+  view?.destroy();
+  view = undefined;
+  mountEditor(chapterId);
+}
+
 onMounted(() => mountEditor(props.chapterId));
 
+watch(() => props.chapterId, remountEditor);
+
 watch(
-  () => props.chapterId,
-  (chapterId) => {
-    view?.destroy();
-    view = undefined;
-    parser = useNovlangParse(chapterId);
-    mountEditor(chapterId);
+  () => project.bookGeneration,
+  () => {
+    resetChapterEditors();
+    remountEditor(props.chapterId);
   },
 );
 
@@ -121,6 +127,7 @@ watch(
 );
 
 onBeforeUnmount(() => {
+  parser.dispose();
   view?.destroy();
   view = undefined;
 });
