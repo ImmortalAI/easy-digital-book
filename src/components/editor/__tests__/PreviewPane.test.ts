@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from "pinia";
 import { mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createBook } from "@/services/book/create";
 import { chapterParseResults, resetChapterParseResults } from "@/composables/use-novlang-parse";
 import { useProjectStore } from "@/stores/project";
@@ -19,6 +19,8 @@ describe("PreviewPane security and rendering", () => {
       }),
     );
   });
+
+  afterEach(() => vi.restoreAllMocks());
 
   it("creates one sandboxed iframe with a restrictive CSP", async () => {
     chapterParseResults.set("chapter1", {
@@ -69,7 +71,61 @@ describe("PreviewPane security and rendering", () => {
     expect(wrapper.get("iframe").attributes("srcdoc")).not.toContain(
       "https://fonts.googleapis.com",
     );
-    createUrl.mockRestore();
     wrapper.unmount();
+  });
+
+  it("updates the retained iframe body after load and revokes its blob on unmount", async () => {
+    const createUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:cover");
+    const revokeUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const book = useProjectStore().book!;
+    book.resources.set("images/cover.png", {
+      mediaType: "image/png",
+      bytes: new Uint8Array([1, 2, 3]),
+    });
+    chapterParseResults.set("chapter1", {
+      document: {
+        type: "document",
+        children: [
+          {
+            type: "paragraph",
+            children: [{ type: "image", alt: "cover", src: "images/cover.png" }],
+          },
+        ],
+      },
+      diagnostics: [],
+    });
+    const wrapper = mount(PreviewPane, { props: { chapterId: "chapter1" } });
+    const iframe = wrapper.get("iframe").element;
+    const body = { innerHTML: "" };
+    const style = { textContent: "" };
+    Object.defineProperty(iframe, "contentDocument", {
+      configurable: true,
+      value: {
+        body,
+        head: { querySelector: () => style },
+        documentElement: { scrollHeight: 1000, clientHeight: 500, scrollTop: 0 },
+      },
+    });
+
+    const initialSrcdoc = iframe.getAttribute("srcdoc");
+    iframe.dispatchEvent(new Event("load"));
+    await wrapper.vm.$nextTick();
+    expect(createUrl).toHaveBeenCalledTimes(1);
+    expect(body.innerHTML).toContain("blob:cover");
+
+    chapterParseResults.set("chapter1", {
+      document: {
+        type: "document",
+        children: [{ type: "paragraph", children: [{ type: "text", value: "Updated" }] }],
+      },
+      diagnostics: [],
+    });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get("iframe").element).toBe(iframe);
+    expect(body.innerHTML).toContain("Updated");
+    expect(iframe.getAttribute("srcdoc")).toBe(initialSrcdoc);
+
+    wrapper.unmount();
+    expect(revokeUrl).toHaveBeenCalledWith("blob:cover");
   });
 });

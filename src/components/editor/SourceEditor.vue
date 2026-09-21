@@ -17,7 +17,15 @@ import { diagnosticRange, novlangHighlightStyle, novlangLanguage } from "./novla
 import { chapterParseResults, useNovlangParse } from "@/composables/use-novlang-parse";
 import { useProjectStore } from "@/stores/project";
 
-const props = defineProps<{ chapterId: string }>();
+interface FocusPosition {
+  line: number;
+  column: number;
+}
+const props = defineProps<{
+  chapterId: string;
+  focusPosition?: FocusPosition | null;
+  focusRequest?: number;
+}>();
 const host = ref<HTMLElement>();
 const project = useProjectStore();
 const parser = useNovlangParse(toRef(props, "chapterId"));
@@ -103,6 +111,14 @@ function remountEditor(chapterId: string) {
   mountEditor(chapterId);
 }
 
+function focusAtPosition(position: FocusPosition | null | undefined) {
+  if (!view || !position) return;
+  const source = view.state.doc.toString();
+  const range = diagnosticRange(source, position);
+  view.dispatch({ selection: { anchor: range.from, head: range.to } });
+  view.focus();
+}
+
 onMounted(() => mountEditor(props.chapterId));
 
 watch(() => props.chapterId, remountEditor);
@@ -118,6 +134,12 @@ watch(
 watch(() => [props.chapterId, chapterParseResults.get(props.chapterId)], updateDiagnostics);
 
 watch(
+  () => props.focusRequest,
+  () => focusAtPosition(props.focusPosition),
+  { flush: "post" },
+);
+
+watch(
   () => project.book?.metadata.language,
   () => {
     if (!view) return;
@@ -131,6 +153,8 @@ onBeforeUnmount(() => {
   view?.destroy();
   view = undefined;
 });
+
+defineExpose({ focusPosition: focusAtPosition });
 </script>
 
 <template>

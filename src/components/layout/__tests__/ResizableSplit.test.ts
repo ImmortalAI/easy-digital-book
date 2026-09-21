@@ -39,4 +39,39 @@ describe("ResizableSplit", () => {
     expect(wrapper.get('[data-pane="source"]').attributes("style")).toContain("min-width: 240px");
     expect(wrapper.get('[data-pane="preview"]').attributes("style")).toContain("min-width: 240px");
   });
+
+  it("uses the full main width for content resizing when the sidebar is hidden", async () => {
+    const layout = useLayoutStore();
+    layout.sidebarVisible = false;
+    layout.splitRatio = 0.5;
+    const wrapper = mount(ResizableSplit, { slots: { source: "source", preview: "preview" } });
+    Object.defineProperty(wrapper.get("[data-resizable-split]").element, "clientWidth", {
+      configurable: true,
+      value: 1000,
+    });
+
+    await wrapper.get('[data-resize="content"]').trigger("pointerdown", {
+      clientX: 500,
+      pointerId: 4,
+    });
+    window.dispatchEvent(new PointerEvent("pointermove", { clientX: 700, pointerId: 4 }));
+
+    expect(layout.splitRatio).toBeCloseTo(0.5 + 200 / (1000 - 48));
+  });
+
+  it("retains pane slot elements while changing modes", async () => {
+    const layout = useLayoutStore();
+    const wrapper = mount(ResizableSplit, {
+      slots: { source: "source", preview: '<iframe data-preview-frame="true" />' },
+    });
+    const frame = wrapper.get("[data-preview-frame]").element;
+
+    layout.mode = "text";
+    await wrapper.vm.$nextTick();
+    layout.mode = "preview";
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.get("[data-preview-frame]").element).toBe(frame);
+    expect(wrapper.find('[data-pane="source"]').exists()).toBe(true);
+  });
 });

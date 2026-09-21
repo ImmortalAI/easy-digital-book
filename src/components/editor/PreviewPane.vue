@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { renderToHTML } from "novlang-js";
-import { computed, onBeforeUnmount, onMounted, ref, toRef, watchEffect } from "vue";
-import { chapterParseResults, useNovlangParse } from "@/composables/use-novlang-parse";
+import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from "vue";
+import { chapterParseResults } from "@/composables/use-novlang-parse";
 import { useProjectStore } from "@/stores/project";
 import { previewCss } from "@/assets/epub/preview.css";
 import { themeCss } from "@/assets/epub/theme.css";
@@ -9,7 +9,6 @@ import { createResourceUrlCache, rewriteResourcePaths } from "./preview-resource
 
 const props = defineProps<{ chapterId: string; sourceScroller?: HTMLElement | null }>();
 const project = useProjectStore();
-const parser = useNovlangParse(toRef(props, "chapterId"));
 const frame = ref<HTMLIFrameElement>();
 const cache = createResourceUrlCache();
 const currentResult = computed(() => chapterParseResults.get(props.chapterId));
@@ -74,7 +73,6 @@ watchEffect(() => bindSourceScroller(props.sourceScroller));
 
 onMounted(() => {
   frame.value?.addEventListener("load", renderPreview);
-  if (!currentResult.value) parser.parseCurrent();
   renderPreview();
 });
 
@@ -82,7 +80,6 @@ onBeforeUnmount(() => {
   frame.value?.removeEventListener("load", renderPreview);
   boundSourceScroller?.removeEventListener("scroll", syncScroll);
   cache.releaseAll();
-  parser.dispose();
 });
 </script>
 

@@ -130,4 +130,19 @@ describe("SourceEditor lifecycle", () => {
     expect(wrapper.find(".cm-line span").exists()).toBe(true);
     wrapper.unmount();
   });
+
+  it("focuses and selects a requested diagnostic position", async () => {
+    const project = useProjectStore();
+    project.book!.chapters[0] = { id: "chapter1", source: "# Chapter 1\n*unclosed" };
+    const wrapper = mount(SourceEditor, { props: { chapterId: "chapter1" } });
+    await wrapper.setProps({
+      focusPosition: { line: 2, column: 1 },
+      focusRequest: 1,
+    } as never);
+
+    const view = EditorView.findFromDOM(wrapper.find(".cm-editor").element as HTMLElement)!;
+    expect(view.state.selection.main.from).toBeGreaterThan(0);
+    expect(view.state.selection.main.to).toBeGreaterThan(view.state.selection.main.from);
+    wrapper.unmount();
+  });
 });

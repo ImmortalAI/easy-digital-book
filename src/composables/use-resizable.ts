@@ -25,7 +25,7 @@ export function clampSplitRatio(ratio: number, total: number, minimum = PANE_MIN
 }
 
 interface ResizableOptions {
-  getContainerWidth: () => number;
+  getContentWidth: () => number;
   getSidebarWidth: () => number;
   setSidebarWidth: (value: number) => void;
   getSplitRatio: () => number;
@@ -64,7 +64,7 @@ export function useResizable(options: ResizableOptions) {
       options.setSidebarWidth(clampSidebarWidth(active.startSidebarWidth + delta));
       return;
     }
-    const width = Math.max(options.getContainerWidth() - options.getSidebarWidth(), PANE_MIN * 2);
+    const width = Math.max(options.getContentWidth(), PANE_MIN * 2);
     options.setSplitRatio(clampSplitRatio(active.startRatio + delta / width, width, PANE_MIN));
   };
 
