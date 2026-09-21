@@ -36,6 +36,9 @@ class MemoryFiles implements FileSystem {
   async writeFile(path: string, bytes: Uint8Array) {
     this.data.set(path, new Uint8Array(bytes));
   }
+  async writeFileAtomic(path: string, bytes: Uint8Array) {
+    await this.writeFile(path, bytes);
+  }
   async exists(path: string) {
     return this.data.has(path);
   }

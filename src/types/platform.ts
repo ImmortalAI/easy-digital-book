@@ -29,6 +29,7 @@ export interface FileInfo {
 export interface FileSystem {
   readFile(path: string): Promise<Uint8Array>;
   writeFile(path: string, bytes: Uint8Array): Promise<void>;
+  writeFileAtomic(path: string, bytes: Uint8Array): Promise<void>;
   exists(path: string): Promise<boolean>;
   stat(path: string): Promise<FileInfo>;
 }

@@ -20,7 +20,7 @@ fn empty_scope() -> TestValidator {
 }
 
 #[test]
-fn atomically_replaces_an_allowed_file() {
+fn atomically_replaces_an_existing_allowed_file() {
     let path = scoped_temp_path("novel.edb");
     std::fs::write(&path, b"old").unwrap();
     write_file_atomic(&scope_with(&path), &path, b"new").unwrap();

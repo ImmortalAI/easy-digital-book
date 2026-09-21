@@ -96,7 +96,7 @@ fn temporary_file(path: &Path) -> Result<(PathBuf, File), CommandError> {
 fn replace_with_retry(temporary: &Path, target: &Path) -> Result<(), CommandError> {
     let attempts = if cfg!(windows) { 5 } else { 1 };
     for attempt in 0..attempts {
-        match std::fs::rename(temporary, target) {
+        match replace_once(temporary, target) {
             Ok(()) => return Ok(()),
             Err(error)
                 if cfg!(windows)
@@ -112,6 +112,45 @@ fn replace_with_retry(temporary: &Path, target: &Path) -> Result<(), CommandErro
         }
     }
     unreachable!()
+}
+
+#[cfg(not(windows))]
+fn replace_once(temporary: &Path, target: &Path) -> io::Result<()> {
+    std::fs::rename(temporary, target)
+}
+
+#[cfg(windows)]
+fn replace_once(temporary: &Path, target: &Path) -> io::Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+
+    const MOVEFILE_REPLACE_EXISTING: u32 = 0x1;
+    const MOVEFILE_WRITE_THROUGH: u32 = 0x8;
+
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn MoveFileExW(
+            existing_file_name: *const u16,
+            new_file_name: *const u16,
+            flags: u32,
+        ) -> i32;
+    }
+
+    let source: Vec<u16> = temporary.as_os_str().encode_wide().chain([0]).collect();
+    let destination: Vec<u16> = target.as_os_str().encode_wide().chain([0]).collect();
+    // MoveFileExW with REPLACE_EXISTING performs the destination replacement
+    // as one filesystem operation, unlike remove-then-rename on Windows.
+    let result = unsafe {
+        MoveFileExW(
+            source.as_ptr(),
+            destination.as_ptr(),
+            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+        )
+    };
+    if result == 0 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
 }
 
 #[tauri::command(rename = "write_file_atomic")]
