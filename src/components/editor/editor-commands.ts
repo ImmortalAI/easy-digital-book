@@ -2,18 +2,22 @@ import { history } from "@codemirror/commands";
 import {
   EditorSelection,
   EditorState,
+  Compartment,
   type Extension,
   type SelectionRange,
+  type StateEffect,
   type Transaction,
 } from "@codemirror/state";
 
 /** Editor states are deliberately kept outside Pinia's reactive book model. */
 export const chapterEditorStates = new Map<string, EditorState>();
+const chapterEditorCompartments = new Map<string, Compartment>();
 /** Backwards-compatible descriptive alias for consumers that own the editor lifecycle. */
 export const editorStates = chapterEditorStates;
 
 export function resetChapterEditors(): void {
   chapterEditorStates.clear();
+  chapterEditorCompartments.clear();
 }
 
 export function createChapterEditor(
@@ -23,9 +27,22 @@ export function createChapterEditor(
 ): EditorState {
   const existing = chapterEditorStates.get(chapterId);
   if (existing) return existing;
-  const state = EditorState.create({ doc: source, extensions: [history(), ...extensions] });
+  const compartment = new Compartment();
+  chapterEditorCompartments.set(chapterId, compartment);
+  const state = EditorState.create({
+    doc: source,
+    extensions: [history(), compartment.of(extensions)],
+  });
   chapterEditorStates.set(chapterId, state);
   return state;
+}
+
+/** Rebind view-specific listeners while retaining the chapter's undo history. */
+export function reconfigureChapterEditor(
+  chapterId: string,
+  extensions: Extension[],
+): StateEffect<unknown> | null {
+  return chapterEditorCompartments.get(chapterId)?.reconfigure(extensions) ?? null;
 }
 
 function markerFor(value: "*" | "**" | "bold" | "italic"): "*" | "**" {

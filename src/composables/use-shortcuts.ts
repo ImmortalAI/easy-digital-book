@@ -26,9 +26,8 @@ export function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
-function isCodeMirrorShortcut(target: EventTarget | null, key: string): boolean {
-  if (!(target instanceof HTMLElement) || !target.closest(".cm-editor")) return false;
-  return key === "b" || key === "i" || key === "f";
+function isCodeMirrorTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && Boolean(target.closest(".cm-editor"));
 }
 
 export function handleGlobalShortcut(
@@ -65,10 +64,9 @@ export function handleGlobalShortcut(
                             ? handlers.previewMode
                             : undefined;
   if (!shortcut) {
-    if (isEditableTarget(event.target) && !isCodeMirrorShortcut(event.target, key)) return false;
     return false;
   }
-  if (isEditableTarget(event.target) && !isCodeMirrorShortcut(event.target, key)) return false;
+  if (isEditableTarget(event.target) && !isCodeMirrorTarget(event.target)) return false;
   event.preventDefault();
   shortcut();
   return true;
