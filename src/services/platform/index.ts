@@ -14,7 +14,8 @@ import { tauriFileSystem } from "./fs";
 import { tauriLogger } from "./logger";
 import { tauriOpener } from "./opener";
 import { tauriSettings } from "./settings";
-import { noUpdates } from "./updates";
+import { githubUpdates, noUpdates } from "./updates";
+import { tauriLogs } from "./logs";
 import { tauriWindow } from "./window";
 
 export const platformServices: PlatformServices = {
@@ -23,8 +24,9 @@ export const platformServices: PlatformServices = {
   settings: tauriSettings,
   recovery: createRecoveryStore(tauriLogger),
   logger: tauriLogger,
+  logs: tauriLogs,
   opener: tauriOpener,
-  updates: noUpdates,
+  updates: githubUpdates,
   window: tauriWindow,
 };
 
@@ -187,6 +189,7 @@ export function createInMemoryPlatformServices(): PlatformServices {
     },
     recovery: new MemoryRecovery(),
     logger,
+    logs: { async openDirectory() {} },
     opener: { async reveal() {}, async open() {} },
     updates: noUpdates,
     window,

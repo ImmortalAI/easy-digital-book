@@ -58,12 +58,15 @@ function rewriteBlock(node: BlockNode, resources: ResourceMap, referenced: strin
   return node;
 }
 
-function textOfHeading(node: BlockNode): string {
-  if (node.type !== "heading") return "";
-  return node.children
-    .map((child) => (child.type === "text" ? child.value : ""))
-    .join("")
-    .trim();
+function textOfHeading(node: BlockNode | undefined): string {
+  if (!node || node.type !== "heading") return "";
+  const textOfInline = (child: InlineNode): string => {
+    if (child.type === "text") return child.value;
+    if (child.type === "emphasis" || child.type === "strong")
+      return child.children.map(textOfInline).join("");
+    return "";
+  };
+  return node.children.map(textOfInline).join("").trim();
 }
 
 export function renderChapter(

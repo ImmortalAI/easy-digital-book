@@ -15,6 +15,7 @@
     "undo": "Undo",
     "doNotAskAgain": "Do not ask again"
   },
+  "toolbar": { "text": "Text", "split": "Split", "preview": "Preview" },
   "metadata": {
     "title": "Metadata",
     "bookTitle": "Title",
@@ -77,5 +78,47 @@
     "title": "Unsaved changes",
     "message": "Save your changes before continuing?",
     "discard": "Don't save"
+  },
+  "export": {
+    "title": "Export EPUB",
+    "preset": "Image preset",
+    "kindle": "Kindle Paperwhite",
+    "original": "Without changes",
+    "grayscale": "Grayscale",
+    "titlePage": "Add title page",
+    "versionInTitle": "Add version to title",
+    "action": "Export…",
+    "progressImages": "Images {done}/{total}",
+    "progressChapters": "Chapters {done}/{total}",
+    "progressZip": "Creating EPUB…",
+    "saved": "EPUB saved",
+    "showInFolder": "Show in folder"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Interface language",
+    "export": "Export",
+    "confirmDelete": "Confirm deletions",
+    "checkUpdates": "Check for updates",
+    "updateAlreadyChecked": "Updates were checked within the last day",
+    "updateAvailable": "A new version is available",
+    "openUpdate": "Open release",
+    "upToDate": "You are up to date",
+    "updateCheckFailed": "Could not check for updates",
+    "openLogs": "Open log folder"
+  },
+  "errors": {
+    "title": "An unexpected error occurred",
+    "explanation": "The error was recorded without book contents.",
+    "copied": "Details copied",
+    "copy": "Copy details",
+    "openLogs": "Log folder",
+    "report": "Report issue",
+    "unexpected": "An unexpected error occurred",
+    "export": {
+      "cancelled": "Export cancelled",
+      "noProject": "No project is open",
+      "failed": "Could not export EPUB"
+    }
   }
 }

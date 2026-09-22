@@ -15,6 +15,7 @@
     "undo": "Отменить",
     "doNotAskAgain": "Больше не спрашивать"
   },
+  "toolbar": { "text": "Текст", "split": "Сплит", "preview": "Превью" },
   "metadata": {
     "title": "Метаданные",
     "bookTitle": "Название",
@@ -77,5 +78,47 @@
     "title": "Несохранённые изменения",
     "message": "Сохранить изменения перед продолжением?",
     "discard": "Не сохранять"
+  },
+  "export": {
+    "title": "Экспорт EPUB",
+    "preset": "Пресет изображений",
+    "kindle": "Kindle Paperwhite",
+    "original": "Без изменений",
+    "grayscale": "Оттенки серого",
+    "titlePage": "Добавить титульную страницу",
+    "versionInTitle": "Добавить версию к названию",
+    "action": "Экспортировать…",
+    "progressImages": "Картинки {done}/{total}",
+    "progressChapters": "Главы {done}/{total}",
+    "progressZip": "Создание EPUB…",
+    "saved": "EPUB сохранён",
+    "showInFolder": "Показать в папке"
+  },
+  "settings": {
+    "title": "Настройки",
+    "language": "Язык интерфейса",
+    "export": "Экспорт",
+    "confirmDelete": "Подтверждать удаление",
+    "checkUpdates": "Проверить обновления",
+    "updateAlreadyChecked": "Обновления уже проверялись за последние сутки",
+    "updateAvailable": "Доступна новая версия",
+    "openUpdate": "Открыть релиз",
+    "upToDate": "Установлена последняя версия",
+    "updateCheckFailed": "Не удалось проверить обновления",
+    "openLogs": "Открыть папку логов"
+  },
+  "errors": {
+    "title": "Произошла непредвиденная ошибка",
+    "explanation": "Ошибка записана без содержимого книги.",
+    "copied": "Подробности скопированы",
+    "copy": "Копировать подробности",
+    "openLogs": "Папка логов",
+    "report": "Сообщить об ошибке",
+    "unexpected": "Произошла непредвиденная ошибка",
+    "export": {
+      "cancelled": "Экспорт отменён",
+      "noProject": "Проект не открыт",
+      "failed": "Не удалось экспортировать EPUB"
+    }
   }
 }

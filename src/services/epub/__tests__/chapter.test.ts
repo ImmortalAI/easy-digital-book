@@ -51,4 +51,11 @@ describe("renderChapter", () => {
     expect(result.title).toBe("Глава 2");
     expect(result.xhtml).toContain("<title>Глава 2</title>");
   });
+
+  it("exports an empty chapter and extracts heading text through emphasis and strong", () => {
+    expect(renderChapter({ id: "empty000", source: "" }, 0, book, new Map()).title).toBe("Глава 1");
+    expect(
+      renderChapter({ id: "bold0001", source: "# *Bold* **heading**" }, 0, book, new Map()).title,
+    ).toBe("Bold heading");
+  });
 });

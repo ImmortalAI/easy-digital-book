@@ -5,6 +5,10 @@ export interface ImageDimensions {
   height: number;
 }
 
+export interface ImageMetadata extends ImageDimensions {
+  hasAlpha?: boolean;
+}
+
 export function imageDimensions(
   bytes: Uint8Array,
   mediaType: ImageMediaType,
@@ -63,4 +67,14 @@ export function imageDimensions(
     }
   }
   return null;
+}
+
+export function imageMetadata(bytes: Uint8Array, mediaType: ImageMediaType): ImageMetadata | null {
+  const dimensions = imageDimensions(bytes, mediaType);
+  if (!dimensions) return null;
+  if (mediaType === "image/png" && bytes.length >= 26)
+    return { ...dimensions, hasAlpha: bytes[25] === 4 || bytes[25] === 6 };
+  if (mediaType === "image/webp" && bytes.length >= 21 && bytes[15] === 0x58)
+    return { ...dimensions, hasAlpha: Boolean(bytes[20]! & 0x10) };
+  return dimensions;
 }

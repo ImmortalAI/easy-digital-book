@@ -15,6 +15,7 @@
     "undo": "撤销",
     "doNotAskAgain": "不再询问"
   },
+  "toolbar": { "text": "文本", "split": "分栏", "preview": "预览" },
   "metadata": {
     "title": "元数据",
     "bookTitle": "书名",
@@ -77,5 +78,47 @@
     "title": "未保存的更改",
     "message": "继续前保存更改吗？",
     "discard": "不保存"
+  },
+  "export": {
+    "title": "导出 EPUB",
+    "preset": "图片预设",
+    "kindle": "Kindle Paperwhite",
+    "original": "不做更改",
+    "grayscale": "灰度",
+    "titlePage": "添加标题页",
+    "versionInTitle": "将版本添加到书名",
+    "action": "导出…",
+    "progressImages": "图片 {done}/{total}",
+    "progressChapters": "章节 {done}/{total}",
+    "progressZip": "正在创建 EPUB…",
+    "saved": "EPUB 已保存",
+    "showInFolder": "在文件夹中显示"
+  },
+  "settings": {
+    "title": "设置",
+    "language": "界面语言",
+    "export": "导出",
+    "confirmDelete": "确认删除",
+    "checkUpdates": "检查更新",
+    "updateAlreadyChecked": "最近一天内已经检查过更新",
+    "updateAvailable": "有新版本可用",
+    "openUpdate": "打开发布页面",
+    "upToDate": "已是最新版本",
+    "updateCheckFailed": "无法检查更新",
+    "openLogs": "打开日志文件夹"
+  },
+  "errors": {
+    "title": "发生了意外错误",
+    "explanation": "错误已记录，未包含书籍内容。",
+    "copied": "详细信息已复制",
+    "copy": "复制详细信息",
+    "openLogs": "日志文件夹",
+    "report": "报告问题",
+    "unexpected": "发生了意外错误",
+    "export": {
+      "cancelled": "导出已取消",
+      "noProject": "没有打开项目",
+      "failed": "无法导出 EPUB"
+    }
   }
 }

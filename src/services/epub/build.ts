@@ -1,6 +1,8 @@
 import { AppError } from "@/types/errors";
 import type { Book, Resource } from "@/types/book";
 import type { ImageProcessor } from "@/types/platform";
+import { imageMetadata } from "@/services/book/image-dimensions";
+import type { ImageMetadata } from "@/services/book/image-dimensions";
 import { renderChapter, type RenderedChapter } from "./chapter";
 import { planImage } from "./resources";
 import { containerXml } from "./container";
@@ -21,6 +23,7 @@ export interface ExportOptions {
 export interface BuildEpubDependencies {
   imageProcessor: ImageProcessor;
   now: () => Date;
+  imageDimensions?: (resource: Resource) => ImageMetadata | null | Promise<ImageMetadata | null>;
   onProgress?: (progress: {
     stage: "chapters" | "images" | "zip";
     done: number;
@@ -108,20 +111,11 @@ async function sha(bytes: Uint8Array): Promise<string> {
   }
   return [h0, h1, h2, h3, h4, h5, h6, h7].map((x) => x.toString(16).padStart(8, "0")).join("");
 }
-function dimensions(resource: Resource): { width: number; height: number; hasAlpha?: boolean } {
-  const b = resource.bytes;
-  if (resource.mediaType === "image/png" && b.length > 24)
-    return {
-      width: new DataView(b.buffer, b.byteOffset).getUint32(16),
-      height: new DataView(b.buffer, b.byteOffset).getUint32(20),
-      hasAlpha: b[25] === 6 || b[25] === 4,
-    };
-  if (resource.mediaType === "image/jpeg") {
-    for (let i = 2; i + 9 < b.length; i++)
-      if (b[i] === 0xff && b[i + 1] >= 0xc0 && b[i + 1] <= 0xc3)
-        return { width: (b[i + 7] << 8) | b[i + 8], height: (b[i + 5] << 8) | b[i + 6] };
-  }
-  return { width: 1, height: 1 };
+async function dimensions(resource: Resource, deps: BuildEpubDependencies): Promise<ImageMetadata> {
+  return (
+    (await deps.imageDimensions?.(resource)) ??
+    imageMetadata(resource.bytes, resource.mediaType) ?? { width: 1, height: 1 }
+  );
 }
 export async function buildEpub(
   book: Book,
@@ -130,14 +124,23 @@ export async function buildEpub(
 ): Promise<Uint8Array> {
   check(deps.signal);
   const allMap = new Map<string, string>();
+  const usedOutputNames = new Set<string>();
+  const resourceMetadata = new Map<string, ImageMetadata>();
   for (const [path, resource] of book.resources) {
     const base = (path.split("/").pop() ?? path).replace(/\.[^.]+$/, "");
+    const metadata = await dimensions(resource, deps);
+    resourceMetadata.set(path, metadata);
     const planned = planImage(
-      { mediaType: resource.mediaType, ...dimensions(resource) },
+      { mediaType: resource.mediaType, ...metadata },
       options,
       path === book.metadata.cover,
     );
-    allMap.set(path, `images/${base}.${planned.format === "jpeg" ? "jpg" : "png"}`);
+    const extension = planned.format === "jpeg" ? "jpg" : "png";
+    let candidate = `${base}.${extension}`;
+    let suffix = 2;
+    while (usedOutputNames.has(candidate)) candidate = `${base}-${suffix++}.${extension}`;
+    usedOutputNames.add(candidate);
+    allMap.set(path, `images/${candidate}`);
   }
   const chapters: RenderedChapter[] = [];
   for (let i = 0; i < book.chapters.length; i++) {
@@ -158,7 +161,7 @@ export async function buildEpub(
     check(deps.signal);
     const source = imagePaths[i];
     const resource = book.resources.get(source) as Resource;
-    const meta = dimensions(resource);
+    const meta = resourceMetadata.get(source) ?? (await dimensions(resource, deps));
     const plan = planImage(
       { mediaType: resource.mediaType, ...meta },
       options,
@@ -180,7 +183,8 @@ export async function buildEpub(
     ["META-INF/container.xml", containerXml],
   ];
   const resourceEntries = processed.map(({ source, output }) => ({
-    path: `OEBPS/${allMap.get(source)}`,
+    path: allMap.get(source) ?? "",
+    archivePath: `OEBPS/${allMap.get(source)}`,
     mediaType: output.mediaType,
     id: source === book.metadata.cover ? "cover-image" : `image-${imagePaths.indexOf(source) + 1}`,
     output,
@@ -190,7 +194,7 @@ export async function buildEpub(
     opf(
       book,
       chapters,
-      resourceEntries.map((r) => ({ path: r.path ?? "", mediaType: r.mediaType, id: r.id })),
+      resourceEntries.map((r) => ({ path: r.path, mediaType: r.mediaType, id: r.id })),
       options.titlePage,
       exported,
       options.versionInTitle,
@@ -205,16 +209,20 @@ export async function buildEpub(
       "OEBPS/title.xhtml",
       titlePage(book, Boolean(book.customCss), options.versionInTitle),
     ]);
-  chapters.forEach((chapter, i) => entries.push([`OEBPS/chapter-${i + 1}.xhtml`, chapter.xhtml]));
+  chapters.forEach((chapter) => entries.push([`OEBPS/c-${chapter.id}.xhtml`, chapter.xhtml]));
   entries.push(["OEBPS/theme.css", themeCss]);
   if (customCss)
     entries.push([
       "OEBPS/custom.css",
       customCss.replace(/url\(["']?([^"')]+)["']?\)/g, (whole, path: string) =>
-        allMap.has(path) ? `url("${allMap.get(path)}")` : whole,
+        allMap.has(path)
+          ? `url("${allMap.get(path)}")`
+          : path.startsWith("images/")
+            ? 'url("data:,")'
+            : whole,
       ),
     ]);
-  for (const r of resourceEntries) entries.push([r.path ?? "", r.output.bytes]);
+  for (const r of resourceEntries) entries.push([r.archivePath, r.output.bytes]);
   deps.onProgress?.({ stage: "zip", done: 0, total: entries.length });
   check(deps.signal);
   const result = await makeZip(entries);

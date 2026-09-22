@@ -18,6 +18,11 @@ import SearchView from "@/components/sidebar/SearchView.vue";
 import MetadataForm from "@/components/metadata/MetadataForm.vue";
 import CssEditor from "@/components/editor/CssEditor.vue";
 import ImageView from "@/components/editor/ImageView.vue";
+import SettingsView from "@/components/settings/SettingsView.vue";
+import ExportDialog from "@/components/export/ExportDialog.vue";
+import { createExportController } from "@/composables/use-export";
+import { useSettingsStore } from "@/stores/settings";
+import { getRuntimePlatformServices } from "@/services/platform";
 import {
   captureImageImportIdentity,
   imageCursorPosition,
@@ -31,6 +36,10 @@ import { setCover } from "@/services/book/metadata";
 const project = useProjectStore();
 const files = inject(projectFilesKey, null);
 const layout = useLayoutStore();
+const settings = files?.settings ?? useSettingsStore();
+const platform = files?.services ?? getRuntimePlatformServices();
+const exportController = createExportController({ services: platform, project, settings });
+const exportOpen = ref(false);
 const shell = ref<HTMLElement>();
 const sourceScroller = ref<HTMLElement | null>(null);
 const sourceEditor = ref<{
@@ -207,9 +216,7 @@ onMounted(findSourceScroller);
       <div class="editor-shell__title">
         {{ project.filePath ?? "Безымянная книга" }}<span v-if="project.dirty"> •</span>
       </div>
-      <AppToolbar>
-        <button class="editor-shell__export" type="button">Экспорт</button>
-      </AppToolbar>
+      <AppToolbar @export="exportOpen = true" />
     </header>
     <div class="editor-shell__body">
       <ResizableSplit :single-pane="singlePane">
@@ -231,9 +238,12 @@ onMounted(findSourceScroller);
               :on-import-cover="importCover"
             />
             <ImageView v-else-if="layout.center.kind === 'image'" :path="layout.center.path" />
-            <div v-else class="editor-placeholder">
-              {{ layout.center.kind === "settings" ? "Settings" : "Select a chapter" }}
-            </div>
+            <SettingsView
+              v-else-if="layout.center.kind === 'settings'"
+              :services="platform"
+              :settings="settings"
+            />
+            <div v-else class="editor-placeholder">Select a chapter</div>
           </div>
         </template>
         <template #source>
@@ -267,6 +277,15 @@ onMounted(findSourceScroller);
           />
         </template>
       </ResizableSplit>
+    </div>
+    <div v-if="exportOpen" class="editor-shell__dialog-backdrop">
+      <ExportDialog
+        :controller="exportController"
+        :services="platform"
+        :project="project"
+        :settings="settings"
+        @close="exportOpen = false"
+      />
     </div>
   </main>
 </template>

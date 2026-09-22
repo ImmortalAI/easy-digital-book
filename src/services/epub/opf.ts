@@ -42,7 +42,7 @@ export function opf(
     book.customCss ? `<item id="custom" href="custom.css" media-type="text/css"/>` : "",
     ...chapters.map(
       (_, i) =>
-        `<item id="chapter-${i + 1}" href="chapter-${i + 1}.xhtml" media-type="application/xhtml+xml"/>`,
+        `<item id="chapter-${i + 1}" href="c-${chapters[i]!.id}.xhtml" media-type="application/xhtml+xml"/>`,
     ),
     ...resources.map(
       (r) =>

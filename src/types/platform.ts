@@ -57,13 +57,20 @@ export interface Logger {
   warn(message: string, details?: Record<string, unknown>): void;
   error(message: string, details?: Record<string, unknown>): void;
 }
+export interface LogServices {
+  openDirectory(): Promise<void>;
+}
 export interface Opener {
   reveal(path: string): Promise<void>;
   open(path: string): Promise<void>;
 }
+export interface UpdateInfo {
+  version: string;
+  url: string;
+  notes?: string;
+}
 export interface Updates {
-  check(): Promise<boolean>;
-  install(): Promise<void>;
+  check(): Promise<UpdateInfo | false>;
 }
 export interface RecoverySessionSummary {
   bookId: string;
@@ -102,6 +109,7 @@ export interface PlatformServices {
   settings: SettingsRepository;
   recovery: RecoveryStore;
   logger: Logger;
+  logs: LogServices;
   opener: Opener;
   updates: Updates;
   window: WindowServices;

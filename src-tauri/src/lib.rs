@@ -4,8 +4,10 @@ mod open_paths;
 
 use std::path::Path;
 
+use log::LevelFilter;
 use open_paths::{OpenPathQueue, OPEN_PATHS_EVENT};
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
+use tauri_plugin_log::{Target, TargetKind};
 
 fn handle_open_paths<R: Runtime>(app: &AppHandle<R>, paths: impl IntoIterator<Item = String>) {
     use tauri_plugin_fs::FsExt;
@@ -50,11 +52,27 @@ fn take_pending_open_paths(state: State<'_, OpenPathQueue>) -> Vec<String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let startup_args: Vec<String> = std::env::args().skip(1).collect();
+    #[cfg(debug_assertions)]
+    let log_level = LevelFilter::Debug;
+    #[cfg(not(debug_assertions))]
+    let log_level = LevelFilter::Info;
 
     tauri::Builder::default()
         .manage(OpenPathQueue::default())
         .plugin(tauri_plugin_single_instance::init(handle_open_args))
-        .plugin(tauri_plugin_log::Builder::new().build())
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .targets([
+                    Target::new(TargetKind::LogDir {
+                        file_name: Some("easy-digital-book".into()),
+                    }),
+                    #[cfg(debug_assertions)]
+                    Target::new(TargetKind::Stdout),
+                ])
+                .level(log_level)
+                .max_file_size(5_000_000)
+                .build(),
+        )
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
