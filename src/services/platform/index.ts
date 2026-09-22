@@ -152,7 +152,14 @@ class MemoryRecovery implements RecoveryStore {
   }
 }
 
-export function createInMemoryPlatformServices(): PlatformServices {
+export interface InMemoryPlatformOptions {
+  dialogPaths?: { project?: string; epub?: string };
+  confirm?: boolean;
+}
+
+export function createInMemoryPlatformServices(
+  options: InMemoryPlatformOptions = {},
+): PlatformServices {
   const files = new MemoryFiles();
   const settings = new MemorySettings();
   const logger = { debug() {}, info() {}, warn() {}, error() {} };
@@ -177,13 +184,16 @@ export function createInMemoryPlatformServices(): PlatformServices {
     settings,
     dialogs: {
       async open() {
-        return null;
+        return options.dialogPaths?.project ?? null;
       },
-      async save() {
-        return null;
+      async save(dialogOptions) {
+        const isEpub = dialogOptions?.filters?.some((filter) => filter.extensions.includes("epub"));
+        return isEpub
+          ? (options.dialogPaths?.epub ?? null)
+          : (options.dialogPaths?.project ?? null);
       },
       async confirm() {
-        return false;
+        return options.confirm ?? false;
       },
       async message() {},
     },

@@ -3,12 +3,23 @@ import { createPinia } from "pinia";
 import App from "./App.vue";
 import "@/assets/style.css";
 import { createI18nPlugin, type SupportedLocale } from "@/plugins/i18n";
-import { platformServices, setRuntimePlatformServices } from "@/services/platform";
+import {
+  createInMemoryPlatformServices,
+  platformServices,
+  setRuntimePlatformServices,
+} from "@/services/platform";
 import { reportUnexpectedError } from "@/services/platform/error-reporting";
 import { installGlobalErrorHandlers } from "@/services/platform/global-errors";
 
 const supportedLocales: SupportedLocale[] = ["ru", "en", "zh-CN"];
-setRuntimePlatformServices(platformServices);
+const runtimeServices =
+  import.meta.env.MODE === "e2e"
+    ? createInMemoryPlatformServices({
+        dialogPaths: { project: "/memory/book.edb", epub: "/memory/book.epub" },
+        confirm: true,
+      })
+    : platformServices;
+setRuntimePlatformServices(runtimeServices);
 
 function browserLocale(): SupportedLocale {
   const value = navigator.language;
@@ -20,17 +31,17 @@ function browserLocale(): SupportedLocale {
 }
 
 function report(error: unknown) {
-  const details = reportUnexpectedError(error, platformServices.logger, { version: "0.1.0" });
+  const details = reportUnexpectedError(error, runtimeServices.logger, { version: "0.1.0" });
   window.dispatchEvent(new CustomEvent("edb-unexpected-error", { detail: details }));
 }
 
 export async function bootstrap() {
   let initialLocale = browserLocale();
   try {
-    const saved = await platformServices.settings.get<SupportedLocale | null>("locale", null);
+    const saved = await runtimeServices.settings.get<SupportedLocale | null>("locale", null);
     if (saved && supportedLocales.includes(saved)) initialLocale = saved;
   } catch {
-    platformServices.logger.warn("Could not load interface locale", { code: "settings.locale" });
+    runtimeServices.logger.warn("Could not load interface locale", { code: "settings.locale" });
   }
   const app = createApp(App);
   app.config.errorHandler = (error) => report(error);

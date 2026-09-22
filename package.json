@@ -14,9 +14,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "check": "vue-tsc --noEmit && pnpm lint && pnpm format:check && pnpm test",
-    "build:fixture-epubs": "tsx scripts/build-fixture-epubs.mts"
+    "build:fixture-epubs": "tsx scripts/build-fixture-epubs.mts",
+    "sync:cargo-version": "tsx scripts/sync-cargo-version.mts"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",

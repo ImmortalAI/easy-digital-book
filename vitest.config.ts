@@ -8,6 +8,19 @@ export default defineConfig({
   test: {
     environment: "happy-dom",
     setupFiles: ["./src/test/setup.ts"],
-    coverage: { provider: "v8", reporter: ["text", "html"] },
+    exclude: ["e2e/**", "node_modules/**", "dist/**"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html"],
+      include: [
+        "src/services/book/**/*.ts",
+        "src/services/edb/**/*.ts",
+        "src/services/epub/**/*.ts",
+        "src/services/search/**/*.ts",
+        "src/services/checks/**/*.ts",
+        "src/stores/**/*.ts",
+      ],
+      thresholds: { lines: 80, functions: 75, branches: 70, statements: 80 },
+    },
   },
 });
