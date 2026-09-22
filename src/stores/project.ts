@@ -37,7 +37,8 @@ export const useProjectStore = defineStore("project", () => {
     fileMtime = ref<number | null>(null),
     saving = ref(false),
     bookGeneration = ref(0),
-    recoveryGeneration = ref(0);
+    recoveryGeneration = ref(0),
+    coverRevision = ref(0);
   const changedChapters = ref(new Set<string>()),
     removedChapters = ref(new Set<string>()),
     changedResources = ref(new Set<string>()),
@@ -64,6 +65,7 @@ export const useProjectStore = defineStore("project", () => {
     fileMtime.value = options.fileMtime ?? null;
     clearDelta();
     chapterRevisions.value = new Map(value.chapters.map((chapter) => [chapter.id, 0]));
+    coverRevision.value = 0;
   }
   function clearDelta() {
     changedChapters.value = new Set();
@@ -73,8 +75,12 @@ export const useProjectStore = defineStore("project", () => {
   }
   function applyMutation(mutation: BookMutation) {
     if (!book.value) throw new Error("No project is open");
+    const coverChanged =
+      mutation.metadataCoverChanged === true ||
+      book.value.metadata.cover !== mutation.book.metadata.cover;
     book.value = mutation.book;
     revision.value++;
+    if (coverChanged) coverRevision.value++;
     const add = <T>(target: Set<T>, values: Set<T>) => {
       for (const value of values) target.add(value);
     };
@@ -200,6 +206,7 @@ export const useProjectStore = defineStore("project", () => {
     fileMtime.value = null;
     clearDelta();
     chapterRevisions.value = new Map();
+    coverRevision.value = 0;
   }
   function invalidateRecovery() {
     recoveryGeneration.value++;
@@ -213,6 +220,7 @@ export const useProjectStore = defineStore("project", () => {
     saving,
     bookGeneration,
     recoveryGeneration,
+    coverRevision,
     dirty,
     recoveryDelta,
     configure,

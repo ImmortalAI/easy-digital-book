@@ -78,6 +78,7 @@ export function removeResource(book: Book, path: string): BookMutation {
       resources,
       metadata: book.metadata.cover === path ? { ...book.metadata, cover: null } : book.metadata,
     },
+    metadataCoverChanged: book.metadata.cover === path,
     changedChapters: new Set(),
     removedChapters: new Set(),
     changedResources: new Set(),

@@ -33,6 +33,7 @@ export interface Book {
 }
 export interface BookMutation {
   book: Book;
+  metadataCoverChanged?: boolean;
   changedChapters: Set<string>;
   removedChapters: Set<string>;
   changedResources: Set<string>;

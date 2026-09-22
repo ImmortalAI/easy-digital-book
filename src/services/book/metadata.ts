@@ -7,7 +7,9 @@ const empty = (book: Book): BookMutation => ({
   removedResources: new Set(),
 });
 export function updateMetadata(book: Book, patch: Partial<BookMetadata>): BookMutation {
-  return empty({ ...book, metadata: { ...book.metadata, ...patch } });
+  const mutation = empty({ ...book, metadata: { ...book.metadata, ...patch } });
+  if (Object.prototype.hasOwnProperty.call(patch, "cover")) mutation.metadataCoverChanged = true;
+  return mutation;
 }
 export function setCover(book: Book, cover: string | null): BookMutation {
   return updateMetadata(book, { cover });

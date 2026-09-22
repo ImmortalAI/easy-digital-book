@@ -175,6 +175,7 @@ export function useBookSearch() {
     const removed = removeResource(project.book, path);
     project.applyMutation(removed);
     const expectedCoverAfterDelete = removed.book.metadata.cover;
+    const coverRevisionAfterDelete = project.coverRevision;
     const canUndo = () =>
       project.bookGeneration === generationAtDelete &&
       project.book?.metadata.id === bookIdAtDelete &&
@@ -187,11 +188,12 @@ export function useBookSearch() {
         const resources = new Map(project.book.resources);
         resources.set(path, resource);
         const restoreCover = project.book.metadata.cover === expectedCoverAfterDelete;
+        const canRestoreCover = project.coverRevision === coverRevisionAfterDelete && restoreCover;
         project.applyMutation({
           book: {
             ...project.book,
             resources,
-            metadata: restoreCover
+            metadata: canRestoreCover
               ? { ...project.book.metadata, cover: previousCover }
               : project.book.metadata,
           },
