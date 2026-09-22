@@ -96,3 +96,21 @@ Implemented the residual review findings from `2b720ac`:
 - strengthened Explorer coverage to assert that an ImageItem context-menu event forwards its image path without changing the cover.
 
 Fix-round 4 verification: the focused workflow test command passed (40 test files / 139 tests); `pnpm check` passed (typecheck, Oxlint, Oxfmt, and 40 test files / 139 tests); `pnpm build` passed. The only concern remains the non-failing Vite main-chunk-size warning (722 kB minified, over 500 kB).
+
+## Fix round 5
+
+Corrected the residual Terra/high VP8L packed-dimensions finding against base `6970f11`:
+
+- width now uses byte 21 and the low six bits of byte 22; height uses the high two bits of byte 22, byte 23, and the low four bits of byte 24;
+- replaced the incorrect VP8L expectations with independent literal vectors covering shared packed fields, the alpha bit, minimum/maximum dimensions, a rejected 24-byte header, and an accepted minimum 25-byte header;
+- retained the existing length/signature guards and PNG, GIF, JPEG, VP8, and VP8X parser behavior.
+
+RED was observed before editing production code: `pnpm test src/services/book/__tests__/task-15-fixes.test.ts` failed exactly two assertions (8 passed). Packed bytes `[0x34, 0xd2, 0x56, 0x1a]` returned `1495605 × 106` instead of `4661 × 10588`; the maximum-dimensions vector returned `4194304 × 64` instead of `16384 × 16384`.
+
+Verification after the fix:
+
+- relevant image/domain/import/editor tests: 7 files / 45 tests passed (`task-15-fixes`, `domain`, EPUB `resources`, `image.worker`, `use-image-import`, `use-image-import-generation`, and `SourceEditor`);
+- `pnpm check`: typecheck, Oxlint, Oxfmt, and the full suite passed (40 files / 143 tests);
+- `pnpm build`: passed.
+
+Concerns: the existing non-failing Vite main-chunk-size warning remains (722.31 kB minified, over 500 kB). No additional concerns identified within this fix's scope.
