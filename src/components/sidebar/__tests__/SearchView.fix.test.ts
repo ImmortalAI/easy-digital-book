@@ -5,6 +5,7 @@ import { createI18nPlugin } from "@/plugins/i18n";
 import { createBook } from "@/services/book/create";
 import { useProjectStore } from "@/stores/project";
 import SearchView from "@/components/sidebar/SearchView.vue";
+import { resetChapterEditors } from "@/components/editor/editor-commands";
 
 function installBook() {
   const project = useProjectStore();
@@ -22,6 +23,9 @@ function installBook() {
 describe("SearchView review contracts", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    // Editor states are module-level singletons; a replace in one test would
+    // otherwise be the starting document of the next one.
+    resetChapterEditors();
     installBook();
   });
 
@@ -56,6 +60,41 @@ describe("SearchView review contracts", () => {
     const hiddenGroup = wrapper.find('[data-search-group="chapter1"]');
     expect(hiddenGroup.exists()).toBe(false);
     expect(wrapper.find('[data-search-group="chapter2"] [data-search-hide]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("excludes hidden groups and hidden results from replace all", async () => {
+    const wrapper = mount(SearchView);
+    await wrapper.get('input[type="search"]').setValue("hero");
+    await wrapper.get('input[placeholder="Replace"]').setValue("villain");
+    await wrapper.get("[data-replace-toggle]").trigger("click");
+
+    // Hiding is the user excluding something from the operation.
+    await wrapper.find('[data-search-group="chapter2"] [data-search-hide]').trigger("click");
+    await wrapper
+      .find('[data-search-group="chapter1"] .search-result button[aria-label="Hide"]')
+      .trigger("click");
+    await wrapper.get("[data-replace-all]").trigger("click");
+
+    const chapters = useProjectStore().book!.chapters;
+    expect(chapters[1]!.source).toBe("# Second\nhero");
+    expect(chapters[0]!.source).toBe("# First\nhero villain");
+    wrapper.unmount();
+  });
+
+  it("keeps replace all available when every group is merely collapsed", async () => {
+    const wrapper = mount(SearchView);
+    await wrapper.get('input[type="search"]').setValue("hero");
+    await wrapper.get('input[placeholder="Replace"]').setValue("villain");
+    await wrapper.get("[data-replace-toggle]").trigger("click");
+
+    for (const id of ["chapter1", "chapter2"])
+      await wrapper.find(`[data-search-group="${id}"] [data-search-collapse]`).trigger("click");
+
+    // Collapsing is a fold, not an exclusion.
+    expect(wrapper.get("[data-replace-all]").attributes("disabled")).toBeUndefined();
+    await wrapper.get("[data-replace-all]").trigger("click");
+    expect(useProjectStore().book?.chapters[1]?.source).toBe("# Second\nvillain");
     wrapper.unmount();
   });
 

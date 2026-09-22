@@ -84,25 +84,43 @@ export function useBookSearch() {
     return result.changes.reduce((total, change) => total + change.matches.length, 0);
   }
 
-  function replaceAll(query: SearchQuery, replacement: string): ReplaceAllUndo | null {
+  /**
+   * `isIncluded` lets the caller drop matches the user excluded in the UI.
+   * applyChange rebuilds the text from `matches`, never from `change.source`,
+   * so filtering the plan this way stays consistent.
+   */
+  function replaceAll(
+    query: SearchQuery,
+    replacement: string,
+    isIncluded?: (chapterId: string, match: SearchResult) => boolean,
+  ): ReplaceAllUndo | null {
     if (!project.book) return null;
     const result = replaceMatches(project.book, query, replacement);
-    if ("error" in result || result.changes.length === 0) return null;
+    if ("error" in result) return null;
+    const changes = isIncluded
+      ? result.changes
+          .map((change) => ({
+            ...change,
+            matches: change.matches.filter((match) => isIncluded(change.chapterId, match)),
+          }))
+          .filter((change) => change.matches.length > 0)
+      : result.changes;
+    if (changes.length === 0) return null;
     const originals = new Map(
-      result.changes.map((change) => [
+      changes.map((change) => [
         change.chapterId,
         project.book!.chapters.find((chapter) => chapter.id === change.chapterId)!.source,
       ]),
     );
-    result.changes.forEach(applyChange);
+    changes.forEach(applyChange);
     const revisionAfter = new Map(
-      result.changes.map((change) => [change.chapterId, project.chapterRevision(change.chapterId)]),
+      changes.map((change) => [change.chapterId, project.chapterRevision(change.chapterId)]),
     );
     const undo: ReplaceAllUndo = { originals, revisionAfter };
     notifications.add({
       message: t("search.replaced", "Replaced {count} matches").replace(
         "{count}",
-        String(result.changes.reduce((total, change) => total + change.matches.length, 0)),
+        String(changes.reduce((total, change) => total + change.matches.length, 0)),
       ),
       kind: "success",
       undo: () => undoReplace(undo),

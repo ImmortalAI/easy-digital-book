@@ -57,9 +57,14 @@ const groups = computed(() => {
       chapterId,
   }));
 });
-const visibleResults = computed(() =>
+/**
+ * What a replace acts on. Hiding is the user excluding a match; collapsing is
+ * only a fold, so a collapsed group is still replaced and still counts towards
+ * whether Replace all is available.
+ */
+const includedResults = computed(() =>
   groups.value.flatMap((group) =>
-    hiddenGroups.value.has(group.chapterId) || collapsedGroups.value.has(group.chapterId)
+    hiddenGroups.value.has(group.chapterId)
       ? []
       : group.results.filter((result) => !hiddenResults.value.has(resultKey(result))),
   ),
@@ -81,7 +86,10 @@ function replaceChapter(chapterId: string) {
   search.replaceChapter(chapterId, query.value, replacement.value);
 }
 function replaceAll() {
-  search.replaceAll(query.value, replacement.value);
+  const included = new Set(includedResults.value.map(resultKey));
+  search.replaceAll(query.value, replacement.value, (chapterId, match) =>
+    included.has(`${chapterId}:${match.from}:${match.to}`),
+  );
 }
 useShortcuts({ replaceAll });
 function toggleGroup(chapterId: string) {
@@ -156,7 +164,7 @@ function hideResult(result: SearchResult) {
       v-if="replacementOpen"
       type="button"
       data-replace-all
-      :disabled="!visibleResults.length"
+      :disabled="!includedResults.length"
       @click="replaceAll"
     >
       {{ t("search.replaceAll", "Replace all") }}
