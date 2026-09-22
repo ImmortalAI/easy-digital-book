@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { buildEpub } from "../src/services/epub/build";
 import type { Book } from "../src/types/book";
 import type { ImageProcessor } from "../src/types/platform";
+import { canonicalUuid } from "../src/utils/uuid";
 
 const execFileAsync = promisify(execFile);
 const png = Uint8Array.from(
@@ -24,7 +25,11 @@ const processor: ImageProcessor = {
 };
 const book: Book = {
   metadata: {
-    id: "urn:uuid:fixture-task-18",
+    // The fixture is hand-built rather than produced by createBook, so it has
+    // to apply the same identifier rule itself: epubcheck rejects a value
+    // marked urn:uuid that is not a real UUID (OPF-085). Fixed, so the built
+    // EPUB stays byte-for-byte reproducible.
+    id: canonicalUuid("f1c7d8e2-3b4a-4c5d-9e6f-0a1b2c3d4e5f"),
     title: "Task 18 Fixture",
     version: "v1",
     created: "2026-01-02T03:04:05.000Z",
