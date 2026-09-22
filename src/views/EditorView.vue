@@ -14,6 +14,7 @@ import SourceEditor from "@/components/editor/SourceEditor.vue";
 import WarningsPopover from "@/components/editor/WarningsPopover.vue";
 import ActivityBar from "@/components/sidebar/ActivityBar.vue";
 import ExplorerView from "@/components/sidebar/ExplorerView.vue";
+import SearchView from "@/components/sidebar/SearchView.vue";
 import MetadataForm from "@/components/metadata/MetadataForm.vue";
 import CssEditor from "@/components/editor/CssEditor.vue";
 import ImageView from "@/components/editor/ImageView.vue";
@@ -199,7 +200,7 @@ onMounted(findSourceScroller);
         <template #sidebar>
           <div class="editor-sidebar__content">
             <ExplorerView v-if="layout.activeView === 'explorer'" @import="importImage" />
-            <div v-else class="editor-placeholder">Поиск по книге</div>
+            <SearchView v-else />
           </div>
         </template>
         <template #single>

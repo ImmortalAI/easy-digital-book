@@ -2,7 +2,7 @@
 import { computed, ref } from "vue";
 import { useProjectStore } from "@/stores/project";
 import { useLayoutStore } from "@/stores/layout";
-import { addChapter, moveChapter, removeChapter } from "@/services/book/chapters";
+import { addChapter, moveChapter } from "@/services/book/chapters";
 import { setCustomCss } from "@/services/book/metadata";
 import { collectImageUsage } from "@/services/checks/image-usage";
 import { customCssTemplate } from "@/assets/epub/custom.css";
@@ -11,9 +11,15 @@ import { useSafeI18n } from "@/composables/use-safe-i18n";
 import ExplorerSection from "./ExplorerSection.vue";
 import ChapterItem from "./ChapterItem.vue";
 import ImageItem from "./ImageItem.vue";
+import ConfirmDialog from "@/components/common/ConfirmDialog.vue";
+import { useSettingsStore } from "@/stores/settings";
+import { useBookSearch } from "@/composables/use-book-search";
 const project = useProjectStore();
 const { t } = useSafeI18n();
 const layout = useLayoutStore();
+const settings = useSettingsStore();
+const search = useBookSearch();
+const pendingDelete = ref<string | null>(null);
 const collapsed = ref<Record<string, boolean>>({});
 const draggedChapter = ref<number | null>(null);
 const book = computed(() => project.book);
@@ -53,7 +59,20 @@ function navigate(index: number, direction: -1 | 1) {
   if (target) selectChapter(target.id);
 }
 function removeChapterAt(id: string) {
-  if (book.value) project.applyMutation(removeChapter(book.value, id));
+  if (!book.value) return;
+  if (!settings.confirmDelete) {
+    search.deleteChapter(id);
+    return;
+  }
+  pendingDelete.value = id;
+}
+function confirmDelete(value: { askAgain: boolean }) {
+  if (pendingDelete.value) search.deleteChapter(pendingDelete.value);
+  pendingDelete.value = null;
+  if (!value.askAgain) {
+    settings.confirmDelete = false;
+    void settings.persist();
+  }
 }
 function openCss() {
   if (!book.value) return;
@@ -130,5 +149,12 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
         @select="layout.center = { kind: 'image', path }"
         @contextmenu="imageContextMenu(path, $event)"
     /></ExplorerSection>
+    <ConfirmDialog
+      :open="pendingDelete !== null"
+      title="Delete chapter"
+      message="This chapter will be removed from the book."
+      @cancel="pendingDelete = null"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>

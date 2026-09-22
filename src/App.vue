@@ -5,6 +5,7 @@ import EditorView from "@/views/EditorView.vue";
 import UnsavedChangesDialog from "@/components/common/UnsavedChangesDialog.vue";
 import { useAutosave } from "@/composables/use-autosave";
 import { projectFilesKey, useProjectFiles } from "@/composables/use-project-files";
+import ToastStack from "@/components/common/ToastStack.vue";
 
 const files = useProjectFiles();
 const project = files.project;
@@ -30,4 +31,5 @@ function chooseUnsaved(value: "save" | "discard" | "cancel") {
     :action="files.prompt.pending.value"
     @decision="chooseUnsaved"
   />
+  <ToastStack />
 </template>

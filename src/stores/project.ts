@@ -40,6 +40,7 @@ export const useProjectStore = defineStore("project", () => {
     removedChapters = ref(new Set<string>()),
     changedResources = ref(new Set<string>()),
     removedResources = ref(new Set<string>());
+  const chapterRevisions = ref(new Map<string, number>());
   const dirty = computed(() => revision.value !== savedRevision.value);
   let services: PlatformServices | undefined = configuredServices;
   function configure(value: PlatformServices) {
@@ -56,6 +57,7 @@ export const useProjectStore = defineStore("project", () => {
     savedRevision.value = 0;
     fileMtime.value = options.fileMtime ?? null;
     clearDelta();
+    chapterRevisions.value = new Map(value.chapters.map((chapter) => [chapter.id, 0]));
   }
   function clearDelta() {
     changedChapters.value = new Set();
@@ -74,6 +76,10 @@ export const useProjectStore = defineStore("project", () => {
     add(removedChapters.value, mutation.removedChapters);
     add(changedResources.value, mutation.changedResources);
     add(removedResources.value, mutation.removedResources);
+    const next = new Map(chapterRevisions.value);
+    for (const id of mutation.changedChapters) next.set(id, (next.get(id) ?? 0) + 1);
+    for (const id of mutation.removedChapters) next.set(id, (next.get(id) ?? 0) + 1);
+    chapterRevisions.value = next;
   }
   function updateChapterSource(id: string, source: string) {
     if (!book.value) throw new Error("No project is open");
@@ -89,6 +95,9 @@ export const useProjectStore = defineStore("project", () => {
       changedResources: new Set(),
       removedResources: new Set(),
     });
+  }
+  function chapterRevision(id: string): number {
+    return chapterRevisions.value.get(id) ?? 0;
   }
   const recoveryDelta = computed<RecoveryDelta>(() => ({
     changedChapters: changedChapters.value,
@@ -178,6 +187,7 @@ export const useProjectStore = defineStore("project", () => {
     savedRevision.value = 0;
     fileMtime.value = null;
     clearDelta();
+    chapterRevisions.value = new Map();
   }
   function invalidateRecovery() {
     recoveryGeneration.value++;
@@ -198,6 +208,7 @@ export const useProjectStore = defineStore("project", () => {
     setBook,
     applyMutation,
     updateChapterSource,
+    chapterRevision,
     save,
     saveAs,
     reset,

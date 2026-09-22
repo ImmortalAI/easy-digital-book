@@ -8,16 +8,40 @@ import {
   type StateEffect,
   type Transaction,
 } from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
 
 /** Editor states are deliberately kept outside Pinia's reactive book model. */
 export const chapterEditorStates = new Map<string, EditorState>();
 const chapterEditorCompartments = new Map<string, Compartment>();
 /** Backwards-compatible descriptive alias for consumers that own the editor lifecycle. */
 export const editorStates = chapterEditorStates;
+const chapterEditorViews = new Map<string, EditorView>();
+
+export function registerChapterEditorView(chapterId: string, view: EditorView): void {
+  chapterEditorViews.set(chapterId, view);
+}
+
+export function unregisterChapterEditorView(chapterId: string, view: EditorView): void {
+  if (chapterEditorViews.get(chapterId) === view) chapterEditorViews.delete(chapterId);
+}
+
+export function replaceChapterEditorText(
+  chapterId: string,
+  changes: Array<{ from: number; to: number; insert: string }>,
+): string {
+  const state = chapterEditorStates.get(chapterId);
+  if (!state) throw new Error(`Editor state not found for ${chapterId}`);
+  const view = chapterEditorViews.get(chapterId);
+  const transaction = state.update({ changes });
+  if (view) view.dispatch(transaction);
+  else chapterEditorStates.set(chapterId, transaction.state);
+  return transaction.state.doc.toString();
+}
 
 export function resetChapterEditors(): void {
   chapterEditorStates.clear();
   chapterEditorCompartments.clear();
+  chapterEditorViews.clear();
 }
 
 export function createChapterEditor(

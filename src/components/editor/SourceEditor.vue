@@ -11,6 +11,8 @@ import {
   insertFootnote,
   reconfigureChapterEditor,
   resetChapterEditors,
+  registerChapterEditorView,
+  unregisterChapterEditorView,
   toggleMarkup,
 } from "./editor-commands";
 import { diagnosticRange, novlangHighlightStyle, novlangLanguage } from "./novlang-language";
@@ -148,12 +150,14 @@ function mountEditor(chapterId: string) {
   if (!chapter || !host.value) return;
   const state = createChapterEditor(chapterId, chapter.source, editorExtensions(chapterId));
   view = new EditorView({ state, parent: host.value });
+  registerChapterEditorView(chapterId, view);
   const effect = reconfigureChapterEditor(chapterId, editorExtensions(chapterId));
   if (effect) view.dispatch({ effects: effect });
   updateDiagnostics();
 }
 
 function remountEditor(chapterId: string) {
+  if (view) unregisterChapterEditorView(props.chapterId, view);
   view?.destroy();
   view = undefined;
   mountEditor(chapterId);
@@ -198,6 +202,7 @@ watch(
 
 onBeforeUnmount(() => {
   parser.dispose();
+  if (view) unregisterChapterEditorView(props.chapterId, view);
   view?.destroy();
   view = undefined;
 });
