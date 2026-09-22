@@ -3,6 +3,7 @@ import { createPinia } from "pinia";
 import App from "./App.vue";
 import "@/assets/style.css";
 import { createI18nPlugin, type SupportedLocale } from "@/plugins/i18n";
+import { useTheme } from "@/composables/use-theme";
 import {
   createInMemoryPlatformServices,
   platformServices,
@@ -49,7 +50,9 @@ export async function bootstrap() {
   const app = createApp(App);
   app.config.errorHandler = (error) => report(error);
   installGlobalErrorHandlers(report);
-  app.use(createPinia()).use(createI18nPlugin(initialLocale)).mount("#app");
+  app.use(createPinia());
+  useTheme();
+  app.use(createI18nPlugin(initialLocale)).mount("#app");
 }
 
 void bootstrap().catch(report);

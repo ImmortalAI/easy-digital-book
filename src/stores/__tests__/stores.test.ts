@@ -224,4 +224,16 @@ describe("application stores", () => {
       lastDir: "/tmp",
     });
   });
+
+  it("persists the theme choice with a system default", async () => {
+    setActivePinia(createPinia());
+    const services = createInMemoryPlatformServices();
+    const settings = useSettingsStore();
+    settings.configure(services.settings);
+    await settings.load();
+    expect(settings.theme).toBe("system");
+    settings.theme = "dark";
+    await settings.persist();
+    expect(await services.settings.get("theme", null)).toBe("dark");
+  });
 });

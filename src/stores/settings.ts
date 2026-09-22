@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import type { SettingsRepository } from "@/types/platform";
 import type { SupportedLocale } from "@/plugins/i18n";
+import type { Theme } from "@/composables/use-theme";
 export interface ExportSettings {
   imagePreset: "kindle-paperwhite" | "original";
   grayscale: boolean;
@@ -24,6 +25,7 @@ export const useSettingsStore = defineStore("settings", () => {
     recentFiles = ref<string[]>([]),
     exportSettings = ref<ExportSettings>({ ...defaultExport }),
     locale = ref<SupportedLocale | null>(null),
+    theme = ref<Theme>("system"),
     updates = ref<UpdateSettings>({ lastCheckedAt: null });
   let repository: SettingsRepository | undefined;
   function configure(value: SettingsRepository) {
@@ -37,6 +39,7 @@ export const useSettingsStore = defineStore("settings", () => {
       ...(await repository?.get<Partial<ExportSettings>>("export", {})),
     };
     locale.value = (await repository?.get<SupportedLocale | null>("locale", null)) ?? null;
+    theme.value = (await repository?.get<Theme>("theme", "system")) ?? "system";
     const updateSettings = await repository?.get<Partial<UpdateSettings>>("updates", {});
     updates.value = {
       lastCheckedAt:
@@ -50,6 +53,7 @@ export const useSettingsStore = defineStore("settings", () => {
     await repository?.set("recentFiles", recentFiles.value);
     await repository?.set("export", exportSettings.value);
     await repository?.set("locale", locale.value);
+    await repository?.set("theme", theme.value);
     await repository?.set("updates", updates.value);
     await repository?.set("updates.lastCheckedAt", updates.value.lastCheckedAt);
   }
@@ -66,6 +70,7 @@ export const useSettingsStore = defineStore("settings", () => {
     recentFiles,
     exportSettings,
     locale,
+    theme,
     updates,
     configure,
     load,
