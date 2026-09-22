@@ -255,8 +255,8 @@ onMounted(findSourceScroller);
           </div>
         </template>
         <template #single>
-          <div class="editor-single-pane">
-            <Breadcrumbs />
+          <Breadcrumbs />
+          <div class="editor-single-pane__content">
             <MetadataForm
               v-if="layout.center.kind === 'metadata'"
               :on-pick-cover="pickCover"

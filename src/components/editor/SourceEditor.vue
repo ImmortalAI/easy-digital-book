@@ -40,8 +40,10 @@ const project = useProjectStore();
 const parser = useNovlangParse(toRef(props, "chapterId"));
 let view: EditorView | undefined;
 
+// A definite height makes .cm-scroller the scroll container, which is what the
+// preview scroll sync binds to and what lets CodeMirror virtualise long chapters.
 const editorTheme = EditorView.theme({
-  "&": { fontFamily: "system-ui, sans-serif", fontSize: "1rem" },
+  "&": { height: "100%", fontFamily: "system-ui, sans-serif", fontSize: "1rem" },
   ".cm-content": {
     fontFamily: "inherit",
     whiteSpace: "pre-wrap",

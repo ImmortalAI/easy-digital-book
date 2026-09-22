@@ -10,6 +10,9 @@ import { setCustomCss } from "@/services/book/metadata";
 const project = useProjectStore();
 const host = ref<HTMLElement>();
 let view: EditorView | undefined;
+// Matches SourceEditor: a definite height makes .cm-scroller the scroll container
+// so the editor fills its pane instead of growing past it.
+const editorTheme = EditorView.theme({ "&": { height: "100%" } });
 function value() {
   return project.book?.customCss ?? customCssTemplate;
 }
@@ -22,6 +25,7 @@ function mount() {
         lineNumbers(),
         history(),
         css(),
+        editorTheme,
         keymap.of([...defaultKeymap, ...historyKeymap]),
         EditorView.updateListener.of((update) => {
           if (!update.docChanged || !project.book) return;
