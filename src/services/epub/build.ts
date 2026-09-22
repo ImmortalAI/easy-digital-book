@@ -1,4 +1,5 @@
 import { AppError } from "@/types/errors";
+import { createByteLru } from "@/utils/byte-lru";
 import type { Book, Resource } from "@/types/book";
 import type { ImageProcessor } from "@/types/platform";
 import { imageMetadata } from "@/services/book/image-dimensions";
@@ -32,7 +33,9 @@ export interface BuildEpubDependencies {
   signal?: AbortSignal;
   hash?: (bytes: Uint8Array) => Promise<string>;
 }
-const cache = new Map<string, ProcessedImage>();
+// Bounded: this map outlives every export, and each entry is a full encoded
+// image. 64 MB keeps repeat exports fast without growing without limit.
+const cache = createByteLru<ProcessedImage>(64 * 1024 * 1024);
 const check = (signal?: AbortSignal) => {
   if (signal?.aborted) throw new AppError("export.cancelled", "Export cancelled");
 };

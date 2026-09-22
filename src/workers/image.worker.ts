@@ -1,4 +1,5 @@
 import type { ImagePlan, ProcessedImage } from "@/types/platform";
+import { createByteLru } from "@/utils/byte-lru";
 
 type Request =
   | { type?: "process"; id: number; bytes: ArrayBuffer; plan: ImagePlan }
@@ -7,7 +8,9 @@ type Response =
   | { id: number; ok: true; result: ProcessedImage }
   | { id: number; ok: false; error: string };
 
-const cache = new Map<string, ProcessedImage>();
+// Bounded for the same reason as the one in epub/build.ts, which caches the
+// same outputs on the main thread.
+const cache = createByteLru<ProcessedImage>(64 * 1024 * 1024);
 const jobs = new Map<number, AbortController>();
 
 async function digest(bytes: Uint8Array): Promise<string> {
