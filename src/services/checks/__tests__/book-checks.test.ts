@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createBook } from "@/services/book/create";
 import { checkBook } from "@/services/checks/book-checks";
-import { collectImageUsage } from "@/services/checks/image-usage";
+import { collectImageUsage, collectUsedImagePaths } from "@/services/checks/image-usage";
 
 function book() {
   const value = createBook({
@@ -42,6 +42,30 @@ describe("book checks", () => {
       ]),
     );
     expect(warnings.find(({ code }) => code === "book.missingImage")?.chapterId).toBe("chapter1");
+  });
+
+  it("counts the cover and CSS-referenced images as used", () => {
+    const value = {
+      ...book(),
+      metadata: { ...book().metadata, cover: "images/cover.png" },
+      customCss: 'body { background: url("images/bg.png"); }',
+      chapters: [{ id: "chapter1", source: "# Only text" }],
+      resources: new Map([
+        ["images/cover.png", { bytes: new Uint8Array([1]), mediaType: "image/png" as const }],
+        ["images/bg.png", { bytes: new Uint8Array([2]), mediaType: "image/png" as const }],
+        ["images/orphan.png", { bytes: new Uint8Array([3]), mediaType: "image/png" as const }],
+      ]),
+    };
+
+    // buildEpub already treats all three of these as used; the unused-image
+    // warning and the bulk delete in the explorer must agree with it.
+    expect([...collectUsedImagePaths(value)].sort()).toEqual(["images/bg.png", "images/cover.png"]);
+
+    const unused = checkBook(value)
+      .filter(({ code }) => code === "book.unusedImage")
+      .map(({ message }) => message);
+    expect(unused).toHaveLength(1);
+    expect(unused[0]).toContain("images/orphan.png");
   });
 
   it("uses NovLang image nodes, ignoring escaped syntax and accepting nested parentheses", () => {

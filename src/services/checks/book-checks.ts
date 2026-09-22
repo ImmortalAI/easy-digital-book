@@ -1,7 +1,7 @@
 import type { AppWarning } from "@/types/diagnostics";
 import type { Book } from "@/types/book";
 import { extractTitle } from "@/services/book/extract-title";
-import { collectImageUsage } from "./image-usage";
+import { collectImageUsage, collectUsedImagePaths } from "./image-usage";
 
 export function checkBook(book: Book): AppWarning[] {
   const warnings: AppWarning[] = [];
@@ -27,8 +27,9 @@ export function checkBook(book: Book): AppWarning[] {
           chapterId,
         });
   }
+  const used = collectUsedImagePaths(book);
   for (const path of book.resources.keys())
-    if (!usage.has(path))
+    if (!used.has(path))
       warnings.push({ code: "book.unusedImage", message: `Image is unused: ${path}` });
   return warnings;
 }

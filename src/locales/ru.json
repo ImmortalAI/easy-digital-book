@@ -15,7 +15,11 @@
     "undo": "Отменить",
     "doNotAskAgain": "Больше не спрашивать"
   },
-  "toolbar": { "text": "Текст", "split": "Сплит", "preview": "Превью" },
+  "toolbar": {
+    "text": "Текст",
+    "split": "Сплит",
+    "preview": "Превью"
+  },
   "editor": {
     "unnamedBook": "Безымянная книга",
     "selectChapter": "Выберите главу",
@@ -30,7 +34,11 @@
     "chapters": "Главы",
     "fallback": "Глава {number}"
   },
-  "warnings": { "currentChapter": "Эта глава", "book": "Книга", "none": "Нет предупреждений" },
+  "warnings": {
+    "currentChapter": "Эта глава",
+    "book": "Книга",
+    "none": "Нет предупреждений"
+  },
   "files": {
     "openTitle": "Открыть проект",
     "openFilter": "Easy Digital Book",
@@ -75,12 +83,17 @@
   },
   "images": {
     "usedIn": "Используется в",
-    "unused": "не используется",
     "insert": "Вставить в текст",
     "setCover": "Сделать обложкой",
-    "findUsage": "Найти использования"
+    "findUsage": "Найти использования",
+    "usedAsCover": "Используется как обложка",
+    "usedInStyles": "Используется в custom.css",
+    "unused": "не используется"
   },
-  "chapters": { "fallback": "Глава {number}", "newAfter": "Новая глава после" },
+  "chapters": {
+    "fallback": "Глава {number}",
+    "newAfter": "Новая глава после"
+  },
   "search": {
     "placeholder": "Поиск",
     "replacePlaceholder": "Замена",

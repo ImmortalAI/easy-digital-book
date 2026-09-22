@@ -4,7 +4,7 @@ import { useProjectStore } from "@/stores/project";
 import { useLayoutStore } from "@/stores/layout";
 import { addChapter, moveChapter } from "@/services/book/chapters";
 import { setCover, setCustomCss } from "@/services/book/metadata";
-import { collectImageUsage } from "@/services/checks/image-usage";
+import { collectImageUsage, collectUsedImagePaths } from "@/services/checks/image-usage";
 import { customCssTemplate } from "@/assets/epub/custom.css";
 import { uniqueRandomId } from "@/utils/random-id";
 import { extractTitle } from "@/services/book/extract-title";
@@ -34,6 +34,10 @@ const book = computed(() => project.book);
 const usage = computed(() =>
   book.value ? collectImageUsage(book.value) : new Map<string, string[]>(),
 );
+/** Chapter references alone are not usage: the cover and custom.css count too. */
+const usedImages = computed(() =>
+  book.value ? collectUsedImagePaths(book.value) : new Set<string>(),
+);
 const warningCounts = computed(() => {
   const counts = new Map<string, number>();
   for (const [chapterId, items] of diagnostics.parse) counts.set(chapterId, items.length);
@@ -48,7 +52,7 @@ const warningCounts = computed(() => {
 });
 function unusedResourcePaths(): string[] {
   return book.value
-    ? [...book.value.resources.keys()].filter((path) => !usage.value.has(path))
+    ? [...book.value.resources.keys()].filter((path) => !usedImages.value.has(path))
     : [];
 }
 function chapterDisplayName(id: string): string {
@@ -61,9 +65,11 @@ function chapterDisplayName(id: string): string {
 }
 function imageUsageDetails(path: string): string {
   const chapters = usage.value.get(path) ?? [];
-  return chapters.length
-    ? `${t("images.usedIn", "Used in")}: ${chapters.map(chapterDisplayName).join(", ")}`
-    : t("images.unused", "not used");
+  if (chapters.length)
+    return `${t("images.usedIn", "Used in")}: ${chapters.map(chapterDisplayName).join(", ")}`;
+  if (book.value?.metadata.cover === path) return t("images.usedAsCover", "Used as the cover");
+  if (usedImages.value.has(path)) return t("images.usedInStyles", "Used in custom.css");
+  return t("images.unused", "not used");
 }
 const deleteTitle = computed(() => {
   const target = pendingDelete.value;
@@ -271,7 +277,7 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
         :key="path"
         :path="path"
         :cover="book.metadata.cover === path"
-        :unused="!usage.has(path)"
+        :unused="!usedImages.has(path)"
         @select="layout.center = { kind: 'image', path }"
         @contextmenu="imageContextMenu(path, $event)"
     /></ExplorerSection>

@@ -15,7 +15,11 @@
     "undo": "Undo",
     "doNotAskAgain": "Do not ask again"
   },
-  "toolbar": { "text": "Text", "split": "Split", "preview": "Preview" },
+  "toolbar": {
+    "text": "Text",
+    "split": "Split",
+    "preview": "Preview"
+  },
   "editor": {
     "unnamedBook": "Untitled book",
     "selectChapter": "Select a chapter",
@@ -30,7 +34,11 @@
     "chapters": "Chapters",
     "fallback": "Chapter {number}"
   },
-  "warnings": { "currentChapter": "Current chapter", "book": "Book", "none": "No warnings" },
+  "warnings": {
+    "currentChapter": "Current chapter",
+    "book": "Book",
+    "none": "No warnings"
+  },
   "files": {
     "openTitle": "Open project",
     "openFilter": "Easy Digital Book",
@@ -75,12 +83,17 @@
   },
   "images": {
     "usedIn": "Used in",
-    "unused": "not used",
     "insert": "Insert in text",
     "setCover": "Make cover",
-    "findUsage": "Find usages"
+    "findUsage": "Find usages",
+    "usedAsCover": "Used as the cover",
+    "usedInStyles": "Used in custom.css",
+    "unused": "not used"
   },
-  "chapters": { "fallback": "Chapter {number}", "newAfter": "New chapter after" },
+  "chapters": {
+    "fallback": "Chapter {number}",
+    "newAfter": "New chapter after"
+  },
   "search": {
     "placeholder": "Search",
     "replacePlaceholder": "Replace",

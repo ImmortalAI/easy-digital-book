@@ -24,3 +24,22 @@ export function collectImageUsage(book: Book): Map<string, string[]> {
   }
   return usage;
 }
+
+/** Matches the `url(...)` scan buildEpub performs over custom CSS. */
+const CSS_URL = /url\(["']?([^"')]+)["']?\)/g;
+
+/**
+ * Every resource the book actually needs: chapter references plus the cover and
+ * anything custom CSS points at. buildEpub packs exactly this set, so anything
+ * outside it — and only that — is safe to report as unused or to delete.
+ */
+export function collectUsedImagePaths(book: Book): Set<string> {
+  const used = new Set<string>();
+  for (const path of collectImageUsage(book).keys()) if (book.resources.has(path)) used.add(path);
+  if (book.metadata.cover && book.resources.has(book.metadata.cover)) used.add(book.metadata.cover);
+  for (const match of book.customCss?.matchAll(CSS_URL) ?? []) {
+    const path = match[1].trim();
+    if (book.resources.has(path)) used.add(path);
+  }
+  return used;
+}
