@@ -1,96 +1,96 @@
-# easy-digital-book — спецификация v1
+# easy-digital-book — specification v1
 
-- **Дата:** 2026-09-15
-- **Обновлено:** 2026-09-20
-- **Статус:** дизайн утверждён по секциям; технический bootstrap начат,
-  новый implementation plan ещё не написан
-- **Источник решений:** брейнсторминг 2026-09-14/15 (контекст — `AGENTS.md`)
+- **Date:** 2026-09-15
+- **Updated:** 2026-09-20
+- **Status:** design approved by sections; technical bootstrap underway,
+  new implementation plan not yet written
+- **Solution source:** brainstorm 2026-09-14/15 (context — `AGENTS.md`)
 
-## 1. Цель и границы
+## 1. Goal and scope
 
-Минималистичный десктоп-редактор, который превращает тексты новелл,
-написанные на языке разметки NovLang, в EPUB3 для чтения на Kindle
-Paperwhite. Существующие инструменты (FB2 Editor + Calibre, Sigil) для этой
-узкой задачи избыточны. Проект open-source.
+A minimalist desktop editor that transforms novel texts written in NovLang
+markup language into EPUB3 for reading on Kindle Paperwhite. Existing tools
+(FB2 Editor + Calibre, Sigil) are overkill for this narrow task. The project
+is open-source.
 
-**Входит в v1**
+**Included in v1**
 
-- Один проект = одна книга, файл проекта `.edb` (zip).
-- Редактор NovLang с превью, поиском и заменой по книге.
-- Метаданные, обложка, изображения, необязательный `custom.css`.
-- Экспорт `.epub` на диск с оптимизацией изображений под Kindle.
-- Ручное сохранение + автосохранение в хранилище восстановления.
-- UI на русском, английском и упрощённом китайском.
-- Windows, macOS, Linux; релизные сборки через GitHub Actions.
+- One project = one book, project file `.edb` (zip).
+- NovLang editor with preview, find and replace across the book.
+- Metadata, cover, images, optional `custom.css`.
+- Export `.epub` to disk with Kindle image optimization.
+- Manual save + autosave to recovery storage.
+- UI in Russian, English, and Simplified Chinese.
+- Windows, macOS, Linux; release builds via GitHub Actions.
 
-**Не входит в v1**
+**Not included in v1**
 
-- Импорт txt / html / docx; разделение и слияние глав.
-- Библиотека книг, несколько проектов в одном окне, вкладки глав.
-- Отправка на Kindle (почта, USB), веб- и мобильные версии.
-- Открытие `.edb` перетаскиванием файла на окно (см. 13.3).
-- Переименование изображений, отдельная страница обложки в EPUB.
-- Автообновление (`tauri-plugin-updater`), подпись и нотаризация сборок,
-  e2e-тесты на реальных WebView (tauri-driver).
-- Телеметрия.
+- Import txt / html / docx; chapter splitting and merging.
+- Book library, multiple projects in one window, chapter tabs.
+- Send to Kindle (email, USB), web and mobile versions.
+- Opening `.edb` by dragging file to window (see 13.3).
+- Image renaming, separate cover page in EPUB.
+- Auto-update (`tauri-plugin-updater`), build signing and notarization,
+  e2e tests on real WebView (tauri-driver).
+- Telemetry.
 
-## 2. Стек
+## 2. Stack
 
-| Слой           | Выбор                                                                        |
-| -------------- | ---------------------------------------------------------------------------- |
-| Оболочка       | Tauri 2 (Rust только там, где нет готового плагина)                          |
-| UI             | Vue 3 (`<script setup>`), Vite, TypeScript, pnpm, Tailwind CSS 4, shadcn-vue |
-| Состояние      | Pinia                                                                        |
-| Редактор       | CodeMirror 6                                                                 |
-| Разметка       | `novlang-js` (npm)                                                           |
-| Контейнеры     | JSZip (`.edb` и `.epub`)                                                     |
-| Схема manifest | valibot                                                                      |
-| i18n           | vue-i18n                                                                     |
-| Автосохранение | IndexedDB через `idb`                                                        |
-| Проверка XML   | `fast-xml-parser` (`XMLValidator`)                                           |
-| Тесты          | Vitest, @vue/test-utils, happy-dom, fake-indexeddb, Playwright, epubcheck    |
-| Качество кода  | Oxfmt (`pnpm format:check`), Oxlint (`pnpm lint`)                            |
+| Layer           | Choice                                                                       |
+| --------------- | ---------------------------------------------------------------------------- |
+| Shell           | Tauri 2 (Rust only where there's no ready plugin)                            |
+| UI              | Vue 3 (`<script setup>`), Vite, TypeScript, pnpm, Tailwind CSS 4, shadcn-vue |
+| State           | Pinia                                                                        |
+| Editor          | CodeMirror 6                                                                 |
+| Markup          | `novlang-js` (npm)                                                           |
+| Containers      | JSZip (`.edb` and `.epub`)                                                   |
+| Manifest schema | valibot                                                                      |
+| i18n            | vue-i18n                                                                     |
+| Autosave        | IndexedDB via `idb`                                                          |
+| XML validation  | `fast-xml-parser` (`XMLValidator`)                                           |
+| Tests           | Vitest, @vue/test-utils, happy-dom, fake-indexeddb, Playwright, epubcheck    |
+| Code quality    | Oxfmt (`pnpm format:check`), Oxlint (`pnpm lint`)                            |
 
-**Плагины Tauri:** `opener`, `dialog`, `fs`, `store`, `log`,
+**Tauri plugins:** `opener`, `dialog`, `fs`, `store`, `log`,
 `single-instance`, `persisted-scope`, `window-state`.
 
-Существующий шаблон уже задаёт `identifier = com.immortalai.edb`. **Его нельзя
-менять:** к нему привязан origin WebView, а значит и данные IndexedDB.
+The existing template already sets `identifier = com.immortalai.edb`. **This must
+not be changed:** the WebView origin is tied to it, and so are IndexedDB data.
 
-## 3. NovLang: что приложение берёт из `novlang-js`
+## 3. NovLang: what the app takes from `novlang-js`
 
-- `parse(source) → { document, diagnostics }` никогда не бросает.
+- `parse(source) → { document, diagnostics }` never throws.
   `diagnostics[i] = { severity: "warning", message, position?: { line, column } }`,
-  позиции 1-based.
+  positions are 1-based.
 - `renderToHTML(document, { xhtmlMode? })`.
-- Блоки AST: `heading | paragraph | sceneBreak | blockquote | footnoteDef`;
-  инлайны: `text | emphasis | strong | image | footnoteRef`. **У узлов AST нет
-  позиций.**
-- `# заголовок` допустим только в первой строке главы.
-- `column` отсчитывается от текста блока без префикса (`# `, `> `,
-  `[^id]: `) — приложение прибавляет ширину префикса само.
-- XHTML-режим требует `xmlns:epub` на `<html>` и CSS
+- AST blocks: `heading | paragraph | sceneBreak | blockquote | footnoteDef`;
+  inlines: `text | emphasis | strong | image | footnoteRef`. **AST nodes have no
+  positions.**
+- `# heading` is permitted only in the first line of a chapter.
+- `column` is counted from the block text without prefix (`# `, `> `,
+  `[^id]: `) — the app adds the prefix width itself.
+- XHTML mode requires `xmlns:epub` on `<html>` and CSS
   `@namespace epub "http://www.idpf.org/2007/ops"; aside[epub|type~="footnote"] { display: none; }`.
-- Стили на стороне приложения: разрыв сцены — `p.novlang-scene-break`;
-  сноска в HTML-режиме — `div.footnote-def`, в XHTML — `aside` без класса.
+- Styles on the app side: scene break — `p.novlang-scene-break`;
+  footnote in HTML mode — `div.footnote-def`, in XHTML — `aside` without class.
 
-Будущие issue для `novlang-js` (не блокируют v1): позиции блоков в AST
-(точная синхронизация прокрутки), исправление смещения `column`.
+Future issues for `novlang-js` (do not block v1): block positions in AST
+(exact scroll synchronization), fix `column` offset.
 
-## 4. Структура проекта
+## 4. Project structure
 
-Общепринятая структура Vue 3; архитектурные границы выражаются правилами
-импорта, а не собственными слоями каталогов.
+Standard Vue 3 structure; architectural boundaries are expressed through import
+rules, not custom directory layers.
 
 ```
 src/
-├── main.ts            createApp + pinia + i18n; подключение адаптеров платформы
-├── App.vue            WelcomeView / EditorView по состоянию projectStore (без vue-router)
+├── main.ts            createApp + pinia + i18n; platform adapter wiring
+├── App.vue            WelcomeView / EditorView by projectStore state (no vue-router)
 ├── assets/
-│   ├── styles/        стили UI
-│   └── epub/          theme.css книги, preview.css, шаблоны XHTML и custom.css (?raw)
+│   ├── styles/        UI styles
+│   └── epub/          book theme.css, preview.css, XHTML templates and custom.css (?raw)
 ├── components/
-│   ├── ui/            компоненты, добавленные CLI shadcn-vue
+│   ├── ui/            components added by shadcn-vue CLI
 │   ├── layout/        AppToolbar, ResizableSplit, StatusBadge, Breadcrumbs
 │   ├── sidebar/       ActivityBar, ExplorerView, ExplorerSection, ChapterItem,
 │   │                  ImageItem, SearchView, SearchResultItem
@@ -104,56 +104,57 @@ src/
 │                      useUnsavedGuard, useBookSearch, useImageImport
 ├── stores/            project.ts, layout.ts, diagnostics.ts, settings.ts, notifications.ts
 ├── services/
-│   ├── book/          операции над Book (главы, метаданные, ресурсы, extractTitle)
-│   ├── edb/           readEdb / writeEdb, схема manifest, миграции
+│   ├── book/          Book operations (chapters, metadata, resources, extractTitle)
+│   ├── edb/           readEdb / writeEdb, manifest schema, migrations
 │   ├── epub/          buildEpub: resources, chapter, titlePage, opf, nav, ncx,
 │   │                  container, zip, fileName, labels
-│   ├── search/        поиск и замена по Book
-│   ├── checks/        проверки уровня книги
+│   ├── search/        find and replace across Book
+│   ├── checks/        book-level checks
 │   └── platform/      fs, dialogs, settings, images, recovery, logger, opener, updates
 ├── workers/           image.worker.ts
 ├── plugins/           i18n.ts
 ├── locales/           ru.json, en.json, zh-CN.json
 ├── types/             book.ts, manifest.ts, platform.ts, diagnostics.ts, errors.ts
 └── utils/             debounce, xml-escape, paths, uuid, bytes, plural
-src-tauri/             см. раздел 14
+src-tauri/             see section 14
 e2e/                   Playwright
-scripts/               сборка тестовых EPUB для epubcheck
+scripts/               build test EPUBs for epubcheck
 ```
 
-**Правила (границы импортов должны проверяться Oxlint через
+**Rules (import boundaries are checked by Oxlint via
 `eslint/no-restricted-imports`):**
 
-- `services/{book,edb,epub,search,checks}` и `utils` не импортируют `vue`,
-  `pinia`, `@tauri-apps/*` и не используют DOM. Всё, что зависит от окружения
-  (обработка изображений, время, прогресс, отмена), приходит параметрами.
-- `@tauri-apps/*` импортируется **только** в `services/platform/`.
-- Stores и composables получают платформенные сервисы через интерфейсы из
-  `types/platform.ts`; в тестах и в e2e-сборке подставляются in-memory
-  реализации.
-- Компоненты работают через stores и composables и не вызывают
-  `services/platform` напрямую.
-- `src/components/ui/**` добавляет CLI shadcn-vue. Oxfmt не форматирует эти
-  файлы, чтобы сохранять минимальный diff с реестром; Oxlint их не исключает.
-- Тесты лежат рядом с кодом в `__tests__/`.
+- `services/{book,edb,epub,search,checks}` and `utils` do not import `vue`,
+  `pinia`, `@tauri-apps/*`, and do not use the DOM. Everything that depends on
+  the environment (image processing, time, progress, cancellation) comes as
+  parameters.
+- `@tauri-apps/*` is imported **only** in `services/platform/`.
+- Stores and composables receive platform services through interfaces from
+  `types/platform.ts`; in tests and e2e builds, in-memory implementations are
+  substituted.
+- Components work through stores and composables and do not call
+  `services/platform` directly.
+- `src/components/ui/**` is added by shadcn-vue CLI. Oxfmt does not format these
+  files to preserve minimal diff with the registry; Oxlint does not exclude them.
+- Tests are located next to code in `__tests__/`.
 
-## 5. Модель данных и формат `.edb`
+## 5. Data model and `.edb` format
 
-### 5.1. Контейнер
+### 5.1. Container
 
 ```
 my-novel.edb (zip)
 ├── manifest.json
-├── chapters/<id>.nov     id: 8 символов [a-z0-9]; UTF-8, LF
-├── images/               все картинки, включая обложку
-└── styles/custom.css     необязательный
+├── chapters/<id>.nov     id: 8 chars [a-z0-9]; UTF-8, LF
+├── images/               all images, including cover
+└── styles/custom.css     optional
 ```
 
-- Файлы глав названы по стабильному id: перестановка глав меняет только
-  массив в manifest.
-- Пути в разметке (`![alt](images/x.png)`) — относительно корня проекта.
-- Запись детерминированная: фиксированный порядок записей, фиксированная
-  дата в zip. Текст — DEFLATE, JPEG/PNG/GIF/WebP — STORE.
+- Chapter files are named by stable id: reordering chapters changes only
+  the array in manifest.
+- Paths in markup (`![alt](images/x.png)`) are relative to project root.
+- Writing is deterministic: fixed entry order, fixed date in zip. Text —
+  DEFLATE, JPEG/PNG/GIF/WebP — STORE.
 
 ### 5.2. manifest.json
 
@@ -164,7 +165,7 @@ my-novel.edb (zip)
   "book": {
     "id": "urn:uuid:…",
     "title": "…",
-    "version": "гл. 1–150",
+    "version": "ch. 1–150",
     "created": "2026-09-15T10:12:00Z",
     "modified": "2026-09-15T18:40:31Z",
     "language": "ru",
@@ -178,25 +179,24 @@ my-novel.edb (zip)
 }
 ```
 
-- `formatVersion` — версия формата контейнера, не книги.
-- `version` — необязательная строка свободного текста (версия содержимого),
-  никогда не разбирается как число.
-- `created` ставится при создании проекта. `modified` обновляется при
-  «Сохранить» / «Сохранить как», если были изменения; автосохранение его не
-  трогает.
-- `series`, `description`, `cover`, `version` могут быть `null`;
-  `translators` — пустым массивом; `series.index` — число (допускается 1.5).
+- `formatVersion` — version of the container format, not the book.
+- `version` — optional free-form text string (content version), never parsed
+  as a number.
+- `created` is set when the project is created. `modified` is updated on
+  "Save" / "Save as" if there were changes; autosave does not touch it.
+- `series`, `description`, `cover`, `version` can be `null`;
+  `translators` can be an empty array; `series.index` is a number (1.5 is allowed).
 - `language` — BCP 47.
-- Названий глав в manifest нет. Главы записаны объектами, чтобы расширять
-  формат без миграции.
-- Схема описана на valibot, TS-типы выводятся из неё.
+- Chapter titles are not in manifest. Chapters are stored as objects to
+  extend the format without migration.
+- Schema is described in valibot, TS types are derived from it.
 
-### 5.3. Модель в памяти
+### 5.3. In-memory model
 
 ```ts
 interface Book {
   metadata: BookMetadata; // = manifest.book
-  chapters: Chapter[]; // порядок = порядок массива
+  chapters: Chapter[]; // order = array order
   resources: Map<string, Resource>; // "images/x.png" → { bytes, mediaType }
   customCss: string | null;
 }
@@ -206,331 +206,318 @@ interface Chapter {
 }
 ```
 
-Название главы — текст `# заголовка` из первой строки
-(`services/book/extractTitle`). Если заголовка нет, в UI и в EPUB
-используется «Глава N» (N — позиция в книге) и выдаётся предупреждение.
+Chapter title is the text `# heading` from the first line
+(`services/book/extractTitle`). If there is no heading, "Chapter N" (where N
+is the position in the book) is used in the UI and EPUB, and a warning is issued.
 
-### 5.4. Чтение
+### 5.4. Reading
 
-Данные пользователя не теряются.
+User data is not lost.
 
-- **Фатальные ошибки** (текущий проект не трогаем): не zip, нет manifest,
-  битый JSON, чужой `format`, `formatVersion` новее поддерживаемой
-  («обновите приложение»).
-- `formatVersion` старше → цепочка миграций в памяти; сохраняется в новой
-  версии.
-- Невалидные поля метаданных → значения по умолчанию + предупреждение.
-- `created` / `modified` отсутствуют → текущее время.
-- Глава в manifest без файла → пустая глава + предупреждение.
-- Файл главы, которого нет в manifest → добавляется в конец +
-  предупреждение.
-- `cover` указывает на отсутствующий файл → `null` + предупреждение.
-- Лишние файлы в `images/` остаются в проекте (в EPUB не попадают).
-- CRLF нормализуется в LF.
+- **Fatal errors** (current project untouched): not a zip, no manifest,
+  corrupt JSON, foreign `format`, `formatVersion` newer than supported
+  ("update the app").
+- `formatVersion` older → chain of in-memory migrations; saved in new version.
+- Invalid metadata fields → default values + warning.
+- Missing `created` / `modified` → current time.
+- Chapter in manifest without file → empty chapter + warning.
+- Chapter file not in manifest → added to the end + warning.
+- `cover` points to missing file → `null` + warning.
+- Extra files in `images/` remain in the project (do not go into EPUB).
+- CRLF is normalized to LF.
 
-Предупреждения чтения показываются плашкой «При открытии обнаружено N
-проблем» со списком.
+Read warnings are shown in a banner "N problems found when opening" with a list.
 
-### 5.5. Новый проект
+### 5.5. New project
 
-Одна глава `# Глава 1` (локализовано), название «Без названия», язык = язык
-UI, новый UUID, `created` = сейчас.
+One chapter `# Chapter 1` (localized), title "Untitled", language = UI language,
+new UUID, `created` = now.
 
-## 6. Главное окно
+## 6. Main window
 
-### 6.1. Раскладка
+### 6.1. Layout
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│ Путь меча.edb •                     [Текст|Сплит|Превью] [Экспорт] │
+│ path-to-sword.edb •               [Text|Split|Preview] [Export]    │
 ├──┬──────────────┬──────────────────────────┬───────────────────────┤
-│📄│ ПРОВОДНИК    │ Главы › 2 Испытание секты│                       │
-│🔍│ ▾ КНИГА      │                          │                       │
-│  │ ▾ ГЛАВЫ   +  │   исходник NovLang       │   превью              │
-│  │ ▾ ИЗОБРАЖЕНИЯ│                          │                       │
-│⚙ │              │            ⚠ 2 · 1 243 сл│                       │
+│📄│ EXPLORER     │ Chapters › 2 Trial     │                       │
+│🔍│ ▾ BOOK       │                          │                       │
+│  │ ▾ CHAPTERS +  │   NovLang source         │   preview            │
+│  │ ▾ IMAGES     │                          │                       │
+│⚙ │              │            ⚠ 2 · 1 243 wd│                       │
 └──┴──────────────┴──────────────────────────┴───────────────────────┘
 ```
 
-- **Панель активности** (48 px): Проводник (Mod+Shift+E), Поиск
-  (Mod+Shift+F), внизу ⚙ Настройки. Клик по активной иконке скрывает
-  сайдбар; Mod+\ переключает сайдбар. На иконке поиска — число найденного.
-- **Сайдбар** шириной 160–400 px, граница перетаскивается.
-- **Центральная область** — по `layoutStore.center`:
+- **Activity panel** (48 px): Explorer (Mod+Shift+E), Search (Mod+Shift+F),
+  Settings ⚙ at the bottom. Click on active icon hides the sidebar;
+  Mod+\ toggles sidebar. Search icon shows the count of matches.
+- **Sidebar** 160–400 px wide, edge is draggable.
+- **Central area** — by `layoutStore.center`:
   `{ kind: 'chapter', id } | { kind: 'metadata' } | { kind: 'css' } |
 { kind: 'image', path } | { kind: 'settings' }`.
-  Над ней строка-«хлебные крошки» («Главы › N Название»). Вкладок нет — у
-  новелл 50–300 глав.
-- **Режимы** Текст / Сплит / Превью (кнопки и Mod+1/2/3) действуют для
-  `chapter` и `css`; для остальных видов кнопки неактивны. Исходник и превью
-  не уже 240 px; двойной клик по границе возвращает 50/50.
-- Разделители идут на всю высоту; строки статуса во всю ширину нет. Счётчики
-  (⚠ предупреждения по книге, слова и символы главы) — плашка в правом
-  нижнем углу панели исходника.
-- Заголовок окна: имя файла и «•» при несохранённых изменениях.
-- Ширины, видимость сайдбара, режим и активный вид — в настройках
-  приложения, не в `.edb`. Размер и положение окна —
-  `tauri-plugin-window-state`.
+  Above it is a breadcrumb row ("Chapters › N Title"). No tabs — novels have
+  50–300 chapters.
+- **Modes** Text / Split / Preview (buttons and Mod+1/2/3) apply to
+  `chapter` and `css`; for other views buttons are inactive. Source and preview
+  are not less than 240 px; double-click on edge returns to 50/50.
+- Dividers span the full height; no full-width status bar. Counters
+  (⚠ warnings for the book, chapter words and characters) — a badge in the
+  bottom right of the source panel.
+- Window title: file name and "•" for unsaved changes.
+- Widths, sidebar visibility, mode, and active view — in app settings, not
+  in `.edb`. Window size and position — `tauri-plugin-window-state`.
 
 ### 6.2. WelcomeView
 
-Показывается без открытого проекта: «Новая книга», «Открыть…», список
-«Недавние» (до 10; пропавший файл → «Файл не найден» и удаление из списка),
-блок «Несохранённые изменения» из хранилища восстановления (раздел 10.3).
+Shown when no project is open: "New book", "Open…", "Recent" list (up to 10;
+missing file → "File not found" and removal from list), "Unsaved changes"
+section from recovery storage (section 10.3).
 
-### 6.3. Горячие клавиши
+### 6.3. Keyboard shortcuts
 
-| Клавиши                   | Действие                                               |
-| ------------------------- | ------------------------------------------------------ |
-| Mod+N / Mod+O             | Новая книга / Открыть                                  |
-| Mod+S / Mod+Shift+S       | Сохранить / Сохранить как                              |
-| Mod+E                     | Экспорт EPUB                                           |
-| Mod+\                     | Показать/скрыть сайдбар                                |
-| Mod+Shift+E / Mod+Shift+F | Проводник / Поиск по книге                             |
-| Mod+1 / 2 / 3             | Текст / Сплит / Превью                                 |
-| Mod+B / Mod+I             | Полужирный `**` / курсив `*`                           |
-| Mod+Alt+F                 | Сноска                                                 |
-| Mod+F                     | Поиск и замена в главе                                 |
-| Mod+Alt+Enter             | Заменить все (в виде «Поиск»)                          |
-| Alt+↑ / Alt+↓             | Переместить выбранную главу (в Проводнике)             |
-| Delete                    | Удалить выбранную главу или изображение (в Проводнике) |
+| Keys                      | Action                                         |
+| ------------------------- | ---------------------------------------------- |
+| Mod+N / Mod+O             | New book / Open                                |
+| Mod+S / Mod+Shift+S       | Save / Save as                                 |
+| Mod+E                     | Export EPUB                                    |
+| Mod+\                     | Show/hide sidebar                              |
+| Mod+Shift+E / Mod+Shift+F | Explorer / Search across book                  |
+| Mod+1 / 2 / 3             | Text / Split / Preview                         |
+| Mod+B / Mod+I             | Bold `**` / italic `*`                         |
+| Mod+Alt+F                 | Footnote                                       |
+| Mod+F                     | Find and replace in chapter                    |
+| Mod+Alt+Enter             | Replace all (in Search view)                   |
+| Alt+↑ / Alt+↓             | Move selected chapter (in Explorer)            |
+| Delete                    | Delete selected chapter or image (in Explorer) |
 
-## 7. Редактор и превью
+## 7. Editor and preview
 
-### 7.1. Парсинг и диагностика (`useNovlangParse`)
+### 7.1. Parsing and diagnostics (`useNovlangParse`)
 
-- Каждое изменение сразу пишется в store (`revision++`).
-- Через 150 мс после последнего изменения выполняется один `parse()`. Его
-  результат обновляет превью, диагностику редактора (`setDiagnostics` из
-  `@codemirror/lint`, без встроенного `linter`) и счётчик ⚠.
-- При открытии проекта парсятся все главы (для счётчика и отметок в
-  Проводнике).
-- Позиция диагностики: `line` → смещение строки + ширина префикса блока;
-  подчёркивается фрагмент до конца слова. Диагностика без `position` — только
-  в списке.
+- Each change is immediately written to the store (`revision++`).
+- 150 ms after the last change, one `parse()` is executed. Its result updates
+  the preview, editor diagnostics (`setDiagnostics` from `@codemirror/lint`,
+  without built-in `linter`), and the ⚠ counter.
+- When opening a project, all chapters are parsed (for the counter and marks
+  in the Explorer).
+- Diagnostic position: `line` → line offset + block prefix width; the fragment
+  is underlined to the end of the word. Diagnostics without `position` — in
+  the list only.
 
 ### 7.2. SourceEditor (CodeMirror 6)
 
-- Подсветка — собственный построчный `StreamLanguage`, маркеры разметки
-  приглушены. Подсветка чисто визуальная; окончательно разметку определяет
-  парсер.
-- Пропорциональный шрифт, мягкий перенос, без номеров строк,
-  `spellcheck="true"`, `lang = book.metadata.language`. На Linux (WebKitGTK)
-  проверка орфографии — best effort.
-- `Map<chapterId, EditorState>`: у каждой главы своя история undo. Состояние
-  создаётся при первом открытии главы и живёт только в памяти.
-- Команды: Mod+B / Mod+I оборачивают выделение в `**` / `*` (или снимают
-  обёртку); Mod+Alt+F вставляет `[^N]` в позицию курсора (N — следующий
-  свободный номер в главе) и `[^N]: ` в конец главы, курсор переходит туда;
-  Mod+F — штатная панель поиска CodeMirror.
+- Highlighting — custom line-by-line `StreamLanguage`, markup markers muted.
+  Highlighting is purely visual; the parser determines markup definitively.
+- Proportional font, soft wrap, no line numbers, `spellcheck="true"`,
+  `lang = book.metadata.language`. On Linux (WebKitGTK), spell checking is
+  best effort.
+- `Map<chapterId, EditorState>`: each chapter has its own undo history. State
+  is created when the chapter is first opened and lives in memory only.
+- Commands: Mod+B / Mod+I wrap selection in `**` / `*` (or unwrap); Mod+Alt+F
+  inserts `[^N]` at cursor position (N — next free number in the chapter) and
+  `[^N]: ` at the end of the chapter, cursor moves there; Mod+F — standard
+  CodeMirror search panel.
 
 ### 7.3. PreviewPane
 
-- `<iframe sandbox="allow-same-origin">`, скрипты запрещены. iframe
-  создаётся один раз через `srcdoc`; CSP задаётся `<meta>` внутри srcdoc:
-  `default-src 'none'; img-src blob:; style-src 'unsafe-inline'`. Далее
-  обновляется только `body.innerHTML`.
-- HTML — `renderToHTML` (HTML-режим). Стили: `theme.css` + `custom.css` +
-  `preview.css` (сноски `div.footnote-def` внизу, колонка ~36em, шрифт с
-  засечками).
-- `images/…` подменяются на `blob:` URL; URL кэшируются и освобождаются при
-  удалении ресурса и закрытии проекта. `url(images/…)` в `custom.css`
-  переписываются так же.
-- Прокрутка синхронизируется пропорционально (точной мешает отсутствие
-  позиций в AST).
+- `<iframe sandbox="allow-same-origin">`, scripts forbidden. iframe is created
+  once via `srcdoc`; CSP is set with `<meta>` inside srcdoc:
+  `default-src 'none'; img-src blob:; style-src 'unsafe-inline'`. Then only
+  `body.innerHTML` is updated.
+- HTML — `renderToHTML` (HTML mode). Styles: `theme.css` + `custom.css` +
+  `preview.css` (footnotes `div.footnote-def` at the bottom, column ~36em,
+  serif font).
+- `images/…` are replaced with `blob:` URLs; URLs are cached and freed when
+  resources are deleted and the project is closed. `url(images/…)` in
+  `custom.css` are rewritten the same way.
+- Scroll is synchronized proportionally (exact synchronization hindered by
+  lack of positions in AST).
 
 ### 7.4. WarningsPopover
 
-Клик по ⚠ открывает список из двух групп: «Эта глава» (диагностика
-NovLang) и «Книга» (`services/checks`: нет заголовка главы, ссылка на
-отсутствующую картинку, пустое название книги, нет обложки, предупреждения
-чтения). Клик по пункту открывает главу на нужной строке. Счётчик — сумма по
-книге.
+Clicking ⚠ opens a list of two groups: "This chapter" (NovLang diagnostics)
+and "Book" (`services/checks`: no chapter heading, link to missing image,
+empty book title, no cover, read warnings). Clicking an item opens the chapter
+at the right line. Counter is the sum across the book.
 
-## 8. Сайдбар
+## 8. Sidebar
 
-### 8.1. Проводник
+### 8.1. Explorer
 
-Сворачиваемые секции:
+Collapsible sections:
 
-- **Книга:** «Метаданные», «custom.css» (если файла нет — «custom.css
-  (создать)»).
-- **Главы** (счётчик в заголовке, «+» при наведении): номер и название;
-  глава без заголовка — «Глава N» курсивом; у глав с предупреждениями жёлтое
-  название и число предупреждений. Навигация ↑/↓/Enter, перестановка
-  drag&drop и Alt+↑/↓. Контекстное меню: «Новая глава после», «Удалить».
-- **Изображения** (счётчик, «+»): имя; обложка помечена; неиспользуемые
-  зачёркнуты с подписью «не используется». Клик открывает `ImageView`.
-  Контекстное меню: «Вставить в текст», «Сделать обложкой», «Найти
-  использования» (открывает Поиск по `images/x.png`), «Удалить». В заголовке
-  секции — «Удалить неиспользуемые».
+- **Book:** "Metadata", "custom.css" (if file does not exist — "custom.css
+  (create)").
+- **Chapters** (counter in header, "+" on hover): number and title; chapter
+  without heading — "Chapter N" in italics; chapters with warnings have yellow
+  title and warning count. Navigation ↑/↓/Enter, reordering with drag&drop
+  and Alt+↑/↓. Context menu: "New chapter after", "Delete".
+- **Images** (counter, "+"): name; cover is marked; unused are struck through
+  with "unused" label. Click opens `ImageView`. Context menu: "Insert in text",
+  "Make cover", "Find uses" (opens Search for `images/x.png`), "Delete". In
+  section header — "Delete unused".
 
-Контекстное меню — собственный компонент `common/ContextMenu` (HTML).
+Context menu is a custom `common/ContextMenu` component (HTML).
 
-### 8.2. Поиск по книге
+### 8.2. Search across book
 
-- Логика — чистые функции `services/search/` над `Book`; UI —
+- Logic — pure functions in `services/search/` over `Book`; UI —
   `useBookSearch`, `SearchView`, `SearchResultItem`.
-- Поле поиска с опциями Aa (регистр), «слово целиком» (границы через
-  `\p{L}\p{N}_`, флаг `u`), `.*` (регулярное выражение; при ошибке —
-  «Неверное регулярное выражение»).
-- Кнопка-шеврон показывает поле замены. При непустой замене результаты
-  показывают предпросмотр ~~было~~ **стало**; в режиме regex работают `$1`.
-- Сводка «N результатов в M главах». Результаты сгруппированы по главам (номер,
-  название, число), группы сворачиваются.
-- Действия: клик по результату открывает главу и выделяет вхождение;
-  «Заменить» (одно вхождение), «Заменить все в главе», «Заменить все»
-  (Mod+Alt+Enter), «Скрыть» (вхождение или группу).
-- Совпадения текущей главы подсвечиваются в редакторе, пока открыт вид
-  «Поиск».
-- Замена применяется транзакциями к `EditorState` каждой затронутой главы
-  (для неоткрытых глав состояние создаётся). Mod+Z в главе отменяет замену
-  только в ней. Уведомление «Заменено N вхождений в M главах · Отменить»
-  (раздел 9.5) откатывает все главы, если поверх замены в них не было новых
-  правок; иначе кнопка «Отменить» неактивна.
+- Search field with options: Aa (case), "whole word" (boundaries via
+  `\p{L}\p{N}_`, flag `u`), `.*` (regex; on error — "Invalid regex").
+- Chevron button reveals replace field. With non-empty replace, results show
+  preview ~~was~~ **became**; in regex mode `$1` works.
+- Summary "N results in M chapters". Results grouped by chapters (number,
+  title, count), groups are collapsible.
+- Actions: click result opens chapter and highlights match; "Replace" (one
+  match), "Replace all in chapter", "Replace all" (Mod+Alt+Enter), "Hide"
+  (match or group).
+- Matches in the current chapter are highlighted in the editor while the
+  Search view is open.
+- Replace is applied as transactions to `EditorState` of each affected
+  chapter (state is created for unopened chapters). Mod+Z in a chapter undoes
+  replace in that chapter only. Notification "Replaced N in M chapters · Undo"
+  (section 9.5) reverts all chapters if no new edits were made over the
+  replacement; otherwise "Undo" button is inactive.
 
-## 9. Главы, метаданные, изображения, стили
+## 9. Chapters, metadata, images, styles
 
-### 9.1. Операции
+### 9.1. Operations
 
-Чистые функции `services/book/`: `addChapter`, `removeChapter`,
+Pure functions in `services/book/`: `addChapter`, `removeChapter`,
 `moveChapter`, `updateMetadata`, `importImage`, `removeResource`, `setCover`,
-`setCustomCss`. Действия `projectStore` вызывают их, делают `revision++` и
-отмечают изменённые/удалённые главы и ресурсы для автосохранения.
+`setCustomCss`. `projectStore` actions call them, increment `revision++`, and
+mark changed/deleted chapters and resources for autosave.
 
-### 9.2. Главы
+### 9.2. Chapters
 
-- «+» добавляет главу в конец с текстом `# Глава N` (локализовано) и
-  открывает её с курсором в конце; «Новая глава после» вставляет после
-  выбранной.
-- Удаление — раздел 9.5.
+- "+" adds a chapter at the end with text `# Chapter N` (localized) and opens
+  it with cursor at the end; "New chapter after" inserts after the selected
+  chapter.
+- Deletion — section 9.5.
 
-### 9.3. Метаданные (`MetadataForm`, центральная область)
+### 9.3. Metadata (`MetadataForm`, central area)
 
-| Поле                    | Поведение                                                                                                |
-| ----------------------- | -------------------------------------------------------------------------------------------------------- |
-| Название                | Пустое → предупреждение книги                                                                            |
-| Версия                  | Свободный текст, подсказка «например, гл. 1–150»                                                         |
-| Язык                    | `LanguageCombobox`: список распространённых языков + свободный ввод, проверка `Intl.getCanonicalLocales` |
-| Авторы, переводчики     | `ContributorsList`: строки, «+», удалить, ↑/↓                                                            |
-| Серия                   | Название + номер; номер доступен только при заданном названии                                            |
-| Аннотация               | Простой текст, абзацы разделяются пустой строкой                                                         |
-| Обложка                 | `CoverPicker`: миниатюра, «Выбрать…», drop файла, «Убрать»; подсказка «рекомендуется 1600×2560»          |
-| UUID, создана, изменена | Только чтение; UUID можно скопировать                                                                    |
+| Field                   | Behavior                                                                               |
+| ----------------------- | -------------------------------------------------------------------------------------- |
+| Title                   | Empty → book warning                                                                   |
+| Version                 | Free text, hint "e.g., ch. 1–150"                                                      |
+| Language                | `LanguageCombobox`: list of common + free input, check `Intl.getCanonicalLocales`      |
+| Authors, translators    | `ContributorsList`: rows, "+", delete, ↑/↓                                             |
+| Series                  | Name + number; number available only if name is set                                    |
+| Description             | Plain text, paragraphs separated by blank line                                         |
+| Cover                   | `CoverPicker`: thumbnail, "Choose…", file drop, "Remove"; hint "recommended 1600×2560" |
+| UUID, created, modified | Read-only; UUID can be copied                                                          |
 
-Каждое изменение сразу уходит в store; ошибки валидации — под полем.
+Each change goes to the store immediately; validation errors — below the field.
 
-### 9.4. Изображения
+### 9.4. Images
 
-- **Импорт** (`services/book/importImage(book, fileName, bytes)`): тип
-  определяется по сигнатуре байтов (JPEG, PNG, GIF, WebP; остальное —
-  ошибка «Формат не поддерживается»). Имя очищается (латиница, цифры, `-`),
-  при совпадении имени добавляется суффикс `-2`, `-3`…; при совпадении SHA-256
-  (`crypto.subtle`) используется уже существующий файл.
-- **Источники** (`useImageImport`): «+» в секции «Изображения» (диалог
-  выбора файлов), drag&drop файлов в редактор, вставка из буфера обмена
-  (имя `pasted-YYYYMMDD-HHmmss.png`). В позицию курсора вставляется отдельный
-  абзац `![](images/x.png)`, курсор ставится внутрь `[]`.
-- **ImageView:** картинка, размеры в пикселях, вес, список глав, где она
-  используется (клик открывает главу).
-- Обложка выбирается в `CoverPicker` или через «Сделать обложкой».
+- **Import** (`services/book/importImage(book, fileName, bytes)`): type is
+  determined by byte signature (JPEG, PNG, GIF, WebP; else — error "Format
+  not supported"). Name is cleaned (Latin, digits, `-`), on name collision
+  suffix `-2`, `-3`… is added; on SHA-256 match (`crypto.subtle`) existing
+  file is used.
+- **Sources** (`useImageImport`): "+" in "Images" section (file picker),
+  drag&drop files into editor, paste from clipboard (name
+  `pasted-YYYYMMDD-HHmmss.png`). At cursor position, a separate paragraph
+  `![](images/x.png)` is inserted, cursor is placed inside `[]`.
+- **ImageView:** image, dimensions in pixels, size, list of chapters where
+  it is used (click opens chapter).
+- Cover is chosen in `CoverPicker` or via "Make cover".
 
-### 9.5. Удаление и уведомления «Отменить»
+### 9.5. Deletion and "Undo" notifications
 
-- **Подтверждение:** `ConfirmDialog` «Удалить главу «…»?» с деталями (число
-  слов; для картинки — в каких главах используется) и галочкой «Больше не
-  спрашивать» (`settings.confirmDelete = false`; включается обратно в
-  Настройках). Фокус на «Удалить», Esc — отмена.
-- **Удаление выполняется сразу**, копия (и позиция) хранится в памяти. Если
-  выбранный элемент удалён, открывается соседний.
-- **Уведомление** (`common/UndoToast`, очередь в `stores/notifications.ts`):
-  «Глава «…» удалена · Отменить · ✕».
-  - Появление и исчезновение с bounce (`cubic-bezier(.34,1.56,.64,1)` на вход,
-    `cubic-bezier(.36,0,.66,-.56)` на выход).
-  - Внизу прогресс-бар оставшегося времени (8 с по умолчанию); на конце
-    полосы яркая светящаяся точка, которая затухает и уменьшается вместе с
-    прогрессом.
-  - Таймер — сама CSS-анимация: уведомление закрывается по `animationend`
-    полосы. Пауза при наведении и когда окно не в фокусе
+- **Confirmation:** `ConfirmDialog` "Delete chapter «…»?" with details (word
+  count; for image — which chapters use it) and "Don't ask again" checkbox
+  (`settings.confirmDelete = false`; toggled back in Settings). Focus on
+  "Delete", Esc — cancel.
+- **Deletion happens immediately**, copy (and position) is stored in memory.
+  If the selected item is deleted, an adjacent item is opened.
+- **Notification** (`common/UndoToast`, queue in `stores/notifications.ts`):
+  "Chapter «…» deleted · Undo · ✕".
+  - Appear and disappear with bounce (`cubic-bezier(.34,1.56,.64,1)` on enter,
+    `cubic-bezier(.36,0,.66,-.56)` on exit).
+  - Below, a progress bar of remaining time (8 s by default); at the end of
+    the bar, a bright glowing dot that fades and shrinks with progress.
+  - Timer is CSS animation itself: notification closes on `animationend` of
+    the bar. Pause on hover and when window is not focused
     (`animation-play-state`).
-  - Не больше 3 уведомлений стопкой; при четвёртом закрывается самое старое.
-  - `prefers-reduced-motion` → простое затухание.
-- «Отменить» возвращает элемент на прежнее место и кратко подсвечивает его.
-  Сохранение, выполненное пока уведомление видно, отмене не мешает (книга
-  снова станет несохранённой).
-- Тот же компонент используется для «Заменить все», «EPUB сохранён ·
-  Показать в папке» и фоновых ошибок (без полосы или с ней — параметр).
+  - No more than 3 notifications in a stack; on the 4th, the oldest closes.
+  - `prefers-reduced-motion` → simple fade.
+- "Undo" returns the item to its place and briefly highlights it. Save
+  performed while the notification is visible does not interfere with undo
+  (the book becomes unsaved again).
+- The same component is used for "Replace all", "EPUB saved · Show in folder",
+  and background errors (with or without bar — a parameter).
 
 ### 9.6. custom.css
 
-- Клик по «custom.css (создать)» создаёт файл из закомментированного шаблона
-  (какие классы NovLang стилизуются, как устроены сноски) и открывает его.
-- `CssEditor`: CodeMirror + `@codemirror/lang-css`, моноширинный шрифт,
-  номера строк. Режимы Текст / Сплит / Превью работают: превью показывает
-  последнюю открытую главу с новыми стилями (обновление с debounce).
-- Удалить `custom.css` можно из контекстного меню пункта (с тем же
-  механизмом подтверждения и отмены).
+- Clicking "custom.css (create)" creates a file from a commented template
+  (which NovLang classes are styled, how footnotes work) and opens it.
+- `CssEditor`: CodeMirror + `@codemirror/lang-css`, monospace font, line
+  numbers. Text / Split / Preview modes work: preview shows the last opened
+  chapter with new styles (debounced update).
+- Delete `custom.css` from the item's context menu (same confirmation and
+  undo mechanism).
 
-## 10. Файловые сценарии, сохранение, восстановление
+## 10. File scenarios, save, recovery
 
-### 10.1. Состояние проекта
+### 10.1. Project state
 
 `stores/project.ts`: `{ book, filePath, revision, savedRevision, fileMtime,
-saving }`, `dirty = revision !== savedRevision`. Одно окно — один проект.
+saving }`, `dirty = revision !== savedRevision`. One window — one project.
 
-### 10.2. Сценарии
+### 10.2. Scenarios
 
-- **useUnsavedGuard** — перед «Новая», «Открыть», закрытием окна, открытием из
-  ОС: «Сохранить / Не сохранять / Отмена». Если сохранение не удалось,
-  действие отменяется.
-- **Новая книга (Mod+N):** guard → книга в памяти, `filePath = null`.
-- **Открыть (Mod+O):** guard → диалог `*.edb` → `readEdb`. Фатальная ошибка —
-  диалог, текущий проект не меняется. Путь добавляется в «Недавние».
-- **Сохранить (Mod+S):** без изменений ничего не пишет; без пути → «Сохранить
-  как». Если mtime файла изменился с момента открытия/сохранения — «Файл
-  изменён другой программой. Перезаписать?». Далее `writeEdb` →
-  `write_file_atomic` → `savedRevision` = ревизия на момент начала
-  сериализации → удаление сессии восстановления. Повторный Mod+S во время
-  записи игнорируется. При ошибке — сообщение, `dirty` остаётся.
-- **Сохранить как (Mod+Shift+S):** диалог с именем `{название}.edb`.
-- **Закрытие окна:** `onCloseRequested` → guard → удаление сессии
-  восстановления.
-- **Открытие из ОС** (ассоциация `.edb`): при уже запущенном приложении
-  `tauri-plugin-single-instance` пересылает путь в окно; на macOS путь
-  приходит через `RunEvent::Opened`. Rust складывает пути в очередь;
-  фронтенд забирает её командой `take_pending_open_paths` после монтирования и
-  затем слушает событие `open-paths`. Дальше guard → «Открыть».
-- **Атомарная запись:** Rust-команда `write_file_atomic(path, bytes)`:
-  временный файл рядом → `sync_all` → rename (на Windows — замена с
-  повтором при временной блокировке). Путь проверяется по fs-scope.
-- **Доступ к файлам между сессиями:** `tauri-plugin-persisted-scope`; пути,
-  пришедшие из ОС, Rust добавляет в scope.
+- **useUnsavedGuard** — before "New", "Open", window close, open from OS:
+  "Save / Don't save / Cancel". If save fails, the action is cancelled.
+- **New book (Mod+N):** guard → book in memory, `filePath = null`.
+- **Open (Mod+O):** guard → `*.edb` dialog → `readEdb`. Fatal error — dialog,
+  current project unchanged. Path is added to "Recent".
+- **Save (Mod+S):** if no changes, writes nothing; if no path → "Save as".
+  If file mtime changed since open/save — "File modified by another program.
+  Overwrite?". Then `writeEdb` → `write_file_atomic` → `savedRevision` =
+  revision at start of serialization → delete recovery session. Repeated Mod+S
+  during write is ignored. On error — message, `dirty` remains.
+- **Save as (Mod+Shift+S):** dialog with name `{title}.edb`.
+- **Window close:** `onCloseRequested` → guard → delete recovery session.
+- **Open from OS** (`.edb` association): if app is already running,
+  `tauri-plugin-single-instance` forwards the path to the window; on macOS
+  path comes via `RunEvent::Opened`. Rust puts paths in a queue; frontend
+  takes it with `take_pending_open_paths` command after mount, then listens
+  to `open-paths` event. Then guard → "Open".
+- **Atomic write:** Rust command `write_file_atomic(path, bytes)`: temp file
+  nearby → `sync_all` → rename (on Windows — replace with retry on temporary
+  lock). Path is checked against fs-scope.
+- **File access between sessions:** `tauri-plugin-persisted-scope`; paths from
+  OS, Rust adds to scope.
 
-### 10.3. Автосохранение (IndexedDB)
+### 10.3. Autosave (IndexedDB)
 
-- `services/platform/recovery.ts` за интерфейсом `RecoveryStore`, обёртка
-  `idb`, база `edb-recovery`:
+- `services/platform/recovery.ts` implements `RecoveryStore`, wrapper over
+  `idb`, database `edb-recovery`:
   - `sessions` [bookId] → `{ originalPath, title, version, updatedAt, metadata, chapterOrder, customCss }`
   - `chapters` [bookId, chapterId] → `source`
   - `resources` [bookId, path] → `{ bytes, mediaType }`
-- Запись инкрементальная: store ведёт множества изменённых/удалённых глав и
-  ресурсов, автосохранение пишет только их одной транзакцией. Первое
-  автосохранение после открытия пишет книгу целиком.
-- Частота: пока `dirty` — через 5 с после паузы в правке, но не реже раза в
-  30 с.
-- Сессия удаляется после успешного сохранения, «Не сохранять», закрытия
-  окна, смены проекта.
-- **Старт:** WelcomeView показывает «Несохранённые изменения»
-  («Восстановить» → книга из сессии, `filePath = originalPath`, `dirty =
-true`; «Удалить»). При открытии `.edb`, для которого есть сессия с
-  `updatedAt` новее mtime файла, предлагается восстановить.
-- Повреждённая сессия удаляется, ошибка пишется в лог.
-- Ошибка записи (например, квота) — уведомление один раз за сессию, попытки
-  продолжаются.
-- Ограничения: данные доступны только приложению, привязаны к origin WebView;
-  dev и prod не пересекаются.
+- Writing is incremental: store maintains sets of changed/deleted chapters and
+  resources, autosave writes only them in one transaction. First autosave after
+  opening writes the entire book.
+- Frequency: while `dirty` — 5 s after edit pause, but no less than once per
+  30 s.
+- Session is deleted after successful save, "Don't save", window close, project
+  switch.
+- **Start:** WelcomeView shows "Unsaved changes" ("Recover" → book from session,
+  `filePath = originalPath`, `dirty = true`; "Delete"). When opening `.edb`
+  for which a session exists whose `updatedAt` is newer than the file mtime,
+  recovery is offered.
+- Corrupted session is deleted, error is logged.
+- Write error (e.g., quota) — notification once per session, attempts continue.
+- Limitations: data is available to the app only, tied to WebView origin;
+  dev and prod don't overlap.
 
-## 11. Экспорт EPUB
+## 11. EPUB export
 
 ### 11.1. API
 
@@ -550,279 +537,267 @@ interface ExportOptions {
 }
 ```
 
-- Работает на снимке `Book` (массивы копируются, байты ресурсов неизменяемы и
-  не копируются) — во время экспорта можно редактировать. Экспорт не меняет
-  `dirty` и не требует сохранения.
-- Модули: `resources.ts` (план изображений, карта путей), `chapter.ts`,
+- Works on a `Book` snapshot (arrays are copied, resource bytes are immutable
+  and not copied) — editing can happen during export. Export does not change
+  `dirty` and does not require saving.
+- Modules: `resources.ts` (image plan, path map), `chapter.ts`,
   `titlePage.ts`, `opf.ts`, `nav.ts`, `ncx.ts`, `container.ts`, `zip.ts`,
-  `fileName.ts`, `labels.ts` (подписи на языке книги).
+  `fileName.ts`, `labels.ts` (labels in book language).
 
-### 11.2. Структура архива
+### 11.2. Archive structure
 
 ```
-mimetype                   первым, STORE, без extra-полей
+mimetype                   first, STORE, no extra fields
 META-INF/container.xml
 OEBPS/content.opf
 OEBPS/nav.xhtml
 OEBPS/toc.ncx
 OEBPS/theme.css
-OEBPS/custom.css           если есть
-OEBPS/title.xhtml          если включена титульная страница
-OEBPS/c-<id>.xhtml         по главе на файл
+OEBPS/custom.css           if present
+OEBPS/title.xhtml          if title page enabled
+OEBPS/c-<id>.xhtml         one file per chapter
 OEBPS/images/…
 ```
 
-Структура плоская, поэтому пути `images/x.png` из разметки и `custom.css`
-работают без переписывания. Zip детерминированный (порядок, дата).
+Structure is flat, so paths `images/x.png` from markup and `custom.css` work
+without rewriting. Zip is deterministic (order, date).
 
-### 11.3. Главы
+### 11.3. Chapters
 
 1. `parse(source)`.
-2. Обход AST, узлы `image`: `src` меняется по карте путей (если при
-   оптимизации сменился формат — меняется расширение); ссылка на
-   отсутствующую картинку — узел удаляется (предупреждение уже есть в
-   редакторе).
+2. Walk AST, `image` nodes: `src` changes by path map (if optimization changed
+   format — extension changes); link to missing image — node is deleted (warning
+   already in editor).
 3. `renderToHTML(document, { xhtmlMode: true })`.
-4. Шаблон: XML-декларация, `<html xmlns xmlns:epub xml:lang lang>`,
-   `<title>`, ссылки на `theme.css` и `custom.css`,
+4. Template: XML declaration, `<html xmlns xmlns:epub xml:lang lang>`,
+   `<title>`, links to `theme.css` and `custom.css`,
    `<body><section epub:type="chapter" role="doc-chapter">…</section></body>`.
-5. Проверка корректности XML через `XMLValidator.validate`
-   (`fast-xml-parser`). Ошибка фатальна: «Глава N «…»: некорректный XHTML
-   (строка, столбец)».
+5. XML validation via `XMLValidator.validate` (`fast-xml-parser`). Error is
+   fatal: "Chapter N «…»: invalid XHTML (line, column)".
 
-Глава без `# заголовка` получает «Глава N» только в `<title>` и оглавлении;
-в текст заголовок не вставляется.
+Chapter without `# heading` gets "Chapter N" only in `<title>` and TOC;
+heading is not inserted in text.
 
-### 11.4. Титульная страница
+### 11.4. Title page
 
-Если `options.titlePage`: `title.xhtml` первым в spine, `<section
-epub:type="titlepage">`. Содержимое: название, авторы, переводчики, серия и
-номер, версия, аннотация (абзацы по пустым строкам). Подписи («Перевод»,
-«Серия», «Версия») — на языке **книги** из `labels.ts` (ru / en / zh; для
-остальных языков — en).
+If `options.titlePage`: `title.xhtml` first in spine, `<section
+epub:type="titlepage">`. Content: title, authors, translators, series and
+number, version, description (paragraphs by blank lines). Labels ("Translator",
+"Series", "Version") — in **book** language from `labels.ts` (ru / en / zh;
+for other languages — en).
 
 ### 11.5. content.opf
 
-- `dc:identifier id="bookid"` = `urn:uuid:…` (не меняется между версиями).
-- `dc:title` = название, или «Название (версия)» если `versionInTitle` и
-  версия задана.
-- `dc:language`; `dc:creator` для каждого автора с
+- `dc:identifier id="bookid"` = `urn:uuid:…` (does not change between versions).
+- `dc:title` = title, or "Title (version)" if `versionInTitle` and version
+  is set.
+- `dc:language`; `dc:creator` for each author with
   `<meta refines property="role" scheme="marc:relators">aut</meta>`;
-  `dc:contributor` для переводчиков с ролью `trl`.
-- `dc:description` — аннотация.
-- `<meta property="dcterms:modified">` = момент экспорта (UTC, секунды).
-- Серия: `<meta property="belongs-to-collection" id="series">` +
-  `collection-type = series` + `group-position`; дополнительно
-  `<meta name="calibre:series">` и `<meta name="calibre:series_index">`.
-- Обложка: ресурс с `properties="cover-image"` и `<meta name="cover"
-content="…">`. Отдельной страницы обложки нет.
-- Manifest: все файлы архива; `nav.xhtml` с `properties="nav"`; `toc.ncx`
-  указан в `<spine toc="ncx">`.
-- Spine: `title.xhtml` (если есть), затем главы по порядку. `nav.xhtml` в
-  spine не входит.
+  `dc:contributor` for translators with role `trl`.
+- `dc:description` — description.
+- `<meta property="dcterms:modified">` = export moment (UTC, seconds).
+- Series: `<meta property="belongs-to-collection" id="series">` +
+  `collection-type = series` + `group-position`; additionally
+  `<meta name="calibre:series">` and `<meta name="calibre:series_index">`.
+- Cover: resource with `properties="cover-image"` and `<meta name="cover"
+content="…">`. No separate cover page.
+- Manifest: all archive files; `nav.xhtml` with `properties="nav"`; `toc.ncx`
+  in `<spine toc="ncx">`.
+- Spine: `title.xhtml` (if present), then chapters in order. `nav.xhtml` not
+  in spine.
 
-### 11.6. Навигация
+### 11.6. Navigation
 
-- `nav.xhtml`: `<nav epub:type="toc">` — плоский список глав; `<nav
-epub:type="landmarks">` — `titlepage` (если есть) и `bodymatter` (первая
-  глава).
-- `toc.ncx`: тот же список для старых читалок и Calibre, `dtb:uid` = `book.id`.
+- `nav.xhtml`: `<nav epub:type="toc">` — flat chapter list; `<nav
+epub:type="landmarks">` — `titlepage` (if present) and `bodymatter` (first
+  chapter).
+- `toc.ncx`: same list for old readers and Calibre, `dtb:uid` = `book.id`.
 
 ### 11.7. theme.css
 
-- Никаких `font-family` и размеров шрифта у `body` — ими управляет читалка.
-- `p { margin: 0; text-indent: 1.5em }`; первый абзац после заголовка и
-  разрыва сцены без отступа.
-- `h1` по центру, с отступами в `em`.
-- `p.novlang-scene-break` по центру, без отступа, с вертикальными полями.
-- `blockquote` с полями в `em`.
-- `img { max-width: 100%; height: auto }`, абзац с одной картинкой по центру.
-- Скрытие сносок-`aside` (Kindle показывает их всплывающими).
-- Стили титульной страницы.
+- No `font-family` or font size on `body` — reader controls them.
+- `p { margin: 0; text-indent: 1.5em }`; first paragraph after heading and
+  scene break without indent.
+- `h1` centered, with margins in `em`.
+- `p.novlang-scene-break` centered, no indent, vertical margins.
+- `blockquote` with margins in `em`.
+- `img { max-width: 100%; height: auto }`, paragraph with single image centered.
+- Hide `aside` footnotes (Kindle shows them as popups).
+- Title page styles.
 
-### 11.8. Изображения
+### 11.8. Images
 
-- В EPUB попадают только используемые в главах картинки и обложка.
-- План (`planImage(meta, options, isCover)` — чистая функция) определяет
-  целевой размер и формат; выполнение — `ImageProcessor` (в приложении —
-  `workers/image.worker.ts`: `createImageBitmap` + `OffscreenCanvas`, в
-  тестах — процессор, возвращающий байты без изменений).
+- Only images used in chapters and the cover go into EPUB.
+- Plan (`planImage(meta, options, isCover)` — pure function) determines target
+  size and format; execution — `ImageProcessor` (in app — `workers/image.worker.ts`:
+  `createImageBitmap` + `OffscreenCanvas`, in tests — processor returning
+  bytes unchanged).
 
-| Пресет            | Размер                                                         | Формат                                                                                       |
-| ----------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Kindle Paperwhite | Вписать в 1264×1680 (обложку — в 1600×2560), только уменьшение | JPEG → JPEG q85; PNG → PNG; GIF → PNG (первый кадр); WebP → JPEG q85, при альфа-канале → PNG |
-| Без изменений     | Как есть                                                       | Как есть, но WebP конвертируется по правилу выше                                             |
+| Preset            | Size                                                 | Format                                                                                 |
+| ----------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Kindle Paperwhite | Fit in 1264×1680 (cover — 1600×2560), downscale only | JPEG → JPEG q85; PNG → PNG; GIF → PNG (first frame); WebP → JPEG q85, with alpha → PNG |
+| Original          | As is                                                | As is, but WebP converted by rule above                                                |
 
-- «Оттенки серого» (по умолчанию выкл.) — ручной проход по `ImageData`
-  (`ctx.filter` в Safari не поддерживается).
-- Результаты кэшируются в памяти по ключу SHA-256 + параметры плана.
-- Прогресс «Изображения k/N», отмена через `AbortSignal`.
+- "Grayscale" (off by default) — manual pass over `ImageData`
+  (`ctx.filter` not supported in Safari).
+- Results are cached in memory by key SHA-256 + plan params.
+- Progress "Images k/N", cancel via `AbortSignal`.
 
-### 11.9. Имя файла
+### 11.9. File name
 
-`{название} ({версия}).epub` или `{название}.epub`. Символы
-`<>:"/\|?*` и управляющие заменяются на `_`, пробелы и точки по краям
-обрезаются, зарезервированные имена Windows (`CON`, `PRN`, `AUX`, `NUL`,
-`COM1`…`LPT9`) получают префикс `_`, длина — до 120 символов.
+`{title} ({version}).epub` or `{title}.epub`. Characters `<>:"/\|?*` and
+control characters replaced with `_`, leading/trailing spaces and dots trimmed,
+Windows reserved names (`CON`, `PRN`, `AUX`, `NUL`, `COM1`…`LPT9`) get prefix
+`_`, length up to 120 characters.
 
 ### 11.10. ExportDialog (Mod+E)
 
-1. Сводка предупреждений книги со ссылкой «Показать» (экспорт не
-   блокируют).
-2. Пресет изображений и «Оттенки серого».
-3. ☑ «Титульная страница» (по умолчанию вкл.).
-4. ☑ «Добавить версию к названию» (доступна при заданной версии, по
-   умолчанию вкл.).
-5. Предпросмотр имени файла.
-6. «Экспорт…» → диалог сохранения (последняя папка экспорта запоминается) →
-   прогресс с «Отменой» → `write_file_atomic` → уведомление «EPUB сохранён ·
-   Показать в папке» (`revealItemInDir` из opener).
+1. Summary of book warnings with "Show" link (do not block export).
+2. Image preset and "Grayscale".
+3. ☑ "Title page" (on by default).
+4. ☑ "Add version to title" (available if version is set, on by default).
+5. File name preview.
+6. "Export…" → save dialog (last export folder remembered) → progress with
+   "Cancel" → `write_file_atomic` → notification "EPUB saved · Show in folder"
+   (`revealItemInDir` from opener).
 
-Выбранные опции 2–4 запоминаются в настройках приложения.
+Selected options 2–4 are remembered in app settings.
 
-## 12. Ошибки и логирование
+## 12. Errors and logging
 
-### 12.1. Ошибки
+### 12.1. Errors
 
-- `types/errors.ts`: `AppError { code, params?, cause? }`; текст — ключ
-  `errors.<code>` в локалях. Коды, например: `edb.notZip`,
+- `types/errors.ts`: `AppError { code, params?, cause? }`; text — key
+  `errors.<code>` in locales. Example codes: `edb.notZip`,
   `edb.noManifest`, `edb.badJson`, `edb.foreignFormat`, `edb.tooNew`,
   `fs.notFound`, `fs.permissionDenied`, `fs.diskFull`, `export.invalidXhtml`,
   `image.unsupported`, `recovery.writeFailed`.
-- Rust-команды возвращают сериализуемую ошибку `{ code, message }`
-  (`thiserror` + `serde`); `services/platform` переводит её в `AppError`.
-- Ошибки действий пользователя (открыть, сохранить, экспорт) — диалог.
-  Фоновые ошибки (автосохранение, воркер) — уведомление.
-- Непредвиденные ошибки: `app.config.errorHandler`, `window.onerror`,
-  `unhandledrejection` → запись в лог + уведомление «Произошла ошибка ·
-  Подробнее». «Подробнее» показывает текст с кнопками «Копировать», «Папка
-  логов», «Сообщить об ошибке» (открывает новый issue на GitHub с версией,
-  ОС и стеком; текст книги не передаётся).
-- Телеметрии нет.
+- Rust commands return serializable error `{ code, message }` (`thiserror` +
+  `serde`); `services/platform` translates it to `AppError`.
+- User action errors (open, save, export) — dialog. Background errors
+  (autosave, worker) — notification.
+- Unexpected errors: `app.config.errorHandler`, `window.onerror`,
+  `unhandledrejection` → log + notification "Error occurred · Details".
+  "Details" shows text with buttons "Copy", "Log folder", "Report error" (opens
+  new GitHub issue with version, OS, and stack; book text not sent).
+- No telemetry.
 
-### 12.2. Логи
+### 12.2. Logs
 
-- `tauri-plugin-log`: файл в системной папке логов с ротацией по размеру;
-  в dev — ещё stdout.
-- Фронтенд пишет через `services/platform/logger.ts` (интерфейс `Logger`).
-- Уровень: info в prod, debug в dev.
-- Пишутся: старт (версия, ОС), открытие/сохранение/экспорт (длительность,
-  число глав и картинок, число предупреждений), ошибки со стеком. Текст
-  книги не пишется.
+- `tauri-plugin-log`: file in system log folder with size rotation; in dev —
+  also stdout.
+- Frontend writes via `services/platform/logger.ts` (interface `Logger`).
+- Level: info in prod, debug in dev.
+- Logged: startup (version, OS), open/save/export (duration, chapter and image
+  count, warning count), errors with stack. Book text not logged.
 
-## 13. Настройки, обновления, платформенные детали
+## 13. Settings, updates, platform details
 
-### 13.1. Настройки приложения
+### 13.1. App settings
 
-`stores/settings.ts`, хранение — `tauri-plugin-store` (`settings.json` в
-папке конфигурации приложения) через `services/platform/settings.ts`.
+`stores/settings.ts`, storage — `tauri-plugin-store` (`settings.json` in
+app config folder) via `services/platform/settings.ts`.
 
-| Ключ                                                                                                    | По умолчанию                                         |
+| Key                                                                                                     | Default                                              |
 | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `locale`                                                                                                | локаль ОС (ru / en / zh-CN, иначе en)                |
+| `locale`                                                                                                | OS locale (ru / en / zh-CN, else en)                 |
 | `layout.sidebarVisible`, `layout.sidebarWidth`, `layout.splitRatio`, `layout.mode`, `layout.activeView` | `true`, 250, 0.5, `split`, `explorer`                |
-| `recentFiles`                                                                                           | `[]` (до 10)                                         |
+| `recentFiles`                                                                                           | `[]` (up to 10)                                      |
 | `confirmDelete`                                                                                         | `true`                                               |
 | `export.imagePreset`, `export.grayscale`, `export.titlePage`, `export.versionInTitle`, `export.lastDir` | `kindle-paperwhite`, `false`, `true`, `true`, `null` |
 | `updates.lastCheckedAt`                                                                                 | `null`                                               |
 
-`SettingsView` (⚙ на панели активности): язык интерфейса, «Подтверждать
-удаление», «Проверить обновления», «Открыть папку логов», версия приложения
-и ссылка на репозиторий.
+`SettingsView` (⚙ on activity panel): UI language, "Confirm deletion", "Check
+for updates", "Open log folder", app version and repository link.
 
-### 13.2. Проверка обновлений
+### 13.2. Update check
 
-При старте (не чаще раза в сутки) и кнопкой в Настройках:
-`services/platform/updates.ts` запрашивает последний релиз через GitHub API и
-сравнивает версии. Есть новее — уведомление со ссылкой на страницу релиза.
-Ошибка сети — только запись в лог.
+On startup (no more than once per day) and via Settings button:
+`services/platform/updates.ts` queries the latest release via GitHub API and
+compares versions. If newer exists — notification with link to release page.
+Network error — log only.
 
-### 13.3. Платформенные детали
+### 13.3. Platform details
 
-- **Drag&drop:** `dragDropEnabled: false` у окна. Иначе на Windows не работает
-  HTML5 drag&drop внутри WebView (перестановка глав, перенос картинок).
-  Следствие — открытие `.edb` перетаскиванием на окно в v1 не
-  поддерживается.
-- **CSP приложения** (`tauri.conf.json`): `default-src 'self'; img-src 'self'
+- **Drag&drop:** `dragDropEnabled: false` on window. Otherwise HTML5 drag&drop
+  doesn't work in WebView on Windows (chapter reordering, image dragging).
+  Consequence — opening `.edb` by dragging to window is not supported in v1.
+- **App CSP** (`tauri.conf.json`): `default-src 'self'; img-src 'self'
 blob: data:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:;
 connect-src ipc: http://ipc.localhost https://api.github.com`.
-- **Ассоциация файлов:** `bundle.fileAssociations` для `.edb`.
-- Окно: минимальный размер ~900×560.
-- **Минимальные ОС:** macOS 12 (`bundle.macOS.minimumSystemVersion`),
-  Windows 10 (WebView2), Linux с WebKitGTK 4.1 уровня ubuntu-22.04.
-  Подтверждается прототипом 2 (раздел 17).
+- **File association:** `bundle.fileAssociations` for `.edb`.
+- Window: minimum size ~900×560.
+- **Minimum OS:** macOS 12 (`bundle.macOS.minimumSystemVersion`),
+  Windows 10 (WebView2), Linux with WebKitGTK 4.1 level ubuntu-22.04.
+  Confirmed by prototype 2 (section 17).
 
 ## 14. Rust (`src-tauri`)
 
-- Регистрация плагинов: `single-instance` (первым), `log`, `window-state`,
+- Plugin registration: `single-instance` (first), `log`, `window-state`,
   `store`, `dialog`, `fs`, `persisted-scope`, `opener`.
-- Команды: `write_file_atomic(path, bytes)`, `take_pending_open_paths()`.
-- Обработка `RunEvent::Opened` (macOS), аргументов запуска (Windows/Linux) и
-  колбэка single-instance → очередь путей + событие `open-paths`; пути
-  добавляются в fs-scope.
-- Узкие capabilities: только нужные команды плагинов для окна `main`;
-  fs — чтение/запись в scope, без произвольного доступа.
-- Ошибки команд — `enum` на `thiserror` с сериализацией `{ code, message }`.
-- Шаблонная команда `greet` удаляется.
+- Commands: `write_file_atomic(path, bytes)`, `take_pending_open_paths()`.
+- Handle `RunEvent::Opened` (macOS), launch arguments (Windows/Linux) and
+  single-instance callback → path queue + `open-paths` event; paths added to
+  fs-scope.
+- Narrow capabilities: only needed plugin commands for window `main`; fs —
+  read/write in scope, no arbitrary access.
+- Command errors — `enum` on `thiserror` with serialization `{ code, message }`.
+- Template command `greet` is removed.
 
-## 15. Тестирование
+## 15. Testing
 
-| Уровень                | Инструменты                                                         | Что покрывает                                                                                                                                                                                                                                                                                                                                                                                 |
-| ---------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unit                   | Vitest (node)                                                       | `services/*`, `utils`: чтение/запись `.edb` туда-обратно, битые фикстуры, миграции; `buildEpub` (OPF, nav, ncx, title page, карта путей, удаление битых картинок, имя файла); `planImage`; поиск и замена (регистр, слово целиком с кириллицей, regex с `$1`); операции над книгой; `importImage` (сигнатуры, имена, дедупликация); проверки книги; совпадение наборов ключей ru / en / zh-CN |
-| Stores, composables    | Vitest + фейки платформы, `fake-indexeddb`, fake timers             | dirty/revision, guard, автосохранение (инкрементальность, частота), восстановление, удаление с отменой, уведомления                                                                                                                                                                                                                                                                           |
-| Компоненты (выборочно) | @vue/test-utils + happy-dom                                         | ContributorsList, UndoToast (закрытие по `animationend`, пауза), ExportDialog, диалог несохранённых изменений, ConfirmDialog с «Больше не спрашивать»                                                                                                                                                                                                                                         |
-| Команды редактора      | Vitest + `EditorState` без view                                     | полужирный/курсив, сноска, замена по книге с историей undo                                                                                                                                                                                                                                                                                                                                    |
-| e2e                    | Playwright против `vite --mode e2e` (Chromium, in-memory платформа) | новая книга → текст → сохранить → открыть → поиск и замена → удаление и отмена → экспорт                                                                                                                                                                                                                                                                                                      |
-| EPUB                   | `scripts/build-fixture-epubs` + epubcheck (Java, версия закреплена) | тестовые книги: серия, переводчики, сноски, картинки, обложка, глава без заголовка, титульная страница; любые ошибки и предупреждения валят CI                                                                                                                                                                                                                                                |
-| Rust                   | `cargo test`                                                        | `write_file_atomic` (замена существующего файла, отказ вне scope), очередь путей                                                                                                                                                                                                                                                                                                              |
-| Реальные WebView       | ручной чеклист `docs/release-checklist.md`                          | запуск на 3 ОС, открытие из ОС, drag&drop, вставка картинки из буфера, экспорт с оптимизацией, проверка EPUB на Kindle через Send to Kindle                                                                                                                                                                                                                                                   |
+| Level                 | Tools                                                               | Coverage                                                                                                                                                                                                                                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit                  | Vitest (node)                                                       | `services/*`, `utils`: `.edb` read/write roundtrip, corrupt fixtures, migrations; `buildEpub` (OPF, nav, ncx, title page, path map, bad image removal, file name); `planImage`; search and replace (case, whole word with Cyrillic, regex with `$1`); book operations; `importImage` (signatures, names, dedup); book checks; key set match ru / en / zh-CN |
+| Stores, composables   | Vitest + platform fakes, `fake-indexeddb`, fake timers              | dirty/revision, guard, autosave (incremental, frequency), recovery, deletion with undo, notifications                                                                                                                                                                                                                                                       |
+| Components (selected) | @vue/test-utils + happy-dom                                         | ContributorsList, UndoToast (close on `animationend`, pause), ExportDialog, unsaved changes dialog, ConfirmDialog with "Don't ask again"                                                                                                                                                                                                                    |
+| Editor commands       | Vitest + `EditorState` without view                                 | bold/italic, footnote, replace across book with undo history                                                                                                                                                                                                                                                                                                |
+| e2e                   | Playwright against `vite --mode e2e` (Chromium, in-memory platform) | new book → text → save → open → search and replace → delete and undo → export                                                                                                                                                                                                                                                                               |
+| EPUB                  | `scripts/build-fixture-epubs` + epubcheck (Java, pinned version)    | test books: series, translators, footnotes, images, cover, chapter without heading, title page; any errors and warnings fail CI                                                                                                                                                                                                                             |
+| Rust                  | `cargo test`                                                        | `write_file_atomic` (replace existing file, refuse outside scope), path queue                                                                                                                                                                                                                                                                               |
+| Real WebView          | manual checklist `docs/release-checklist.md`                        | run on 3 OS, open from OS, drag&drop, paste image from clipboard, export with optimization, EPUB check on Kindle via Send to Kindle                                                                                                                                                                                                                         |
 
-## 16. CI и релизы
+## 16. CI and releases
 
-### 16.1. `ci.yml` (pull request и push)
+### 16.1. `ci.yml` (pull request and push)
 
-- **ubuntu:** pnpm install с кэшем → `vue-tsc --noEmit` → Oxlint (включая
-  границы импортов) → `pnpm format:check` → Vitest с покрытием → сборка
-  тестовых EPUB + epubcheck → Playwright.
-- **Rust, матрица ubuntu / macOS / windows:** `cargo fmt --check`,
+- **ubuntu:** pnpm install with cache → `vue-tsc --noEmit` → Oxlint
+  (including import boundaries) → `pnpm format:check` → Vitest with coverage
+  → build test EPUBs + epubcheck → Playwright.
+- **Rust, matrix ubuntu / macOS / windows:** `cargo fmt --check`,
   `cargo clippy -- -D warnings`, `cargo test`.
-- Dependabot (или Renovate) раз в неделю, обновления группами (npm, cargo,
-  actions).
+- Dependabot (or Renovate) weekly, updates in groups (npm, cargo, actions).
 
-### 16.2. `release.yml` (тег `v*`)
+### 16.2. `release.yml` (tag `v*`)
 
-- `tauri-apps/tauri-action`, матрица:
+- `tauri-apps/tauri-action`, matrix:
   - macOS: universal (`universal-apple-darwin`), `.dmg`;
   - Windows: NSIS `.exe`;
-  - ubuntu-22.04 (старая glibc для совместимости): AppImage, `.deb`, `.rpm`.
-- Черновик GitHub Release с артефактами; заметки — из `CHANGELOG.md`.
-- Версия в одном месте: `package.json`; `tauri.conf.json` ссылается на неё
-  (`"version": "../package.json"`), `Cargo.toml` синхронизируется скриптом
-  релиза.
-- **Подпись:** в v1 сборки не подписываются и не нотаризуются. В
-  `release.yml` шаги подписи (Apple, Windows) присутствуют и выполняются
-  только при наличии секретов. README содержит инструкции первого запуска:
-  macOS — «Системные настройки → Конфиденциальность и безопасность → Всё
-  равно открыть»; Windows — SmartScreen «Подробнее → Выполнить в любом
-  случае».
+  - ubuntu-22.04 (old glibc for compatibility): AppImage, `.deb`, `.rpm`.
+- GitHub Release draft with artifacts; notes from `CHANGELOG.md`.
+- Version in one place: `package.json`; `tauri.conf.json` references it
+  (`"version": "../package.json"`), `Cargo.toml` synced by release script.
+- **Signing:** in v1 builds are not signed or notarized. In `release.yml`
+  signing steps (Apple, Windows) are present and run only if secrets exist.
+  README contains first-run instructions: macOS — "System Settings →
+  Privacy and Security → Open Anyway"; Windows — SmartScreen "More info →
+  Run anyway".
 
-## 17. Риски и прототипы первой очереди
+## 17. Risks and first-priority prototypes
 
-Первые задачи плана — короткие прототипы, результаты которых могут поменять
-детали реализации:
+The first plan tasks are short prototypes whose results may change implementation
+details:
 
-1. **fs-scope + `write_file_atomic` + persisted-scope:** запись по пути,
-   выбранному в диалоге, по пути из ОС и после перезапуска; проверка scope
-   в Rust-команде.
-2. **Изображения в воркере:** `createImageBitmap` + `OffscreenCanvas` 2D +
-   `convertToBlob` в WKWebView (macOS 12), WebView2 и
-   WebKitGTK (ubuntu-22.04). Запасной вариант — Rust-команда на crate
-   `image` за тем же интерфейсом `ImageProcessor`.
-3. **HTML5 drag&drop и вставка картинок из буфера** при `dragDropEnabled:
-false` на трёх ОС.
-4. **Send to Kindle:** тестовый EPUB (сноски, картинки, серия, титульная
-   страница) принимается и корректно отображается на Paperwhite.
+1. **fs-scope + `write_file_atomic` + persisted-scope:** write to path from
+   dialog, path from OS, and after restart; scope check in Rust command.
+2. **Images in worker:** `createImageBitmap` + `OffscreenCanvas` 2D +
+   `convertToBlob` in WKWebView (macOS 12), WebView2, and
+   WebKitGTK (ubuntu-22.04). Fallback — Rust command on crate `image` with
+   same `ImageProcessor` interface.
+3. **HTML5 drag&drop and paste images from clipboard** with `dragDropEnabled:
+false` on three OS.
+4. **Send to Kindle:** test EPUB (footnotes, images, series, title page)
+   accepted and displays correctly on Paperwhite.
 
-Известные ограничения: проверка орфографии на Linux — best effort;
-синхронизация прокрутки превью приблизительная.
+Known limitations: spell check on Linux is best effort; preview scroll
+synchronization is approximate.
