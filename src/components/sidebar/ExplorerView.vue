@@ -21,7 +21,8 @@ const { t } = useSafeI18n();
 const layout = useLayoutStore();
 const settings = useSettingsStore();
 const search = useBookSearch();
-const pendingDelete = ref<{ kind: "chapter" | "image" | "unused"; id?: string } | null>(null);
+type DeleteTarget = { kind: "chapter" | "image"; id: string } | { kind: "unused"; paths: string[] };
+const pendingDelete = ref<DeleteTarget | null>(null);
 const context = ref<{ kind: "chapter" | "image"; id: string; x: number; y: number } | null>(null);
 const collapsed = ref<Record<string, boolean>>({});
 const draggedChapter = ref<number | null>(null);
@@ -29,25 +30,47 @@ const book = computed(() => project.book);
 const usage = computed(() =>
   book.value ? collectImageUsage(book.value) : new Map<string, string[]>(),
 );
+function unusedResourcePaths(): string[] {
+  return book.value
+    ? [...book.value.resources.keys()].filter((path) => !usage.value.has(path))
+    : [];
+}
+function chapterDisplayName(id: string): string {
+  const index = book.value?.chapters.findIndex((chapter) => chapter.id === id) ?? -1;
+  const chapter = index >= 0 ? book.value?.chapters[index] : undefined;
+  return (
+    (chapter && extractTitle(chapter.source)) ||
+    t("chapters.fallback", "Chapter {number}").replace("{number}", String(index + 1))
+  );
+}
+function imageUsageDetails(path: string): string {
+  const chapters = usage.value.get(path) ?? [];
+  return chapters.length
+    ? `${t("images.usedIn", "Used in")}: ${chapters.map(chapterDisplayName).join(", ")}`
+    : t("images.unused", "not used");
+}
 const deleteTitle = computed(() => {
-  if (pendingDelete.value?.kind === "image")
-    return `${t("delete.imageTitle", "Delete image")} “${pendingDelete.value.id?.replace(/^images\//, "") ?? ""}”`;
-  const chapter = book.value?.chapters.find((item) => item.id === pendingDelete.value?.id);
-  return `${t("delete.chapterTitle", "Delete chapter")} “${chapter ? extractTitle(chapter.source) || t("chapters.fallback", "Chapter") : ""}”`;
+  const target = pendingDelete.value;
+  if (target?.kind === "unused") return t("delete.unusedTitle", "Delete unused images");
+  if (target?.kind === "image")
+    return `${t("delete.imageTitle", "Delete image")} “${target.id.replace(/^images\//, "") ?? ""}”`;
+  return `${t("delete.chapterTitle", "Delete chapter")} “${target ? chapterDisplayName(target.id) : ""}”`;
 });
 const deleteMessage = computed(() =>
-  pendingDelete.value?.kind === "image"
-    ? t("delete.imageMessage", "This image will be removed from the project.")
-    : t("delete.chapterMessage", "This chapter will be removed from the book."),
+  pendingDelete.value?.kind === "unused"
+    ? t("delete.unusedMessage", "These unused images will be removed from the project.")
+    : pendingDelete.value?.kind === "image"
+      ? t("delete.imageMessage", "This image will be removed from the project.")
+      : t("delete.chapterMessage", "This chapter will be removed from the book."),
 );
 const deleteDetails = computed(() => {
-  if (pendingDelete.value?.kind === "image") {
-    const chapters = usage.value.get(pendingDelete.value.id ?? "") ?? [];
-    return chapters.length
-      ? `${t("images.usedIn", "Used in")}: ${chapters.join(", ")}`
-      : t("images.unused", "not used");
+  const target = pendingDelete.value;
+  if (target?.kind === "unused")
+    return target.paths.map((path) => path.replace(/^images\//, "")).join(", ");
+  if (target?.kind === "image") {
+    return imageUsageDetails(target.id);
   }
-  const chapter = book.value?.chapters.find((item) => item.id === pendingDelete.value?.id);
+  const chapter = book.value?.chapters.find((item) => item.id === target?.id);
   const words = chapter?.source.trim().split(/\s+/).filter(Boolean).length ?? 0;
   return `${t("delete.words", "Words")}: ${words}`;
 });
@@ -95,11 +118,7 @@ function confirmDelete(value: { askAgain: boolean }) {
   const target = pendingDelete.value;
   if (target?.kind === "chapter" && target.id) search.deleteChapter(target.id);
   if (target?.kind === "image" && target.id) search.deleteResource(target.id);
-  if (target?.kind === "unused")
-    for (const path of book.value
-      ? [...book.value.resources.keys()].filter((item) => !usage.value.has(item))
-      : [])
-      search.deleteResource(path);
+  if (target?.kind === "unused") for (const path of target.paths) search.deleteResource(path);
   pendingDelete.value = null;
   if (!value.askAgain) {
     settings.confirmDelete = false;
@@ -111,13 +130,13 @@ function requestDelete(target: { kind: "chapter" | "image" | "unused"; id?: stri
     if (target.kind === "chapter" && target.id) search.deleteChapter(target.id);
     if (target.kind === "image" && target.id) search.deleteResource(target.id);
     if (target.kind === "unused")
-      for (const path of book.value
-        ? [...book.value.resources.keys()].filter((item) => !usage.value.has(item))
-        : [])
-        search.deleteResource(path);
+      for (const path of unusedResourcePaths()) search.deleteResource(path);
     return;
   }
-  pendingDelete.value = target;
+  pendingDelete.value =
+    target.kind === "unused"
+      ? { kind: "unused", paths: unusedResourcePaths() }
+      : { kind: target.kind, id: target.id! };
   context.value = null;
 }
 function openChapterMenu(id: string, event: MouseEvent) {

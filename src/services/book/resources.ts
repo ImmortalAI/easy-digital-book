@@ -73,7 +73,11 @@ export function removeResource(book: Book, path: string): BookMutation {
   const resources = new Map(book.resources);
   const existed = resources.delete(path);
   return {
-    book: { ...book, resources },
+    book: {
+      ...book,
+      resources,
+      metadata: book.metadata.cover === path ? { ...book.metadata, cover: null } : book.metadata,
+    },
     changedChapters: new Set(),
     removedChapters: new Set(),
     changedResources: new Set(),

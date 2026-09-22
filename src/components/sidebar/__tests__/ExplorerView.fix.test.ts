@@ -29,9 +29,71 @@ describe("ExplorerView destructive actions", () => {
     await wrapper.get(".explorer-image").trigger("contextmenu");
     await wrapper.findComponent({ name: "ContextMenu" }).vm.$emit("select", "delete");
     expect(project.book?.resources.has("images/cover.png")).toBe(false);
+    expect(project.book?.metadata.cover).toBeNull();
     const items = useNotificationsStore().items;
     items[items.length - 1]?.undo?.();
     expect(project.book?.resources.has("images/cover.png")).toBe(true);
+    expect(project.book?.metadata.cover).toBe("images/cover.png");
+    wrapper.unmount();
+  });
+
+  it("confirms unused-resource deletion with the affected names and deletes all selected resources", async () => {
+    const project = useProjectStore();
+    const book = createBook({
+      locale: "en",
+      now: new Date(),
+      newUuid: () => "550e8400-e29b-41d4-a716-446655440000",
+      newChapterId: () => "chapter1",
+    });
+    book.chapters[0]!.source = "# First\n![](images/used.png)";
+    book.chapters.push({ id: "chapter2", source: "# Second" });
+    for (const path of ["images/used.png", "images/unused-a.png", "images/unused-b.png"])
+      book.resources.set(path, { bytes: new Uint8Array([1]), mediaType: "image/png" });
+    project.setBook(book);
+    const wrapper = mount(ExplorerView);
+
+    const imagesSection = wrapper.findAll(".explorer-section")[2]!;
+    await imagesSection.findAll(".explorer-section__action button")[1]!.trigger("click");
+
+    const dialog = wrapper.findComponent({ name: "ConfirmDialog" });
+    expect(dialog.exists()).toBe(true);
+    expect(dialog.get("h2").text()).toContain("Delete unused images");
+    expect(dialog.get(".confirm-dialog__details").text()).toContain("unused-a.png");
+    expect(dialog.get(".confirm-dialog__details").text()).toContain("unused-b.png");
+    expect(dialog.get(".confirm-dialog__details").text()).not.toContain("chapter1");
+
+    await dialog.get("button:last-child").trigger("click");
+    expect([...project.book!.resources.keys()]).toEqual(["images/used.png"]);
+    wrapper.unmount();
+  });
+
+  it("shows chapter names, not internal IDs, when confirming a used-image deletion", async () => {
+    const project = useProjectStore();
+    const book = createBook({
+      locale: "en",
+      now: new Date(),
+      newUuid: () => "550e8400-e29b-41d4-a716-446655440000",
+      newChapterId: () => "chapter1",
+    });
+    book.chapters[0]!.source = "# First\n![](images/used.png)";
+    book.chapters.push({ id: "chapter2", source: "# Second\n![](images/used.png)" });
+    book.resources.set("images/used.png", {
+      bytes: new Uint8Array([1]),
+      mediaType: "image/png",
+    });
+    project.setBook(book);
+    const wrapper = mount(ExplorerView);
+
+    await wrapper.get(".explorer-image").trigger("contextmenu");
+    await wrapper.findComponent({ name: "ContextMenu" }).vm.$emit("select", "delete");
+
+    const details = wrapper
+      .findComponent({ name: "ConfirmDialog" })
+      .get(".confirm-dialog__details");
+    expect(details.text()).toContain("First");
+    expect(details.text()).toContain("Second");
+    expect(details.text()).not.toContain("chapter1");
+    expect(details.text()).not.toContain("chapter2");
     wrapper.unmount();
   });
 

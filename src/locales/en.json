@@ -67,6 +67,8 @@
     "chapterMessage": "This chapter will be removed from the book.",
     "imageTitle": "Delete image",
     "imageMessage": "This image will be removed from the project.",
+    "unusedTitle": "Delete unused images",
+    "unusedMessage": "These unused images will be removed from the project.",
     "words": "Words",
     "chapterToast": "Chapter deleted",
     "imageToast": "Image deleted"

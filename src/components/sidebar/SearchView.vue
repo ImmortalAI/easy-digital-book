@@ -163,41 +163,38 @@ function hideResult(result: SearchResult) {
     >
       {{ t("search.replaceAll", "Replace all") }}
     </button>
-    <div
-      v-for="group in groups"
-      v-show="!hiddenGroups.has(group.chapterId)"
-      :key="group.chapterId"
-      :data-search-group="group.chapterId"
-    >
-      <header class="search-group__header">
-        <button type="button" data-search-collapse @click="toggleGroup(group.chapterId)">
-          {{ group.title }}
-        </button>
-        <span data-search-count>{{ group.results.length }}</span>
-        <button type="button" data-search-hide @click="hideGroup(group.chapterId)">
-          {{ t("search.hide", "Hide") }}
-        </button>
-        <button
-          v-if="replacementOpen"
-          type="button"
-          :data-replace-chapter="group.chapterId"
-          @click="replaceChapter(group.chapterId)"
-        >
-          {{ t("search.replaceChapter", "Replace chapter") }}
-        </button>
-      </header>
-      <div v-if="!collapsedGroups.has(group.chapterId)">
-        <SearchResultItem
-          v-for="result in group.results.filter((item) => !hiddenResults.has(resultKey(item)))"
-          :key="resultKey(result)"
-          :result="result"
-          :chapter-title="group.title"
-          :replacement-visible="replacementOpen"
-          @select="selectResult(result)"
-          @replace="replaceOne(result)"
-          @hide="hideResult(result)"
-        />
+    <template v-for="group in groups" :key="group.chapterId">
+      <div v-if="!hiddenGroups.has(group.chapterId)" :data-search-group="group.chapterId">
+        <header class="search-group__header">
+          <button type="button" data-search-collapse @click="toggleGroup(group.chapterId)">
+            {{ group.title }}
+          </button>
+          <span data-search-count>{{ group.results.length }}</span>
+          <button type="button" data-search-hide @click="hideGroup(group.chapterId)">
+            {{ t("search.hide", "Hide") }}
+          </button>
+          <button
+            v-if="replacementOpen"
+            type="button"
+            :data-replace-chapter="group.chapterId"
+            @click="replaceChapter(group.chapterId)"
+          >
+            {{ t("search.replaceChapter", "Replace chapter") }}
+          </button>
+        </header>
+        <div v-if="!collapsedGroups.has(group.chapterId)">
+          <SearchResultItem
+            v-for="result in group.results.filter((item) => !hiddenResults.has(resultKey(item)))"
+            :key="resultKey(result)"
+            :result="result"
+            :chapter-title="group.title"
+            :replacement-visible="replacementOpen"
+            @select="selectResult(result)"
+            @replace="replaceOne(result)"
+            @hide="hideResult(result)"
+          />
+        </div>
       </div>
-    </div>
+    </template>
   </section>
 </template>

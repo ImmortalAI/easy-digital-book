@@ -45,6 +45,17 @@ describe("SearchView review contracts", () => {
     expect(wrapper.emitted("select")?.[0]).toEqual(["chapter2", 9, 13]);
   });
 
+  it("hides a result group instead of merely collapsing it", async () => {
+    const wrapper = mount(SearchView);
+    await wrapper.get('input[type="search"]').setValue("hero");
+
+    await wrapper.find('[data-search-group="chapter1"] [data-search-hide]').trigger("click");
+
+    const hiddenGroup = wrapper.find('[data-search-group="chapter1"]');
+    expect(hiddenGroup.exists()).toBe(false);
+    expect(wrapper.find('[data-search-group="chapter2"] [data-search-hide]').exists()).toBe(true);
+  });
+
   it("toggles replacement preview and supports replace chapter/all keyboard action", async () => {
     const wrapper = mount(SearchView);
     await wrapper.get('input[type="search"]').setValue("hero");
