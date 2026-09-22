@@ -23,10 +23,14 @@ export function rewriteResourcePaths(
 export function createResourceUrlCache() {
   const cache = new Map<string, CachedResource>();
 
+  /**
+   * Identity, not contents. Mutations rebuild the resources map but carry the
+   * unchanged Resource objects over by reference, so a replaced image is always
+   * a different object. Comparing bytes here meant scanning the book's entire
+   * image payload on every preview render, i.e. on every keystroke.
+   */
   function sameResource(left: Resource, right: Resource) {
-    if (left.mediaType !== right.mediaType || left.bytes.length !== right.bytes.length)
-      return false;
-    return left.bytes.every((byte, index) => byte === right.bytes[index]);
+    return left === right;
   }
 
   function createUrl(resource: Resource): { url: string; owned: boolean } {
