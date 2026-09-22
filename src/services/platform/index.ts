@@ -15,6 +15,7 @@ import { tauriLogger } from "./logger";
 import { tauriOpener } from "./opener";
 import { tauriSettings } from "./settings";
 import { noUpdates } from "./updates";
+import { tauriWindow } from "./window";
 
 export const platformServices: PlatformServices = {
   files: tauriFileSystem,
@@ -24,6 +25,7 @@ export const platformServices: PlatformServices = {
   logger: tauriLogger,
   opener: tauriOpener,
   updates: noUpdates,
+  window: tauriWindow,
 };
 
 class MemoryFiles implements FileSystem {
@@ -152,6 +154,22 @@ export function createInMemoryPlatformServices(): PlatformServices {
   const files = new MemoryFiles();
   const settings = new MemorySettings();
   const logger = { debug() {}, info() {}, warn() {}, error() {} };
+  const pendingOpenPaths: string[] = [];
+  const openListeners = new Set<() => void>();
+  const window: PlatformServices["window"] = {
+    async listenOpenPaths(handler) {
+      openListeners.add(handler);
+      return () => {
+        openListeners.delete(handler);
+      };
+    },
+    async takePendingOpenPaths() {
+      return pendingOpenPaths.splice(0);
+    },
+    async onCloseRequested() {
+      return () => {};
+    },
+  };
   return {
     files,
     settings,
@@ -171,7 +189,16 @@ export function createInMemoryPlatformServices(): PlatformServices {
     logger,
     opener: { async reveal() {}, async open() {} },
     updates: noUpdates,
+    window,
   };
+}
+
+let runtimeServices: PlatformServices | undefined;
+export function setRuntimePlatformServices(services: PlatformServices): void {
+  runtimeServices = services;
+}
+export function getRuntimePlatformServices(): PlatformServices {
+  return runtimeServices ?? createInMemoryPlatformServices();
 }
 
 export * from "./recovery";

@@ -5,8 +5,15 @@ import { buildDeterministicZip, type ZipEntry } from "./zip";
 function utf8(value: string): Uint8Array {
   return new TextEncoder().encode(value);
 }
-export async function writeEdb(book: Book, now: Date): Promise<Uint8Array> {
-  const metadata = { ...book.metadata, modified: now.toISOString() };
+export async function writeEdb(
+  book: Book,
+  now: Date,
+  options: { updateModified?: boolean } = {},
+): Promise<Uint8Array> {
+  const metadata = {
+    ...book.metadata,
+    ...(options.updateModified === false ? {} : { modified: now.toISOString() }),
+  };
   const manifest = {
     format: "easy-digital-book" as const,
     formatVersion: CURRENT_EDB_FORMAT_VERSION,

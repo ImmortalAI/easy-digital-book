@@ -5,7 +5,7 @@ import type { PlatformServices, RecoveryDelta } from "@/types/platform";
 import { writeEdb } from "@/services/edb/write";
 
 let configuredServices: PlatformServices | undefined;
-function copyBook(book: Book): Book {
+export function snapshotBook(book: Book): Book {
   return {
     metadata: {
       ...book.metadata,
@@ -23,6 +23,10 @@ function copyBook(book: Book): Book {
     customCss: book.customCss,
   };
 }
+export interface SetBookOptions {
+  dirty?: boolean;
+  fileMtime?: number | null;
+}
 export const useProjectStore = defineStore("project", () => {
   const book = ref<Book | null>(null),
     filePath = ref<string | null>(null),
@@ -30,7 +34,8 @@ export const useProjectStore = defineStore("project", () => {
     savedRevision = ref(0),
     fileMtime = ref<number | null>(null),
     saving = ref(false),
-    bookGeneration = ref(0);
+    bookGeneration = ref(0),
+    recoveryGeneration = ref(0);
   const changedChapters = ref(new Set<string>()),
     removedChapters = ref(new Set<string>()),
     changedResources = ref(new Set<string>()),
@@ -43,13 +48,13 @@ export const useProjectStore = defineStore("project", () => {
   function setServices(value: PlatformServices) {
     configure(value);
   }
-  function setBook(value: Book, path: string | null = null) {
+  function setBook(value: Book, path: string | null = null, options: SetBookOptions = {}) {
     bookGeneration.value++;
     book.value = value;
     filePath.value = path;
-    revision.value = 0;
+    revision.value = options.dirty ? 1 : 0;
     savedRevision.value = 0;
-    fileMtime.value = null;
+    fileMtime.value = options.fileMtime ?? null;
     clearDelta();
   }
   function clearDelta() {
@@ -92,28 +97,64 @@ export const useProjectStore = defineStore("project", () => {
     removedResources: removedResources.value,
   }));
   async function save(path = filePath.value): Promise<boolean> {
-    if (!book.value || !path) throw new Error("A file path is required");
+    if (!book.value || !path) return false;
     if (!dirty.value && filePath.value === path) return true;
     if (!services) throw new Error("Platform services are not configured");
     if (saving.value) return false;
     saving.value = true;
-    const snapshotRevision = revision.value;
-    const snapshot = copyBook(book.value);
-    const savedAt = new Date();
+    const generationAtStart = bookGeneration.value;
+    const bookAtStart = book.value;
+    const isCurrentProject = () =>
+      bookGeneration.value === generationAtStart &&
+      book.value?.metadata.id === bookAtStart.metadata.id;
     try {
-      const bytes = await writeEdb(snapshot, savedAt);
-      await services.files.writeFileAtomic(path, bytes);
+      if (path === filePath.value && fileMtime.value !== null) {
+        try {
+          const current = await services.files.stat(path);
+          if (current.mtime !== null && current.mtime !== fileMtime.value) {
+            const overwrite = await services.dialogs.confirm(
+              "The file was changed by another program. Overwrite it?",
+              "File changed",
+            );
+            if (!overwrite) return false;
+          }
+        } catch (error) {
+          services.logger.warn("Could not verify file modification time", { error });
+        }
+      }
+      if (!isCurrentProject()) return false;
+      const snapshotRevision = revision.value;
+      const updateModified = dirty.value;
+      const snapshot = snapshotBook(bookAtStart);
+      const savedAt = new Date();
+      if (updateModified) snapshot.metadata.modified = savedAt.toISOString();
+      try {
+        const bytes = await writeEdb(snapshot, savedAt, { updateModified: false });
+        await services.files.writeFileAtomic(path, bytes);
+      } catch (error) {
+        services.logger.error("Failed to save project", { error });
+        try {
+          await services.dialogs.message("Could not save project", "Save project");
+        } catch (dialogError) {
+          services.logger.warn("Could not show save error", { error: dialogError });
+        }
+        return false;
+      }
+      if (!isCurrentProject()) return true;
+      let savedFileMtime: number | null = null;
+      try {
+        savedFileMtime = (await services.files.stat(path)).mtime;
+      } catch {
+        savedFileMtime = null;
+      }
+      if (!isCurrentProject()) return true;
       filePath.value = path;
       savedRevision.value = snapshotRevision;
-      if (revision.value === snapshotRevision && book.value) {
-        book.value.metadata.modified = savedAt.toISOString();
-      }
-      try {
-        fileMtime.value = (await services.files.stat(path)).mtime;
-      } catch {
-        fileMtime.value = null;
-      }
+      fileMtime.value = savedFileMtime;
       if (revision.value === snapshotRevision) {
+        book.value.metadata.modified = snapshot.metadata.modified;
+      }
+      if (isCurrentProject() && revision.value === snapshotRevision) {
         clearDelta();
         try {
           await services.recovery.remove(snapshot.metadata.id);
@@ -122,9 +163,6 @@ export const useProjectStore = defineStore("project", () => {
         }
       }
       return true;
-    } catch (error) {
-      services.logger.error("Failed to save project", { error });
-      return false;
     } finally {
       saving.value = false;
     }
@@ -141,6 +179,9 @@ export const useProjectStore = defineStore("project", () => {
     fileMtime.value = null;
     clearDelta();
   }
+  function invalidateRecovery() {
+    recoveryGeneration.value++;
+  }
   return {
     book,
     filePath,
@@ -149,6 +190,7 @@ export const useProjectStore = defineStore("project", () => {
     fileMtime,
     saving,
     bookGeneration,
+    recoveryGeneration,
     dirty,
     recoveryDelta,
     configure,
@@ -159,6 +201,7 @@ export const useProjectStore = defineStore("project", () => {
     save,
     saveAs,
     reset,
+    invalidateRecovery,
   };
 });
 export function configureProjectServices(services: PlatformServices) {

@@ -3,6 +3,17 @@
     "title": "Easy Digital Book",
     "subtitle": "Create an EPUB from your novel.",
     "newProject": "New project",
-    "openProject": "Open project"
+    "openProject": "Open project",
+    "recovery": "Unsaved changes",
+    "recent": "Recent"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "unsaved": {
+    "title": "Unsaved changes",
+    "message": "Save your changes before continuing?",
+    "discard": "Don't save"
   }
 }

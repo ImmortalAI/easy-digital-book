@@ -10,7 +10,11 @@
     "store:default",
     "log:default",
     "window-state:default",
+    "core:window:allow-close",
+    "core:window:allow-destroy",
     "fs:allow-read-file",
-    "fs:allow-write-file"
+    "fs:allow-write-file",
+    "fs:allow-exists",
+    "fs:allow-stat"
   ]
 }

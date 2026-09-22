@@ -87,6 +87,15 @@ export interface RecoveryStore {
   writeChanges(book: Book, delta: RecoveryDelta, originalPath?: string | null): Promise<void>;
   remove(bookId: string): Promise<void>;
 }
+export interface WindowCloseEvent {
+  preventDefault(): void;
+}
+export type Unlisten = () => void | Promise<void>;
+export interface WindowServices {
+  listenOpenPaths(handler: () => void): Promise<Unlisten>;
+  takePendingOpenPaths(): Promise<string[]>;
+  onCloseRequested(handler: (event: WindowCloseEvent) => void | Promise<void>): Promise<Unlisten>;
+}
 export interface PlatformServices {
   files: FileSystem;
   dialogs: Dialogs;
@@ -95,5 +104,6 @@ export interface PlatformServices {
   logger: Logger;
   opener: Opener;
   updates: Updates;
+  window: WindowServices;
 }
 export type InMemoryPlatformServices = PlatformServices;

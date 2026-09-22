@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from "pinia";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createBook } from "@/services/book/create";
 import { addChapter } from "@/services/book/chapters";
 import { createInMemoryPlatformServices } from "@/services/platform";
@@ -7,6 +7,14 @@ import { useProjectStore } from "@/stores/project";
 import { useNotificationsStore } from "@/stores/notifications";
 import { useLayoutStore } from "@/stores/layout";
 import { useSettingsStore } from "@/stores/settings";
+
+function deferred<T = void>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((next) => {
+    resolve = next;
+  });
+  return { promise, resolve };
+}
 
 const book = () =>
   createBook({
@@ -84,6 +92,95 @@ describe("application stores", () => {
     expect(project.savedRevision).toBe(1);
     expect(project.revision).toBe(2);
     expect(project.dirty).toBe(true);
+  });
+
+  it("locks before checking mtime so a second save cannot race the first", async () => {
+    setActivePinia(createPinia());
+    const services = createInMemoryPlatformServices();
+    const mtime = deferred<{ mtime: number | null; size: number }>();
+    const stat = vi.fn<() => Promise<{ mtime: number | null; size: number }>>(() => mtime.promise);
+    services.files.stat = stat;
+    const project = useProjectStore();
+    project.configure(services);
+    project.setBook(book(), "book.edb", { dirty: true, fileMtime: 1 });
+
+    const first = project.save();
+    const second = project.save();
+    await Promise.resolve();
+    expect(stat).toHaveBeenCalledTimes(1);
+
+    mtime.resolve({ mtime: 1, size: 0 });
+    await expect(first).resolves.toBe(true);
+    await expect(second).resolves.toBe(false);
+  });
+
+  it("does not apply an old save result after the project changes", async () => {
+    setActivePinia(createPinia());
+    const services = createInMemoryPlatformServices();
+    const writeStarted = deferred();
+    const releaseWrite = deferred();
+    services.files.writeFileAtomic = async () => {
+      writeStarted.resolve();
+      await releaseWrite.promise;
+    };
+    const project = useProjectStore();
+    project.configure(services);
+    project.setBook(book(), "old.edb", { dirty: true });
+
+    const saving = project.save();
+    await writeStarted.promise;
+    const replacement = book();
+    replacement.metadata.id = "550e8400-e29b-41d4-a716-446655440001";
+    replacement.metadata.modified = "2026-02-01T00:00:00.000Z";
+    project.setBook(replacement, null, { dirty: true });
+    releaseWrite.resolve();
+
+    await expect(saving).resolves.toBe(true);
+    expect(project.book?.metadata.id).toBe(replacement.metadata.id);
+    expect(project.filePath).toBeNull();
+    expect(project.savedRevision).toBe(0);
+    expect(project.dirty).toBe(true);
+    expect(project.book?.metadata.modified).toBe("2026-02-01T00:00:00.000Z");
+  });
+
+  it("does not apply a post-write mtime to a replacement project", async () => {
+    setActivePinia(createPinia());
+    const services = createInMemoryPlatformServices();
+    const statStarted = deferred();
+    const mtime = deferred<{ mtime: number | null; size: number }>();
+    services.files.stat = async () => {
+      statStarted.resolve();
+      return mtime.promise;
+    };
+    const project = useProjectStore();
+    project.configure(services);
+    project.setBook(book(), "old.edb", { dirty: true });
+
+    const saving = project.save();
+    await statStarted.promise;
+    const replacement = book();
+    replacement.metadata.id = "550e8400-e29b-41d4-a716-446655440001";
+    project.setBook(replacement, null, { dirty: true });
+    mtime.resolve({ mtime: 123, size: 10 });
+
+    await expect(saving).resolves.toBe(true);
+    expect(project.fileMtime).toBeNull();
+  });
+
+  it("shows a save error without clearing dirty state", async () => {
+    setActivePinia(createPinia());
+    const services = createInMemoryPlatformServices();
+    services.files.writeFileAtomic = async () => {
+      throw new Error("disk full");
+    };
+    const message = vi.spyOn(services.dialogs, "message");
+    const project = useProjectStore();
+    project.configure(services);
+    project.setBook(book(), "book.edb", { dirty: true });
+
+    await expect(project.save()).resolves.toBe(false);
+    expect(project.dirty).toBe(true);
+    expect(message).toHaveBeenCalledWith("Could not save project", "Save project");
   });
 
   it("uses atomic file writes and isolates recovery cleanup failures", async () => {

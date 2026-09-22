@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, inject, nextTick, onMounted, ref, watch } from "vue";
 import { useShortcuts } from "@/composables/use-shortcuts";
+import { projectFilesKey } from "@/composables/use-project-files";
 import { useLayoutStore, type LayoutMode } from "@/stores/layout";
 import { useProjectStore } from "@/stores/project";
 import { extractTitle } from "@/services/book/extract-title";
@@ -14,6 +15,7 @@ import SourceEditor from "@/components/editor/SourceEditor.vue";
 import WarningsPopover from "@/components/editor/WarningsPopover.vue";
 
 const project = useProjectStore();
+const files = inject(projectFilesKey, null);
 const layout = useLayoutStore();
 const shell = ref<HTMLElement>();
 const sourceScroller = ref<HTMLElement | null>(null);
@@ -99,6 +101,10 @@ function findSourceScroller() {
 }
 
 useShortcuts({
+  newBook: files ? () => void files.newBook() : undefined,
+  open: files ? () => void files.open() : undefined,
+  save: files ? () => void files.save() : undefined,
+  saveAs: files ? () => void files.saveAs() : undefined,
   toggleSidebar: () => {
     layout.toggleSidebar();
     persistLayout();
