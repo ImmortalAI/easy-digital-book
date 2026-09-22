@@ -3,7 +3,7 @@ import { addChapter, moveChapter } from "@/services/book/chapters";
 import { createBook } from "@/services/book/create";
 import { normalizeSeriesIndex } from "@/services/book/metadata";
 import { customCssTemplate } from "@/assets/epub/custom.css";
-import { imageDimensions } from "@/services/book/image-dimensions";
+import { imageDimensions, imageMetadata } from "@/services/book/image-dimensions";
 
 const base = () =>
   createBook({
@@ -107,5 +107,40 @@ describe("Task 15 fix round domain boundaries", () => {
     ]);
     bytes.set(packed, 21);
     expect(imageDimensions(bytes.subarray(0, length), "image/webp")).toEqual(expected);
+  });
+
+  it("reads the alpha flag of a lossless WebP", () => {
+    // 16x8 VP8L: bits 0-13 width-1, bits 14-27 height-1, bit 28 alpha_is_used.
+    const lossless = (alpha: boolean) => {
+      const bytes = new Uint8Array(25);
+      bytes.set([
+        0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x4c, 0, 0, 0,
+        0, 0x2f,
+      ]);
+      bytes.set([0x0f, 0xc0, 0x01, alpha ? 0x10 : 0x00], 21);
+      return bytes;
+    };
+
+    // Reported as opaque, planImage re-encodes to JPEG and the transparent
+    // areas come out black.
+    expect(imageMetadata(lossless(true), "image/webp")).toEqual({
+      width: 16,
+      height: 8,
+      hasAlpha: true,
+    });
+    expect(imageMetadata(lossless(false), "image/webp")).toEqual({
+      width: 16,
+      height: 8,
+      hasAlpha: false,
+    });
+  });
+
+  it("reports lossy WebP as opaque, since VP8 carries no alpha channel", () => {
+    const vp8 = new Uint8Array(42);
+    vp8.set([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
+    vp8.set([0x56, 0x50, 0x38, 0x20], 12);
+    vp8.set([0x9d, 1, 0x2a, 20, 0, 10, 0], 23);
+
+    expect(imageMetadata(vp8, "image/webp")).toEqual({ width: 20, height: 10, hasAlpha: false });
   });
 });

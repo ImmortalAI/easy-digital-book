@@ -76,5 +76,12 @@ export function imageMetadata(bytes: Uint8Array, mediaType: ImageMediaType): Ima
     return { ...dimensions, hasAlpha: bytes[25] === 4 || bytes[25] === 6 };
   if (mediaType === "image/webp" && bytes.length >= 21 && bytes[15] === 0x58)
     return { ...dimensions, hasAlpha: Boolean(bytes[20]! & 0x10) };
+  // VP8L packs alpha_is_used into bit 28 of the same header the dimensions come
+  // from. Leaving it undefined made planImage re-encode transparent lossless
+  // WebP as JPEG, turning the transparent areas black.
+  if (mediaType === "image/webp" && bytes.length >= 25 && bytes[15] === 0x4c)
+    return { ...dimensions, hasAlpha: Boolean(bytes[24]! & 0x10) };
+  // Lossy VP8 has no alpha channel at all, so this is a fact, not a guess.
+  if (mediaType === "image/webp" && bytes[15] === 0x20) return { ...dimensions, hasAlpha: false };
   return dimensions;
 }
