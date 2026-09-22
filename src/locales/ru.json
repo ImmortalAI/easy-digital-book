@@ -11,6 +11,32 @@
     "cancel": "Отмена",
     "save": "Сохранить"
   },
+  "metadata": {
+    "title": "Метаданные",
+    "bookTitle": "Название",
+    "version": "Версия",
+    "versionHint": "например, гл. 1–150",
+    "language": "Язык",
+    "authors": "Авторы",
+    "translators": "Переводчики",
+    "series": "Серия",
+    "description": "Аннотация",
+    "coverHint": "Рекомендуется 1600×2560",
+    "choose": "Выбрать…",
+    "remove": "Убрать",
+    "created": "Создана",
+    "modified": "Изменена",
+    "bytes": "байт"
+  },
+  "explorer": {
+    "title": "Проводник",
+    "book": "Книга",
+    "metadata": "Метаданные",
+    "createCss": "custom.css (создать)",
+    "chapters": "Главы",
+    "images": "Изображения"
+  },
+  "images": { "usedIn": "Используется в", "unused": "не используется" },
   "unsaved": {
     "title": "Несохранённые изменения",
     "message": "Сохранить изменения перед продолжением?",

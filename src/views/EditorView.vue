@@ -4,7 +4,6 @@ import { useShortcuts } from "@/composables/use-shortcuts";
 import { projectFilesKey } from "@/composables/use-project-files";
 import { useLayoutStore, type LayoutMode } from "@/stores/layout";
 import { useProjectStore } from "@/stores/project";
-import { extractTitle } from "@/services/book/extract-title";
 import type { DiagnosticPosition } from "@/types/diagnostics";
 import AppToolbar from "@/components/layout/AppToolbar.vue";
 import Breadcrumbs from "@/components/layout/Breadcrumbs.vue";
@@ -13,6 +12,12 @@ import StatusBadge from "@/components/layout/StatusBadge.vue";
 import PreviewPane from "@/components/editor/PreviewPane.vue";
 import SourceEditor from "@/components/editor/SourceEditor.vue";
 import WarningsPopover from "@/components/editor/WarningsPopover.vue";
+import ActivityBar from "@/components/sidebar/ActivityBar.vue";
+import ExplorerView from "@/components/sidebar/ExplorerView.vue";
+import MetadataForm from "@/components/metadata/MetadataForm.vue";
+import CssEditor from "@/components/editor/CssEditor.vue";
+import ImageView from "@/components/editor/ImageView.vue";
+import { useImageImport } from "@/composables/use-image-import";
 
 const project = useProjectStore();
 const files = inject(projectFilesKey, null);
@@ -48,15 +53,22 @@ const wordCount = computed(
   () => selectedChapter.value?.source.trim().split(/\s+/).filter(Boolean).length ?? 0,
 );
 const characterCount = computed(() => selectedChapter.value?.source.length ?? 0);
+const imageImport = useImageImport({ chapterId: selectedChapterId.value });
+
+async function importImage() {
+  if (!files) return;
+  const path = await files.services.dialogs.open({
+    title: "Import image",
+    filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }],
+  });
+  if (!path) return;
+  await imageImport.add(path, await files.services.files.readFile(path), selectedChapterId.value);
+}
 
 function setMode(mode: LayoutMode) {
   if (!canUseModes.value) return;
   layout.mode = mode;
   void layout.persist();
-}
-
-function selectChapter(id: string) {
-  layout.center = { kind: "chapter", id };
 }
 
 function persistLayout() {
@@ -154,65 +166,22 @@ onMounted(findSourceScroller);
     <div class="editor-shell__body">
       <ResizableSplit :single-pane="singlePane">
         <template #activity>
-          <div class="editor-activity">
-            <button
-              data-activity="explorer"
-              :class="{ 'is-active': activeActivity === 'explorer' }"
-              type="button"
-              aria-label="Проводник"
-              :aria-pressed="activeActivity === 'explorer'"
-              @click="selectActivity('explorer')"
-            >
-              📄
-            </button>
-            <button
-              data-activity="search"
-              :class="{ 'is-active': activeActivity === 'search' }"
-              type="button"
-              aria-label="Поиск"
-              :aria-pressed="activeActivity === 'search'"
-              @click="selectActivity('search')"
-            >
-              ⌕
-            </button>
-            <button
-              data-activity="settings"
-              class="editor-activity__settings"
-              :class="{ 'is-active': activeActivity === 'settings' }"
-              type="button"
-              aria-label="Настройки"
-              :aria-pressed="activeActivity === 'settings'"
-              @click="selectActivity('settings')"
-            >
-              ⚙
-            </button>
-          </div>
+          <ActivityBar :active="activeActivity" @select="selectActivity" />
         </template>
         <template #sidebar>
           <div class="editor-sidebar__content">
-            <template v-if="layout.activeView === 'explorer'">
-              <strong>ПРОВОДНИК</strong>
-              <section>
-                <div class="editor-sidebar__section-title">ГЛАВЫ</div>
-                <button
-                  v-for="(chapter, index) in project.book?.chapters"
-                  :key="chapter.id"
-                  class="editor-sidebar__chapter"
-                  :class="{ 'is-active': chapter.id === selectedChapterId }"
-                  type="button"
-                  @click="selectChapter(chapter.id)"
-                >
-                  {{ index + 1 }}. {{ extractTitle(chapter.source) || `Глава ${index + 1}` }}
-                </button>
-              </section>
-            </template>
+            <ExplorerView v-if="layout.activeView === 'explorer'" @import="importImage" />
             <div v-else class="editor-placeholder">Поиск по книге</div>
           </div>
         </template>
         <template #single>
           <div class="editor-single-pane">
             <Breadcrumbs />
-            <div class="editor-placeholder">Этот раздел будет доступен позже</div>
+            <MetadataForm v-if="layout.center.kind === 'metadata'" />
+            <ImageView v-else-if="layout.center.kind === 'image'" :path="layout.center.path" />
+            <div v-else class="editor-placeholder">
+              {{ layout.center.kind === "settings" ? "Settings" : "Select a chapter" }}
+            </div>
           </div>
         </template>
         <template #source>
@@ -225,9 +194,8 @@ onMounted(findSourceScroller);
               :focus-position="pendingFocusPosition"
               :focus-request="focusRequest"
             />
-            <div v-else class="editor-placeholder">
-              {{ layout.center.kind === "css" ? "custom.css" : "Выберите главу" }}
-            </div>
+            <CssEditor v-else-if="layout.center.kind === 'css'" />
+            <div v-else class="editor-placeholder">Выберите главу</div>
             <div class="editor-pane__status">
               <WarningsPopover
                 v-if="!singlePane"

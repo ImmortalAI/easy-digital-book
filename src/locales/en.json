@@ -11,6 +11,32 @@
     "cancel": "Cancel",
     "save": "Save"
   },
+  "metadata": {
+    "title": "Metadata",
+    "bookTitle": "Title",
+    "version": "Version",
+    "versionHint": "e.g. ch. 1–150",
+    "language": "Language",
+    "authors": "Authors",
+    "translators": "Translators",
+    "series": "Series",
+    "description": "Description",
+    "coverHint": "Recommended 1600×2560",
+    "choose": "Choose…",
+    "remove": "Remove",
+    "created": "Created",
+    "modified": "Modified",
+    "bytes": "bytes"
+  },
+  "explorer": {
+    "title": "Explorer",
+    "book": "Book",
+    "metadata": "Metadata",
+    "createCss": "custom.css (create)",
+    "chapters": "Chapters",
+    "images": "Images"
+  },
+  "images": { "usedIn": "Used in", "unused": "not used" },
   "unsaved": {
     "title": "Unsaved changes",
     "message": "Save your changes before continuing?",

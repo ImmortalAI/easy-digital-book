@@ -11,6 +11,32 @@
     "cancel": "取消",
     "save": "保存"
   },
+  "metadata": {
+    "title": "元数据",
+    "bookTitle": "书名",
+    "version": "版本",
+    "versionHint": "例如：第 1–150 章",
+    "language": "语言",
+    "authors": "作者",
+    "translators": "译者",
+    "series": "系列",
+    "description": "简介",
+    "coverHint": "建议 1600×2560",
+    "choose": "选择…",
+    "remove": "移除",
+    "created": "创建时间",
+    "modified": "修改时间",
+    "bytes": "字节"
+  },
+  "explorer": {
+    "title": "资源管理器",
+    "book": "书籍",
+    "metadata": "元数据",
+    "createCss": "custom.css（创建）",
+    "chapters": "章节",
+    "images": "图片"
+  },
+  "images": { "usedIn": "使用于", "unused": "未使用" },
   "unsaved": {
     "title": "未保存的更改",
     "message": "继续前保存更改吗？",
