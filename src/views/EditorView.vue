@@ -212,7 +212,7 @@ onMounted(findSourceScroller);
 <template>
   <main ref="shell" class="editor-shell">
     <header class="editor-shell__header">
-      <div class="editor-shell__title">
+      <div class="editor-shell__title" data-editor-title>
         {{ project.filePath ?? "Безымянная книга" }}<span v-if="project.dirty"> •</span>
       </div>
       <AppToolbar @export="exportOpen = true" />

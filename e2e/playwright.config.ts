@@ -9,6 +9,7 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: "http://127.0.0.1:1420",
+    locale: "en-US",
     trace: "on-first-retry",
     ...devices["Desktop Chrome"],
   },

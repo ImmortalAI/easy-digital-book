@@ -41,6 +41,9 @@ use **System Settings → Privacy & Security → Open Anyway**. On Windows, use
 SmartScreen **More info → Run anyway** only for an artifact obtained from a
 trusted release. Release bundles are built by the `v*` GitHub Actions workflow
 for universal macOS DMG, Windows NSIS, and Ubuntu 22.04 AppImage/deb/rpm.
+Release tags must exactly match the `package.json` version: for example,
+version `0.1.0` is released as tag `v0.1.0`. The workflow checks this before
+building and includes the matching `CHANGELOG.md` section in the draft notes.
 
 The Tauri application identifier is `com.immortalai.edb`; changing it breaks
 recovery data tied to the WebView origin.

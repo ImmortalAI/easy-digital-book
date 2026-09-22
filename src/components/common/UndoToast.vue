@@ -23,6 +23,7 @@ const paused = computed(() => hovered.value || isVisible.value !== "visible" || 
     <span>{{ props.notification.message }}</span>
     <button
       v-if="props.notification.undo"
+      data-undo
       type="button"
       :disabled="!props.notification.undoEnabled"
       @click="emit('undo')"

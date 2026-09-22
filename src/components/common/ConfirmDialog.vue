@@ -64,6 +64,7 @@ function keydown(event: KeyboardEvent) {
       </button>
       <button
         ref="confirmButton"
+        data-confirm-delete
         type="button"
         @click="emit('confirm', { askAgain: askAgainChoice })"
       >

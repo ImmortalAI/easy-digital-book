@@ -211,11 +211,13 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
       </button></ExplorerSection
     >
     <ExplorerSection
+      data-explorer-section="chapters"
       :title="t('explorer.chapters', 'Chapters')"
       :count="book.chapters.length"
       :collapsed="collapsed.chapters"
       @toggle="toggle('chapters')"
-      ><template #action><button type="button" @click.stop="add()">+</button></template
+      ><template #action
+        ><button type="button" data-chapter-add @click.stop="add()">+</button></template
       ><ChapterItem
         v-for="(chapter, index) in book.chapters"
         :key="chapter.id"

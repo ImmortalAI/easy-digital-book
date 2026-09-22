@@ -4,6 +4,10 @@ Complete every release-blocking item with a real packaged Tauri build. Record
 the OS version, app version, date, operator, artifact name, and a short result
 next to each item. A skipped or unavailable check is not a pass.
 
+Release tags must be exactly `v<package.json version>` (for example, version
+`0.1.0` uses `v0.1.0`). The release workflow checks this convention and uses
+the matching `CHANGELOG.md` section for the draft release notes.
+
 ## Automated gates
 
 - [ ] `pnpm check`

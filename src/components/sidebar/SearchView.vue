@@ -112,6 +112,7 @@ function hideResult(result: SearchResult) {
       <input
         v-model="text"
         type="search"
+        data-search-input
         :placeholder="t('search.placeholder', 'Search')"
         autofocus
       />
@@ -127,6 +128,7 @@ function hideResult(result: SearchResult) {
     <input
       v-model="replacement"
       type="text"
+      data-replace-input
       :aria-hidden="!replacementOpen"
       :placeholder="t('search.replacePlaceholder', 'Replace')"
     />
@@ -147,7 +149,7 @@ function hideResult(result: SearchResult) {
     <p v-if="error" class="search-error" role="alert">
       {{ t(error.error, "Invalid regular expression") }}
     </p>
-    <p v-else>
+    <p v-else data-search-summary>
       {{
         t("search.summary", "{results} results in {chapters} chapters")
           .replace("{results}", String(resultCount))

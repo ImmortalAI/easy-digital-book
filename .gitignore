@@ -14,6 +14,7 @@ coverage
 test-results
 playwright-report
 fixtures/*.epub
+src-tauri/tauri.windows-signing.conf.json
 *.local
 
 # Editor directories and files

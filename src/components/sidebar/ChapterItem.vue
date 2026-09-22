@@ -24,6 +24,7 @@ const title = () =>
 <template>
   <div
     class="explorer-chapter"
+    data-explorer-chapter
     :class="{ 'is-active': active, 'has-warning': warningCount }"
     draggable="true"
     @contextmenu.prevent="emit('contextmenu', $event)"
@@ -47,7 +48,7 @@ const title = () =>
     </button>
     <span class="explorer-chapter__actions">
       <button type="button" @click.stop="emit('newAfter')">+</button>
-      <button type="button" @click.stop="emit('remove')">×</button>
+      <button type="button" data-chapter-delete @click.stop="emit('remove')">×</button>
     </span>
   </div>
 </template>
