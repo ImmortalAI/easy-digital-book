@@ -11,6 +11,7 @@ const emit = defineEmits<{ select: [value: "explorer" | "search" | "settings"] }
       :data-activity="item"
       :class="{ 'is-active': active === item }"
       :aria-pressed="active === item"
+      :aria-label="item === 'explorer' ? 'Explorer' : 'Search'"
       @click="emit('select', item)"
     >
       {{ item === "explorer" ? "📄" : "⌕" }}
@@ -21,6 +22,7 @@ const emit = defineEmits<{ select: [value: "explorer" | "search" | "settings"] }
       type="button"
       :class="{ 'is-active': active === 'settings' }"
       :aria-pressed="active === 'settings'"
+      aria-label="Settings"
       @click="emit('select', 'settings')"
     >
       ⚙

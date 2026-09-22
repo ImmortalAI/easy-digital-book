@@ -1,4 +1,3 @@
-import { onBeforeUnmount } from "vue";
 import { importImage, type ImageHash, type ImportImageResult } from "@/services/book/resources";
 import { useProjectStore } from "@/stores/project";
 import { useLayoutStore } from "@/stores/layout";
@@ -36,6 +35,12 @@ export interface ImageImportOptions {
   position?: number;
   fileName?: string;
   onInserted?: (result: ImportImageResult, cursor: number) => void;
+  pickFile?: () => Promise<ImageFile | null>;
+}
+export interface ImageFile {
+  name: string;
+  bytes: Uint8Array;
+  type?: string;
 }
 
 export function useImageImport(options: ImageImportOptions = {}) {
@@ -66,28 +71,31 @@ export function useImageImport(options: ImageImportOptions = {}) {
     return result;
   }
 
-  async function importClipboardImage(data: DataTransfer | null) {
+  async function importFile(file: ImageFile, chapterId?: string, position?: number) {
+    return add(file.name, file.bytes, chapterId, position);
+  }
+
+  async function pickAndImport(chapterId?: string, position?: number) {
+    const file = await options.pickFile?.();
+    return file ? importFile(file, chapterId, position) : null;
+  }
+
+  async function importClipboardImage(
+    data: DataTransfer | null,
+    chapterId = options.chapterId,
+    position = options.position,
+  ) {
     const file = [...(data?.files ?? [])].find((item) => item.type.startsWith("image/"));
     if (!file) return null;
     return add(
       options.fileName ?? `pasted-${timestamp()}.png`,
       new Uint8Array(await file.arrayBuffer()),
-      options.chapterId,
-      options.position,
+      chapterId,
+      position,
     );
   }
 
-  function handlePaste(event: ClipboardEvent) {
-    void importClipboardImage(event.clipboardData);
-  }
-  if (typeof window !== "undefined") {
-    window.addEventListener("paste", handlePaste);
-    onBeforeUnmount(() => {
-      window.removeEventListener("paste", handlePaste);
-    });
-  }
-
-  return { add, importClipboardImage };
+  return { add, importFile, pickAndImport, importClipboardImage };
 }
 
 function timestamp() {

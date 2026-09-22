@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useProjectStore } from "@/stores/project";
-import { updateMetadata, setCover } from "@/services/book/metadata";
+import { normalizeSeriesIndex, updateMetadata, setCover } from "@/services/book/metadata";
 import { validateLanguage } from "@/composables/use-image-import";
 import ContributorsList from "./ContributorsList.vue";
 import LanguageCombobox from "./LanguageCombobox.vue";
 import CoverPicker from "./CoverPicker.vue";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
+import type { ImageFile } from "@/composables/use-image-import";
 
 const project = useProjectStore();
 const { t } = useSafeI18n();
-const emit = defineEmits<{ "choose-cover": [] }>();
+const props = defineProps<{
+  onPickCover?: () => Promise<void>;
+  onImportCover?: (file: ImageFile) => Promise<void>;
+}>();
 const languageError = ref("");
 const book = computed(() => project.book);
 function patch(value: Record<string, unknown>) {
@@ -28,12 +32,22 @@ function updateSeriesName(value: string) {
   patch({ series: value ? { name: value, index: book.value?.metadata.series?.index ?? 1 } : null });
 }
 function updateSeriesIndex(value: string) {
-  if (book.value?.metadata.series)
-    patch({ series: { ...book.value.metadata.series, index: Number(value) || 1 } });
+  const index = normalizeSeriesIndex(value);
+  if (book.value?.metadata.series && index !== null)
+    patch({ series: { ...book.value.metadata.series, index } });
 }
 function removeCover() {
   if (project.book) project.applyMutation(setCover(project.book, null));
 }
+const coverPreview = computed(() => {
+  const item = book.value?.metadata.cover
+    ? book.value.resources.get(book.value.metadata.cover)
+    : undefined;
+  if (!item) return "";
+  let text = "";
+  for (const byte of item.bytes) text += String.fromCharCode(byte);
+  return `data:${item.mediaType};base64,${btoa(text)}`;
+});
 </script>
 <template>
   <form v-if="book" class="metadata-form" @submit.prevent>
@@ -75,6 +89,7 @@ function removeCover() {
         @input="updateSeriesName(($event.target as HTMLInputElement).value)"
       /><input
         type="number"
+        step="any"
         :value="book.metadata.series?.index ?? 1"
         :disabled="!book.metadata.series"
         @input="updateSeriesIndex(($event.target as HTMLInputElement).value)"
@@ -89,7 +104,9 @@ function removeCover() {
     </label>
     <CoverPicker
       :cover="book.metadata.cover"
-      @choose="emit('choose-cover')"
+      :preview="coverPreview"
+      :on-pick="props.onPickCover"
+      :on-drop-file="props.onImportCover"
       @remove="removeCover"
     />
     <dl class="metadata-readonly">

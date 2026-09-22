@@ -7,7 +7,7 @@ import { setCover } from "@/services/book/metadata";
 import { setCustomCss } from "@/services/book/metadata";
 import { collectImageUsage } from "@/services/checks/image-usage";
 import { customCssTemplate } from "@/assets/epub/custom.css";
-import { randomId } from "@/utils/random-id";
+import { uniqueRandomId } from "@/utils/random-id";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
 import ExplorerSection from "./ExplorerSection.vue";
 import ChapterItem from "./ChapterItem.vue";
@@ -16,6 +16,7 @@ const project = useProjectStore();
 const { t } = useSafeI18n();
 const layout = useLayoutStore();
 const collapsed = ref<Record<string, boolean>>({});
+const draggedChapter = ref<number | null>(null);
 const book = computed(() => project.book);
 const usage = computed(() =>
   book.value ? collectImageUsage(book.value) : new Map<string, string[]>(),
@@ -30,7 +31,10 @@ function add(index = book.value?.chapters.length ?? 0) {
   if (book.value) {
     const result = addChapter(
       book.value,
-      { newId: randomId, locale: book.value.metadata.language },
+      {
+        newId: () => uniqueRandomId(book.value!.chapters.map((chapter) => chapter.id)),
+        locale: book.value.metadata.language,
+      },
       index,
     );
     project.applyMutation(result);
@@ -53,6 +57,14 @@ function openCss() {
 }
 function setImageCover(path: string) {
   if (book.value) project.applyMutation(setCover(book.value, path));
+}
+function startDrag(index: number) {
+  draggedChapter.value = index;
+}
+function dropChapter(index: number) {
+  if (draggedChapter.value !== null && draggedChapter.value !== index && book.value)
+    project.applyMutation(moveChapter(book.value, draggedChapter.value, index));
+  draggedChapter.value = null;
 }
 function requestImport() {
   emit("import");
@@ -86,10 +98,15 @@ const emit = defineEmits<{ import: [] }>();
         :chapter="chapter"
         :index="index"
         :active="layout.center.kind === 'chapter' && layout.center.id === chapter.id"
+        :fallback-title="
+          t('chapters.fallback', 'Chapter {number}').replace('{number}', String(index + 1))
+        "
         @select="selectChapter(chapter.id)"
         @move="move(index, $event)"
         @remove="removeChapterAt(chapter.id)"
         @new-after="add(index + 1)"
+        @drag-start="startDrag(index)"
+        @drop="dropChapter(index)"
     /></ExplorerSection>
     <ExplorerSection
       :title="t('explorer.images', 'Images')"

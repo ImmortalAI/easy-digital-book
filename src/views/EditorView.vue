@@ -17,14 +17,22 @@ import ExplorerView from "@/components/sidebar/ExplorerView.vue";
 import MetadataForm from "@/components/metadata/MetadataForm.vue";
 import CssEditor from "@/components/editor/CssEditor.vue";
 import ImageView from "@/components/editor/ImageView.vue";
-import { useImageImport } from "@/composables/use-image-import";
+import {
+  imageCursorPosition,
+  useImageImport,
+  type ImageFile,
+} from "@/composables/use-image-import";
+import { setCover } from "@/services/book/metadata";
 
 const project = useProjectStore();
 const files = inject(projectFilesKey, null);
 const layout = useLayoutStore();
 const shell = ref<HTMLElement>();
 const sourceScroller = ref<HTMLElement | null>(null);
-const sourceEditor = ref<{ focusPosition: (position: DiagnosticPosition) => void } | null>(null);
+const sourceEditor = ref<{
+  focusPosition: (position: DiagnosticPosition) => void;
+  syncSource: (source: string, cursor: number) => void;
+} | null>(null);
 const pendingFocusPosition = ref<DiagnosticPosition | null>(null);
 const focusRequest = ref(0);
 
@@ -53,16 +61,29 @@ const wordCount = computed(
   () => selectedChapter.value?.source.trim().split(/\s+/).filter(Boolean).length ?? 0,
 );
 const characterCount = computed(() => selectedChapter.value?.source.length ?? 0);
-const imageImport = useImageImport({ chapterId: selectedChapterId.value });
+const imageImport = useImageImport({ pickFile: files?.pickImage });
 
 async function importImage() {
-  if (!files) return;
-  const path = await files.services.dialogs.open({
-    title: "Import image",
-    filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }],
-  });
-  if (!path) return;
-  await imageImport.add(path, await files.services.files.readFile(path), selectedChapterId.value);
+  await imageImport.pickAndImport();
+}
+
+async function importImageAt(file: ImageFile, position: number) {
+  const chapter = selectedChapter.value;
+  if (!chapter) return;
+  const source = chapter.source;
+  await imageImport.importFile(file, chapter.id, position);
+  const next = project.book?.chapters.find((item) => item.id === chapter.id)?.source;
+  if (next) sourceEditor.value?.syncSource(next, imageCursorPosition(source, position));
+}
+
+async function importCover(file: ImageFile) {
+  const result = await imageImport.importFile(file);
+  if (project.book) project.applyMutation(setCover(project.book, result.path));
+}
+
+async function pickCover() {
+  const file = await files?.pickImage();
+  if (file) await importCover(file);
 }
 
 function setMode(mode: LayoutMode) {
@@ -177,7 +198,11 @@ onMounted(findSourceScroller);
         <template #single>
           <div class="editor-single-pane">
             <Breadcrumbs />
-            <MetadataForm v-if="layout.center.kind === 'metadata'" />
+            <MetadataForm
+              v-if="layout.center.kind === 'metadata'"
+              :on-pick-cover="pickCover"
+              :on-import-cover="importCover"
+            />
             <ImageView v-else-if="layout.center.kind === 'image'" :path="layout.center.path" />
             <div v-else class="editor-placeholder">
               {{ layout.center.kind === "settings" ? "Settings" : "Select a chapter" }}
@@ -193,6 +218,7 @@ onMounted(findSourceScroller);
               :chapter-id="selectedChapterId"
               :focus-position="pendingFocusPosition"
               :focus-request="focusRequest"
+              :import-image="importImageAt"
             />
             <CssEditor v-else-if="layout.center.kind === 'css'" />
             <div v-else class="editor-placeholder">Выберите главу</div>

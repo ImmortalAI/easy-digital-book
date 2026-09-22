@@ -37,6 +37,7 @@
     "images": "图片"
   },
   "images": { "usedIn": "使用于", "unused": "未使用" },
+  "chapters": { "fallback": "第 {number} 章" },
   "unsaved": {
     "title": "未保存的更改",
     "message": "继续前保存更改吗？",

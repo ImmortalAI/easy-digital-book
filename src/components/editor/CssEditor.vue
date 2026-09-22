@@ -10,7 +10,6 @@ import { setCustomCss } from "@/services/book/metadata";
 const project = useProjectStore();
 const host = ref<HTMLElement>();
 let view: EditorView | undefined;
-let timer: ReturnType<typeof setTimeout> | undefined;
 function value() {
   return project.book?.customCss ?? customCssTemplate;
 }
@@ -26,11 +25,7 @@ function mount() {
         keymap.of([...defaultKeymap, ...historyKeymap]),
         EditorView.updateListener.of((update) => {
           if (!update.docChanged || !project.book) return;
-          clearTimeout(timer);
-          timer = setTimeout(
-            () => project.applyMutation(setCustomCss(project.book!, update.state.doc.toString())),
-            150,
-          );
+          project.applyMutation(setCustomCss(project.book, update.state.doc.toString()));
         }),
       ],
     }),
@@ -47,7 +42,6 @@ watch(
   },
 );
 onBeforeUnmount(() => {
-  clearTimeout(timer);
   view?.destroy();
 });
 </script>

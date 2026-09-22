@@ -37,6 +37,7 @@
     "images": "Images"
   },
   "images": { "usedIn": "Used in", "unused": "not used" },
+  "chapters": { "fallback": "Chapter {number}" },
   "unsaved": {
     "title": "Unsaved changes",
     "message": "Save your changes before continuing?",

@@ -15,3 +15,8 @@ export function setCover(book: Book, cover: string | null): BookMutation {
 export function setCustomCss(book: Book, customCss: string | null): BookMutation {
   return empty({ ...book, customCss });
 }
+
+export function normalizeSeriesIndex(value: string): number | null {
+  const index = Number(value);
+  return Number.isFinite(index) ? index : null;
+}

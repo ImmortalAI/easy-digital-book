@@ -22,7 +22,7 @@ export function addChapter(
   const chapterId = options.newId();
   if (!/^[a-z0-9]{8}$/.test(chapterId) || book.chapters.some((chapter) => chapter.id === chapterId))
     throw new Error("Invalid or colliding chapter ID");
-  const locale = options.locale ?? book.metadata.language;
+  const locale = (options.locale ?? book.metadata.language).toLowerCase().split("-")[0];
   const number = book.chapters.length + 1;
   const heading =
     locale === "ru"
@@ -46,6 +46,14 @@ export function removeChapter(book: Book, chapterId: string): BookMutation {
   );
 }
 export function moveChapter(book: Book, from: number, to: number): BookMutation {
+  if (
+    from < 0 ||
+    from >= book.chapters.length ||
+    to < 0 ||
+    to >= book.chapters.length ||
+    from === to
+  )
+    return mutation(book);
   const chapters = book.chapters.slice();
   const [chapter] = chapters.splice(from, 1);
   if (!chapter) return mutation(book);

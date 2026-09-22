@@ -16,6 +16,7 @@ import {
 import { diagnosticRange, novlangHighlightStyle, novlangLanguage } from "./novlang-language";
 import { chapterParseResults, useNovlangParse } from "@/composables/use-novlang-parse";
 import { useProjectStore } from "@/stores/project";
+import type { ImageFile } from "@/composables/use-image-import";
 
 interface FocusPosition {
   line: number;
@@ -25,6 +26,7 @@ const props = defineProps<{
   chapterId: string;
   focusPosition?: FocusPosition | null;
   focusRequest?: number;
+  importImage?: (file: ImageFile, position: number) => Promise<void>;
 }>();
 const host = ref<HTMLElement>();
 const project = useProjectStore();
@@ -72,6 +74,43 @@ function editorExtensions(chapterId: string) {
       if (!update.docChanged) return;
       chapterEditorStates.set(chapterId, update.state);
       parser.updateSource(update.state.doc.toString());
+    }),
+    EditorView.domEventHandlers({
+      paste: (event, editor) => {
+        const file = [...(event.clipboardData?.files ?? [])].find((item) =>
+          item.type.startsWith("image/"),
+        );
+        if (!file || !props.importImage) return false;
+        event.preventDefault();
+        void file
+          .arrayBuffer()
+          .then((bytes) =>
+            props.importImage?.(
+              { name: file.name || "pasted.png", bytes: new Uint8Array(bytes), type: file.type },
+              editor.state.selection.main.head,
+            ),
+          );
+        return true;
+      },
+      drop: (event, editor) => {
+        const file = [...(event.dataTransfer?.files ?? [])].find((item) =>
+          item.type.startsWith("image/"),
+        );
+        if (!file || !props.importImage) return false;
+        event.preventDefault();
+        const position =
+          editor.posAtCoords({ x: event.clientX, y: event.clientY }) ??
+          editor.state.selection.main.head;
+        void file
+          .arrayBuffer()
+          .then((bytes) =>
+            props.importImage?.(
+              { name: file.name || "dropped.png", bytes: new Uint8Array(bytes), type: file.type },
+              position,
+            ),
+          );
+        return true;
+      },
     }),
   ];
 }
@@ -154,7 +193,18 @@ onBeforeUnmount(() => {
   view = undefined;
 });
 
-defineExpose({ focusPosition: focusAtPosition });
+function syncSource(source: string, cursor: number) {
+  if (!view || view.state.doc.toString() === source) {
+    view?.dispatch({ selection: { anchor: cursor } });
+    return;
+  }
+  view.dispatch({
+    changes: { from: 0, to: view.state.doc.length, insert: source },
+    selection: { anchor: cursor },
+  });
+}
+
+defineExpose({ focusPosition: focusAtPosition, syncSource });
 </script>
 
 <template>

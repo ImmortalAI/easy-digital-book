@@ -5,11 +5,15 @@ import { useLayoutStore } from "@/stores/layout";
 import { collectImageUsage } from "@/services/checks/image-usage";
 import { extractTitle } from "@/services/book/extract-title";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
+import { imageDimensions } from "@/services/book/image-dimensions";
 const { t } = useSafeI18n();
 const props = defineProps<{ path: string }>();
 const project = useProjectStore();
 const layout = useLayoutStore();
 const resource = computed(() => project.book?.resources.get(props.path));
+const dimensions = computed(() =>
+  resource.value ? imageDimensions(resource.value.bytes, resource.value.mediaType) : null,
+);
 const usage = computed(() =>
   project.book ? (collectImageUsage(project.book).get(props.path) ?? []) : [],
 );
@@ -31,6 +35,7 @@ function bytesToBase64(bytes: Uint8Array) {
   <section class="image-view" v-if="resource">
     <img :src="src" :alt="path" />
     <h2>{{ path }}</h2>
+    <p v-if="dimensions">{{ dimensions.width }}×{{ dimensions.height }} px</p>
     <p>{{ resource.bytes.byteLength }} {{ t("metadata.bytes", "bytes") }}</p>
     <h3>{{ t("images.usedIn", "Used in") }}</h3>
     <ul>

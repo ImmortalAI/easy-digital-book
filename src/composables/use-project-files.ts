@@ -7,6 +7,7 @@ import { useProjectStore } from "@/stores/project";
 import { useSettingsStore } from "@/stores/settings";
 import { getRuntimePlatformServices } from "@/services/platform";
 import type { PlatformServices, RecoverySessionSummary, Unlisten } from "@/types/platform";
+import type { ImageFile } from "./use-image-import";
 import {
   createUnsavedGuard,
   useUnsavedGuard,
@@ -42,6 +43,7 @@ export interface ProjectFilesController {
   saveAs(path?: string): Promise<boolean>;
   startLifecycle(): Promise<void>;
   disposeLifecycle(): Promise<void>;
+  pickImage(): Promise<ImageFile | null>;
 }
 
 export const projectFilesKey: InjectionKey<ProjectFilesController> = Symbol("project-files");
@@ -219,6 +221,16 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
     return path ? openPath(path) : false;
   }
 
+  async function pickImage(): Promise<ImageFile | null> {
+    const path = await services.dialogs.open({
+      title: "Import image",
+      filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }],
+    });
+    return path
+      ? { name: path.split(/[\\/]/).pop() ?? "image", bytes: await services.files.readFile(path) }
+      : null;
+  }
+
   save = async () => {
     if (!project.book) return false;
     if (!project.filePath) return saveAs();
@@ -314,6 +326,7 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
     restoreRecovery,
     save,
     saveAs,
+    pickImage,
     startLifecycle,
     disposeLifecycle,
   };
