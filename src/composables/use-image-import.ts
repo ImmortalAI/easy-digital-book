@@ -54,14 +54,18 @@ export function useImageImport(options: ImageImportOptions = {}) {
     bytes: Uint8Array,
     chapterId = options.chapterId,
     position?: number,
+    expected?: { generation: number; bookId: string },
   ) {
     if (!project.book) throw new Error("No project is open");
-    const generation = project.bookGeneration;
-    const bookId = project.book.metadata.id;
+    const generation = expected?.generation ?? project.bookGeneration;
+    const bookId = expected?.bookId ?? project.book.metadata.id;
+    const sourceBook = project.book;
     const result = await importImage(project.book, fileName, bytes, deps);
     const isCurrent = () =>
-      project.bookGeneration === generation && project.book?.metadata.id === bookId;
-    if (!isCurrent()) return result;
+      project.bookGeneration === generation &&
+      project.book === sourceBook &&
+      project.book?.metadata.id === bookId;
+    if (!isCurrent()) return null;
     if (result.inserted) project.applyMutation(result);
     const chapter = chapterId
       ? project.book.chapters.find((item) => item.id === chapterId)
@@ -71,7 +75,7 @@ export function useImageImport(options: ImageImportOptions = {}) {
       project.updateChapterSource(chapter.id, source);
       options.onInserted?.(result, imageCursorPosition(chapter.source, position));
     }
-    if (!isCurrent()) return result;
+    if (!isCurrent()) return null;
     layout.center = chapter
       ? { kind: "chapter", id: chapter.id }
       : { kind: "image", path: result.path };
@@ -83,8 +87,10 @@ export function useImageImport(options: ImageImportOptions = {}) {
   }
 
   async function pickAndImport(chapterId?: string, position?: number) {
+    if (!project.book) return null;
+    const expected = { generation: project.bookGeneration, bookId: project.book.metadata.id };
     const file = await options.pickFile?.();
-    return file ? importFile(file, chapterId, position) : null;
+    return file ? add(file.name, file.bytes, chapterId, position, expected) : null;
   }
 
   async function importClipboardImage(

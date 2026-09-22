@@ -72,5 +72,17 @@ describe("Task 15 fix round domain boundaries", () => {
     vp8l[21] = 4;
     vp8l[23] = 128;
     expect(imageDimensions(vp8l, "image/webp")).toEqual({ width: 5, height: 3 });
+    const paddedVp8l = new Uint8Array(24);
+    paddedVp8l.set([
+      0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x4c, 0, 0, 0,
+      0, 0x2f, 0xff, 0x3f, 0xc0,
+    ]);
+    expect(imageDimensions(paddedVp8l, "image/webp")).toEqual({ width: 16384, height: 4 });
+    const maskedVp8 = new Uint8Array(vp8);
+    maskedVp8[26] = 0xff;
+    maskedVp8[27] = 0xff;
+    maskedVp8[28] = 0xff;
+    maskedVp8[29] = 0xff;
+    expect(imageDimensions(maskedVp8, "image/webp")).toEqual({ width: 16383, height: 16383 });
   });
 });

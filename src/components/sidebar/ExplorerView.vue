@@ -43,7 +43,10 @@ function add(index = book.value?.chapters.length ?? 0) {
   }
 }
 function move(index: number, direction: -1 | 1) {
-  if (book.value) project.applyMutation(moveChapter(book.value, index, index + direction));
+  if (book.value) {
+    const mutation = moveChapter(book.value, index, index + direction);
+    if (mutation.book !== book.value) project.applyMutation(mutation);
+  }
 }
 function navigate(index: number, direction: -1 | 1) {
   const target = book.value?.chapters[index + direction];

@@ -49,9 +49,28 @@ describe("image import project generation", () => {
     project.setBook(makeBook("urn:uuid:550e8400-e29b-41d4-a716-446655440002"));
     await Promise.resolve();
     release();
-    await pending;
+    await expect(pending).resolves.toBeNull();
     expect(project.book?.resources.size).toBe(0);
     expect(layout.center).toEqual({ kind: "chapter", id: "" });
     expect(callback.called).toBe(false);
+  });
+
+  it("discards a stale cover import result for callers", async () => {
+    let release!: () => void;
+    const hash = () =>
+      new Promise<string>((resolve) => {
+        release = () => resolve("hash");
+      });
+    const project = useProjectStore();
+    project.setBook(makeBook("urn:uuid:550e8400-e29b-41d4-a716-446655440001"));
+    const importer = useImageImport({ sha256: hash });
+    const pending = importer.importFile({
+      name: "cover.png",
+      bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    });
+    project.setBook(makeBook("urn:uuid:550e8400-e29b-41d4-a716-446655440002"));
+    await Promise.resolve();
+    release();
+    await expect(pending).resolves.toBeNull();
   });
 });

@@ -38,17 +38,23 @@ export function imageDimensions(
   }
   if (
     mediaType === "image/webp" &&
-    bytes.length >= 30 &&
+    bytes.length >= 16 &&
     bytes[12] === 0x56 &&
     bytes[13] === 0x50
   ) {
     if (bytes[15] === 0x58) {
+      if (bytes.length < 30) return null;
       const read24 = (offset: number) =>
         bytes[offset]! | (bytes[offset + 1]! << 8) | (bytes[offset + 2]! << 16);
       return { width: 1 + read24(24), height: 1 + read24(27) };
     }
-    if (bytes[15] === 0x20 && bytes[23] === 0x9d && bytes[24] === 0x01 && bytes[25] === 0x2a)
-      return { width: bytes[26]! | (bytes[27]! << 8), height: bytes[28]! | (bytes[29]! << 8) };
+    if (bytes[15] === 0x20 && bytes[23] === 0x9d && bytes[24] === 0x01 && bytes[25] === 0x2a) {
+      if (bytes.length < 30) return null;
+      return {
+        width: (bytes[26]! | (bytes[27]! << 8)) & 0x3fff,
+        height: (bytes[28]! | (bytes[29]! << 8)) & 0x3fff,
+      };
+    }
     if (bytes[15] === 0x4c && bytes[20] === 0x2f) {
       const width = 1 + (bytes[21]! | (bytes[22]! << 8) | ((bytes[23]! & 0x3f) << 16));
       const height = 1 + ((bytes[23]! >> 6) | (bytes[24]! << 2) | ((bytes[25]! & 0xf) << 10));

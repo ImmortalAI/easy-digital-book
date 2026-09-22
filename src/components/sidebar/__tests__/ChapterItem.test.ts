@@ -16,6 +16,7 @@ describe("ChapterItem", () => {
     await wrapper.trigger("dragover", { dataTransfer: new DataTransfer() });
     await wrapper.trigger("drop", { dataTransfer: new DataTransfer() });
     expect(wrapper.emitted("move")?.map(([direction]) => direction)).toEqual([-1]);
+    expect(wrapper.emitted("navigate")?.map(([direction]) => direction)).toEqual([-1, 1]);
     expect(wrapper.emitted("select")).toHaveLength(1);
     expect(wrapper.emitted("drag-start")).toHaveLength(1);
     expect(wrapper.emitted("drop")).toHaveLength(1);

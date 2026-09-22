@@ -31,12 +31,12 @@ const title = () =>
     @dragover.prevent
     @drop.prevent="emit('drop', $event)"
   >
-    ><button
+    <button
       class="explorer-chapter__select"
       type="button"
       @click="emit('select')"
-      @keydown.arrow-up.prevent="emit('navigate', -1)"
-      @keydown.arrow-down.prevent="emit('navigate', 1)"
+      @keydown.arrow-up.exact.prevent="emit('navigate', -1)"
+      @keydown.arrow-down.exact.prevent="emit('navigate', 1)"
       @keydown.enter.prevent="emit('select')"
       @keydown.alt.up.prevent="emit('move', -1)"
       @keydown.alt.down.prevent="emit('move', 1)"

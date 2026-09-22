@@ -71,19 +71,23 @@ async function importImageAt(file: ImageFile, position: number) {
   const chapter = selectedChapter.value;
   if (!chapter) return;
   const source = chapter.source;
-  await imageImport.importFile(file, chapter.id, position);
+  const result = await imageImport.importFile(file, chapter.id, position);
+  if (!result) return;
   const next = project.book?.chapters.find((item) => item.id === chapter.id)?.source;
   if (next) sourceEditor.value?.syncSource(next, imageCursorPosition(source, position));
 }
 
 async function importCover(file: ImageFile) {
   const result = await imageImport.importFile(file);
-  if (project.book) project.applyMutation(setCover(project.book, result.path));
+  if (result && project.book) project.applyMutation(setCover(project.book, result.path));
 }
 
 async function pickCover() {
+  const generation = project.bookGeneration;
+  const bookId = project.book?.metadata.id;
   const file = await files?.pickImage();
-  if (file) await importCover(file);
+  if (file && project.bookGeneration === generation && project.book?.metadata.id === bookId)
+    await importCover(file);
 }
 
 function setMode(mode: LayoutMode) {

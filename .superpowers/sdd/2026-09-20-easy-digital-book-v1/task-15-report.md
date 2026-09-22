@@ -71,3 +71,16 @@ Implemented the scoped Terra findings from `112f644`:
 - image contextmenu emits an explicit future ContextMenu hook and never changes the cover directly.
 
 Fix-round 2 verification: focused brief tests, `pnpm check`, and `pnpm build` passed; 39 test files / 131 tests passed. The only build concern remains the non-failing main-chunk size warning (>500 kB).
+
+## Fix round 3
+
+Implemented the scoped review gaps from `92047d7`:
+
+- stale image imports now return `null`; generation/book identity is captured before hashing and before native picker awaits, so EditorView cannot set a cover or resync a changed editor after stale completion;
+- plain chapter arrows use exact handlers, while Alt+Arrow only reorders;
+- Explorer skips identity/no-op mutations at first/last boundaries;
+- image dimension tests cover short padded VP8L payloads and VP8 14-bit masks;
+- image contextmenu forwarding is tested and never mutates cover state;
+- removed the stray literal template node from the chapter row.
+
+Fix-round 3 verification: focused brief tests, `pnpm check`, and `pnpm build` passed; 40 test files / 134 tests passed. The only concern is the existing non-failing main-chunk size warning (>500 kB).
