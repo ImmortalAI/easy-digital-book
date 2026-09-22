@@ -25,11 +25,7 @@ export function addChapter(
   const locale = (options.locale ?? book.metadata.language).toLowerCase().split("-")[0];
   const number = book.chapters.length + 1;
   const heading =
-    locale === "ru"
-      ? `Глава ${number}`
-      : locale === "zh-CN"
-        ? `第 ${number} 章`
-        : `Chapter ${number}`;
+    locale === "ru" ? `Глава ${number}` : locale === "zh" ? `第 ${number} 章` : `Chapter ${number}`;
   const chapters = book.chapters.slice();
   chapters.splice(Math.max(0, Math.min(index, chapters.length)), 0, {
     id: chapterId,

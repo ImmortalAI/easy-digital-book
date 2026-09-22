@@ -57,3 +57,17 @@ Implemented from review findings against `3aadc1d`:
 - Added documented CSS starter content, primary-subtag chapter localization, finite fractional series-index validation with `step="any"`, collision-avoiding chapter IDs, accessible activity labels, valid section markup, and no-op move bounds.
 
 Fix-round verification: focused tests, `pnpm check`, and `pnpm build` all passed; 38 test files / 129 tests passed. The build retains the non-failing >500 kB main-chunk warning.
+
+## Fix round 2
+
+Implemented the scoped Terra findings from `112f644`:
+
+- image import captures project generation and book ID before deferred hashing/import and discards stale results without mutation, navigation, or cursor callbacks;
+- plain ArrowUp/ArrowDown now navigates adjacent chapters, Enter selects, and Alt+Arrow is reserved for reorder;
+- chapter rows use a non-interactive drag wrapper with a separate select button and action buttons, avoiding nested interactive controls;
+- bounded/no-op chapter moves remain pure no-ops and do not dirty the project;
+- `zh-CN` and `zh-Hans-CN` use Chinese generated headings;
+- pure image dimension parsing now covers JPEG SOF and WebP VP8, VP8L, and VP8X fixtures;
+- image contextmenu emits an explicit future ContextMenu hook and never changes the cover directly.
+
+Fix-round 2 verification: focused brief tests, `pnpm check`, and `pnpm build` passed; 39 test files / 131 tests passed. The only build concern remains the non-failing main-chunk size warning (>500 kB).

@@ -17,6 +17,13 @@ describe("Task 15 fix round domain boundaries", () => {
   it("uses the primary locale subtag for generated chapter headings", () => {
     const mutation = addChapter(base(), { locale: "ru-RU", newId: () => "chapter2" });
     expect(mutation.book.chapters[1]?.source).toBe("# Глава 2");
+    expect(
+      addChapter(base(), { locale: "zh-CN", newId: () => "chapter2" }).book.chapters[1]?.source,
+    ).toBe("# 第 2 章");
+    expect(
+      addChapter(base(), { locale: "zh-Hans-CN", newId: () => "chapter2" }).book.chapters[1]
+        ?.source,
+    ).toBe("# 第 2 章");
   });
 
   it("rejects non-finite series indexes and keeps fractional indexes", () => {
@@ -44,5 +51,26 @@ describe("Task 15 fix round domain boundaries", () => {
     new DataView(bytes.buffer).setUint32(16, 1600);
     new DataView(bytes.buffer).setUint32(20, 2560);
     expect(imageDimensions(bytes, "image/png")).toEqual({ width: 1600, height: 2560 });
+  });
+
+  it("reads JPEG SOF and WebP VP8, VP8L and VP8X dimensions", () => {
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xc0, 0, 17, 8, 0, 10, 0, 20, 1]);
+    expect(imageDimensions(jpeg, "image/jpeg")).toEqual({ width: 20, height: 10 });
+    const vp8x = new Uint8Array(30);
+    vp8x.set([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x58]);
+    vp8x.set([1, 0, 0, 2, 0, 0], 24);
+    expect(imageDimensions(vp8x, "image/webp")).toEqual({ width: 2, height: 3 });
+    const vp8 = new Uint8Array(42);
+    vp8.set(vp8x.subarray(0, 12));
+    vp8.set([0x56, 0x50, 0x38, 0x20], 12);
+    vp8.set([0x9d, 1, 0x2a, 20, 0, 10, 0], 23);
+    expect(imageDimensions(vp8, "image/webp")).toEqual({ width: 20, height: 10 });
+    const vp8l = new Uint8Array(42);
+    vp8l.set(vp8x.subarray(0, 12));
+    vp8l.set([0x56, 0x50, 0x38, 0x4c], 12);
+    vp8l[20] = 0x2f;
+    vp8l[21] = 4;
+    vp8l[23] = 128;
+    expect(imageDimensions(vp8l, "image/webp")).toEqual({ width: 5, height: 3 });
   });
 });

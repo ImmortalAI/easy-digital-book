@@ -3,7 +3,6 @@ import { computed, ref } from "vue";
 import { useProjectStore } from "@/stores/project";
 import { useLayoutStore } from "@/stores/layout";
 import { addChapter, moveChapter, removeChapter } from "@/services/book/chapters";
-import { setCover } from "@/services/book/metadata";
 import { setCustomCss } from "@/services/book/metadata";
 import { collectImageUsage } from "@/services/checks/image-usage";
 import { customCssTemplate } from "@/assets/epub/custom.css";
@@ -46,6 +45,10 @@ function add(index = book.value?.chapters.length ?? 0) {
 function move(index: number, direction: -1 | 1) {
   if (book.value) project.applyMutation(moveChapter(book.value, index, index + direction));
 }
+function navigate(index: number, direction: -1 | 1) {
+  const target = book.value?.chapters[index + direction];
+  if (target) selectChapter(target.id);
+}
 function removeChapterAt(id: string) {
   if (book.value) project.applyMutation(removeChapter(book.value, id));
 }
@@ -55,8 +58,8 @@ function openCss() {
     project.applyMutation(setCustomCss(book.value, customCssTemplate));
   layout.center = { kind: "css" };
 }
-function setImageCover(path: string) {
-  if (book.value) project.applyMutation(setCover(book.value, path));
+function imageContextMenu(path: string, event: MouseEvent) {
+  emit("image-context-menu", path, event);
 }
 function startDrag(index: number) {
   draggedChapter.value = index;
@@ -69,7 +72,7 @@ function dropChapter(index: number) {
 function requestImport() {
   emit("import");
 }
-const emit = defineEmits<{ import: [] }>();
+const emit = defineEmits<{ import: []; "image-context-menu": [path: string, event: MouseEvent] }>();
 </script>
 <template>
   <div v-if="book" class="explorer-view">
@@ -103,6 +106,7 @@ const emit = defineEmits<{ import: [] }>();
         "
         @select="selectChapter(chapter.id)"
         @move="move(index, $event)"
+        @navigate="navigate(index, $event)"
         @remove="removeChapterAt(chapter.id)"
         @new-after="add(index + 1)"
         @drag-start="startDrag(index)"
@@ -121,7 +125,7 @@ const emit = defineEmits<{ import: [] }>();
         :cover="book.metadata.cover === path"
         :unused="!usage.has(path)"
         @select="layout.center = { kind: 'image', path }"
-        @contextmenu="setImageCover(path)"
+        @contextmenu="imageContextMenu(path, $event)"
     /></ExplorerSection>
   </div>
 </template>

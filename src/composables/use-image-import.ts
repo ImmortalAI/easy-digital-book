@@ -36,6 +36,7 @@ export interface ImageImportOptions {
   fileName?: string;
   onInserted?: (result: ImportImageResult, cursor: number) => void;
   pickFile?: () => Promise<ImageFile | null>;
+  sha256?: ImageHash["sha256"];
 }
 export interface ImageFile {
   name: string;
@@ -46,7 +47,7 @@ export interface ImageFile {
 export function useImageImport(options: ImageImportOptions = {}) {
   const project = useProjectStore();
   const layout = useLayoutStore();
-  const deps: ImageHash = { sha256: browserSha256 };
+  const deps: ImageHash = { sha256: options.sha256 ?? browserSha256 };
 
   async function add(
     fileName: string,
@@ -55,7 +56,12 @@ export function useImageImport(options: ImageImportOptions = {}) {
     position?: number,
   ) {
     if (!project.book) throw new Error("No project is open");
+    const generation = project.bookGeneration;
+    const bookId = project.book.metadata.id;
     const result = await importImage(project.book, fileName, bytes, deps);
+    const isCurrent = () =>
+      project.bookGeneration === generation && project.book?.metadata.id === bookId;
+    if (!isCurrent()) return result;
     if (result.inserted) project.applyMutation(result);
     const chapter = chapterId
       ? project.book.chapters.find((item) => item.id === chapterId)
@@ -65,6 +71,7 @@ export function useImageImport(options: ImageImportOptions = {}) {
       project.updateChapterSource(chapter.id, source);
       options.onInserted?.(result, imageCursorPosition(chapter.source, position));
     }
+    if (!isCurrent()) return result;
     layout.center = chapter
       ? { kind: "chapter", id: chapter.id }
       : { kind: "image", path: result.path };
