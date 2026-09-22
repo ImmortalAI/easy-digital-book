@@ -10,6 +10,7 @@ import {
 } from "@/services/platform";
 import { reportUnexpectedError } from "@/services/platform/error-reporting";
 import { installGlobalErrorHandlers } from "@/services/platform/global-errors";
+import packageJson from "../package.json";
 
 const supportedLocales: SupportedLocale[] = ["ru", "en", "zh-CN"];
 const runtimeServices =
@@ -31,7 +32,9 @@ function browserLocale(): SupportedLocale {
 }
 
 function report(error: unknown) {
-  const details = reportUnexpectedError(error, runtimeServices.logger, { version: "0.1.0" });
+  const details = reportUnexpectedError(error, runtimeServices.logger, {
+    version: packageJson.version,
+  });
   window.dispatchEvent(new CustomEvent("edb-unexpected-error", { detail: details }));
 }
 
