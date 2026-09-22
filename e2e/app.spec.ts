@@ -32,8 +32,11 @@ test("new book, save/open, search/replace, undo delete, and export", async ({ pa
     .locator("[data-chapter-delete]")
     .click();
   await page.locator("[data-confirm-delete]").click();
-  await expect(page.locator("[data-toast]")).toBeVisible();
-  await page.locator("[data-toast] [data-undo]").click();
+  // Replace all registers an undo notification of its own, so the stack holds
+  // that one as well; the newest toast is the chapter deletion.
+  const deleteToast = page.locator("[data-toast]").last();
+  await expect(deleteToast).toBeVisible();
+  await deleteToast.locator("[data-undo]").click();
   await expect(page.locator("[data-explorer-chapter]")).toHaveCount(2);
 
   await page.locator("[data-export-button]").click();
