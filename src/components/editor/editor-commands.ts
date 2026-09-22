@@ -25,21 +25,48 @@ export function unregisterChapterEditorView(chapterId: string, view: EditorView)
   if (chapterEditorViews.get(chapterId) === view) chapterEditorViews.delete(chapterId);
 }
 
+/**
+ * A mounted view is the source of truth: only doc changes are mirrored back
+ * into chapterEditorStates, so the map lags behind after any other transaction
+ * and building on it would dispatch a transaction that does not start from the
+ * view's current state.
+ */
+function currentChapterEditorState(chapterId: string): EditorState | undefined {
+  return chapterEditorViews.get(chapterId)?.state ?? chapterEditorStates.get(chapterId);
+}
+
+function applyChapterEditorChanges(
+  chapterId: string,
+  changes:
+    | Array<{ from: number; to: number; insert: string }>
+    | { from: number; to: number; insert: string },
+): EditorState | null {
+  const state = currentChapterEditorState(chapterId);
+  if (!state) return null;
+  const transaction = state.update({ changes });
+  chapterEditorViews.get(chapterId)?.dispatch(transaction);
+  chapterEditorStates.set(chapterId, transaction.state);
+  return transaction.state;
+}
+
 export function replaceChapterEditorText(
   chapterId: string,
   changes: Array<{ from: number; to: number; insert: string }>,
 ): string {
-  const view = chapterEditorViews.get(chapterId);
-  // A mounted view is the source of truth: only doc changes are mirrored back
-  // into chapterEditorStates, so the map lags behind after any other
-  // transaction and building on it would dispatch a transaction that does not
-  // start from the view's current state.
-  const state = view?.state ?? chapterEditorStates.get(chapterId);
+  const state = applyChapterEditorChanges(chapterId, changes);
   if (!state) throw new Error(`Editor state not found for ${chapterId}`);
-  const transaction = state.update({ changes });
-  if (view) view.dispatch(transaction);
-  chapterEditorStates.set(chapterId, transaction.state);
-  return transaction.state.doc.toString();
+  return state.doc.toString();
+}
+
+/**
+ * Push a model-side edit into the chapter's editor. Without it the editor keeps
+ * showing the old text and writes it back over the model on the next keystroke.
+ * A chapter with no editor yet needs nothing: it mounts from the model.
+ */
+export function syncChapterEditorText(chapterId: string, source: string): void {
+  const state = currentChapterEditorState(chapterId);
+  if (!state || state.doc.toString() === source) return;
+  applyChapterEditorChanges(chapterId, { from: 0, to: state.doc.length, insert: source });
 }
 
 export function resetChapterEditors(): void {

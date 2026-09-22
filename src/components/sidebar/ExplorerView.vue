@@ -18,6 +18,7 @@ import { useSettingsStore } from "@/stores/settings";
 import { useBookSearch } from "@/composables/use-book-search";
 import { useDiagnosticsStore } from "@/stores/diagnostics";
 import { checkBook } from "@/services/checks/book-checks";
+import { syncChapterEditorText } from "@/components/editor/editor-commands";
 const project = useProjectStore();
 const { t } = useSafeI18n();
 const layout = useLayoutStore();
@@ -182,10 +183,15 @@ function selectContextAction(value: string) {
   context.value = null;
 }
 function insertImage(path: string) {
-  const id = layout.center.kind === "chapter" ? layout.center.id : book.value?.chapters[0]?.id;
-  const chapter = book.value?.chapters.find((item) => item.id === id);
+  // layout.center starts as { kind: "chapter", id: "" }, so matching on the id
+  // alone silently finds nothing until a chapter has been opened.
+  const selected = layout.center.kind === "chapter" ? layout.center.id : "";
+  const chapter =
+    book.value?.chapters.find((item) => item.id === selected) ?? book.value?.chapters[0];
   if (!chapter) return;
-  project.updateChapterSource(chapter.id, `${chapter.source}\n\n![](${path})`);
+  const source = `${chapter.source}\n\n![](${path})`;
+  project.updateChapterSource(chapter.id, source);
+  syncChapterEditorText(chapter.id, source);
   layout.center = { kind: "chapter", id: chapter.id };
 }
 function openCss() {

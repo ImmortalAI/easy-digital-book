@@ -6,6 +6,12 @@ import { useNotificationsStore } from "@/stores/notifications";
 import { useProjectStore } from "@/stores/project";
 import { useSettingsStore } from "@/stores/settings";
 import ExplorerView from "@/components/sidebar/ExplorerView.vue";
+import { EditorView } from "@codemirror/view";
+import {
+  createChapterEditor,
+  registerChapterEditorView,
+  resetChapterEditors,
+} from "@/components/editor/editor-commands";
 
 describe("ExplorerView destructive actions", () => {
   beforeEach(() => setActivePinia(createPinia()));
@@ -64,6 +70,36 @@ describe("ExplorerView destructive actions", () => {
 
     await dialog.get("button:last-child").trigger("click");
     expect([...project.book!.resources.keys()]).toEqual(["images/used.png"]);
+    wrapper.unmount();
+  });
+
+  it("pushes an inserted image into the open editor so the next keystroke keeps it", async () => {
+    const project = useProjectStore();
+    const book = createBook({
+      locale: "en",
+      now: new Date(),
+      newUuid: () => "550e8400-e29b-41d4-a716-446655440000",
+      newChapterId: () => "chapter1",
+    });
+    book.chapters[0]!.source = "# First";
+    book.resources.set("images/pic.png", { bytes: new Uint8Array([1]), mediaType: "image/png" });
+    project.setBook(book);
+
+    resetChapterEditors();
+    const view = new EditorView({ state: createChapterEditor("chapter1", "# First") });
+    registerChapterEditorView("chapter1", view);
+
+    const wrapper = mount(ExplorerView);
+    await wrapper.get(".explorer-image").trigger("contextmenu", { clientX: 10, clientY: 10 });
+    await wrapper.findComponent({ name: "ContextMenu" }).vm.$emit("select", "insert");
+
+    expect(project.book?.chapters[0]?.source).toContain("![](images/pic.png)");
+    // The editor must carry the insert too: it writes its own doc back to the
+    // model on the next keystroke, which would otherwise drop the image.
+    expect(view.state.doc.toString()).toContain("![](images/pic.png)");
+
+    view.destroy();
+    resetChapterEditors();
     wrapper.unmount();
   });
 
