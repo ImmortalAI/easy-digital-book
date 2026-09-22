@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, ref } from "vue";
 import { useProjectStore } from "@/stores/project";
 import { normalizeSeriesIndex, updateMetadata, setCover } from "@/services/book/metadata";
 import { validateLanguage } from "@/composables/use-image-import";
@@ -8,6 +8,7 @@ import LanguageCombobox from "./LanguageCombobox.vue";
 import CoverPicker from "./CoverPicker.vue";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
 import type { ImageFile, ImageImportIdentity } from "@/composables/use-image-import";
+import type { Resource } from "@/types/book";
 
 const project = useProjectStore();
 const { t } = useSafeI18n();
@@ -39,15 +40,37 @@ function updateSeriesIndex(value: string) {
 function removeCover() {
   if (project.book) project.applyMutation(setCover(project.book, null));
 }
+/**
+ * Every patch() replaces the book object, so a preview derived from it plainly
+ * would be rebuilt on each keystroke — a multi-megabyte re-encode on the main
+ * thread for a large cover. The cover Resource keeps its identity across those
+ * patches, so it can key the cache, and a blob URL avoids base64 entirely.
+ */
+let cachedCover: { resource: Resource; url: string; owned: boolean } | null = null;
+
+function releaseCover() {
+  if (cachedCover?.owned && typeof URL.revokeObjectURL === "function")
+    URL.revokeObjectURL(cachedCover.url);
+  cachedCover = null;
+}
+
 const coverPreview = computed(() => {
-  const item = book.value?.metadata.cover
-    ? book.value.resources.get(book.value.metadata.cover)
-    : undefined;
-  if (!item) return "";
-  let text = "";
-  for (const byte of item.bytes) text += String.fromCharCode(byte);
-  return `data:${item.mediaType};base64,${btoa(text)}`;
+  const path = book.value?.metadata.cover;
+  const item = path ? book.value?.resources.get(path) : undefined;
+  if (!item) {
+    releaseCover();
+    return "";
+  }
+  if (cachedCover?.resource === item) return cachedCover.url;
+  releaseCover();
+  const blob = new Blob([item.bytes as unknown as BlobPart], { type: item.mediaType });
+  const owned = typeof URL.createObjectURL === "function";
+  const url = owned ? URL.createObjectURL(blob) : "";
+  cachedCover = { resource: item, url, owned };
+  return url;
 });
+
+onBeforeUnmount(releaseCover);
 </script>
 <template>
   <form v-if="book" class="metadata-form" @submit.prevent>
