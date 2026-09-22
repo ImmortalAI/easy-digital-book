@@ -1,9 +1,12 @@
 import { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
 import { describe, expect, it } from "vitest";
 import {
   chapterEditorStates,
   createChapterEditor,
   insertFootnote,
+  registerChapterEditorView,
+  replaceChapterEditorText,
   resetChapterEditors,
   toggleMarkup,
 } from "@/components/editor/editor-commands";
@@ -40,6 +43,34 @@ describe("editor commands", () => {
     expect(transaction.state.doc.toString()).toContain("[^2]");
     expect(transaction.state.doc.toString()).toContain("[^2]: ");
     expect(transaction.state.selection.main.from).toBe(transaction.state.doc.length);
+  });
+
+  it("replaces against the live view state rather than a stale snapshot", () => {
+    resetChapterEditors();
+    const state = createChapterEditor("one", "hero walks");
+    const view = new EditorView({ state });
+    registerChapterEditorView("one", view);
+    // Only doc changes are written back to chapterEditorStates, so any other
+    // transaction desynchronises the map from the view. mountEditor always
+    // dispatches two of them: the reconfigure effect and the diagnostics.
+    view.dispatch({ selection: { anchor: 0 } });
+
+    const result = replaceChapterEditorText("one", [{ from: 0, to: 4, insert: "champion" }]);
+
+    expect(result).toBe("champion walks");
+    expect(view.state.doc.toString()).toBe("champion walks");
+    expect(chapterEditorStates.get("one")?.doc.toString()).toBe("champion walks");
+    view.destroy();
+  });
+
+  it("replaces through the map when no view is mounted", () => {
+    resetChapterEditors();
+    createChapterEditor("one", "hero walks");
+
+    expect(replaceChapterEditorText("one", [{ from: 0, to: 4, insert: "champion" }])).toBe(
+      "champion walks",
+    );
+    expect(chapterEditorStates.get("one")?.doc.toString()).toBe("champion walks");
   });
 
   it("keeps one editor state per chapter and can reset the lifecycle", () => {

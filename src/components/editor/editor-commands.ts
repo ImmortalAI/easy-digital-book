@@ -29,12 +29,16 @@ export function replaceChapterEditorText(
   chapterId: string,
   changes: Array<{ from: number; to: number; insert: string }>,
 ): string {
-  const state = chapterEditorStates.get(chapterId);
-  if (!state) throw new Error(`Editor state not found for ${chapterId}`);
   const view = chapterEditorViews.get(chapterId);
+  // A mounted view is the source of truth: only doc changes are mirrored back
+  // into chapterEditorStates, so the map lags behind after any other
+  // transaction and building on it would dispatch a transaction that does not
+  // start from the view's current state.
+  const state = view?.state ?? chapterEditorStates.get(chapterId);
+  if (!state) throw new Error(`Editor state not found for ${chapterId}`);
   const transaction = state.update({ changes });
   if (view) view.dispatch(transaction);
-  else chapterEditorStates.set(chapterId, transaction.state);
+  chapterEditorStates.set(chapterId, transaction.state);
   return transaction.state.doc.toString();
 }
 
