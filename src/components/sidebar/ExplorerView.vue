@@ -3,15 +3,17 @@ import { computed, ref } from "vue";
 import { useProjectStore } from "@/stores/project";
 import { useLayoutStore } from "@/stores/layout";
 import { addChapter, moveChapter } from "@/services/book/chapters";
-import { setCustomCss } from "@/services/book/metadata";
+import { setCover, setCustomCss } from "@/services/book/metadata";
 import { collectImageUsage } from "@/services/checks/image-usage";
 import { customCssTemplate } from "@/assets/epub/custom.css";
 import { uniqueRandomId } from "@/utils/random-id";
+import { extractTitle } from "@/services/book/extract-title";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
 import ExplorerSection from "./ExplorerSection.vue";
 import ChapterItem from "./ChapterItem.vue";
 import ImageItem from "./ImageItem.vue";
 import ConfirmDialog from "@/components/common/ConfirmDialog.vue";
+import ContextMenu from "@/components/common/ContextMenu.vue";
 import { useSettingsStore } from "@/stores/settings";
 import { useBookSearch } from "@/composables/use-book-search";
 const project = useProjectStore();
@@ -19,13 +21,36 @@ const { t } = useSafeI18n();
 const layout = useLayoutStore();
 const settings = useSettingsStore();
 const search = useBookSearch();
-const pendingDelete = ref<string | null>(null);
+const pendingDelete = ref<{ kind: "chapter" | "image" | "unused"; id?: string } | null>(null);
+const context = ref<{ kind: "chapter" | "image"; id: string; x: number; y: number } | null>(null);
 const collapsed = ref<Record<string, boolean>>({});
 const draggedChapter = ref<number | null>(null);
 const book = computed(() => project.book);
 const usage = computed(() =>
   book.value ? collectImageUsage(book.value) : new Map<string, string[]>(),
 );
+const deleteTitle = computed(() => {
+  if (pendingDelete.value?.kind === "image")
+    return `${t("delete.imageTitle", "Delete image")} “${pendingDelete.value.id?.replace(/^images\//, "") ?? ""}”`;
+  const chapter = book.value?.chapters.find((item) => item.id === pendingDelete.value?.id);
+  return `${t("delete.chapterTitle", "Delete chapter")} “${chapter ? extractTitle(chapter.source) || t("chapters.fallback", "Chapter") : ""}”`;
+});
+const deleteMessage = computed(() =>
+  pendingDelete.value?.kind === "image"
+    ? t("delete.imageMessage", "This image will be removed from the project.")
+    : t("delete.chapterMessage", "This chapter will be removed from the book."),
+);
+const deleteDetails = computed(() => {
+  if (pendingDelete.value?.kind === "image") {
+    const chapters = usage.value.get(pendingDelete.value.id ?? "") ?? [];
+    return chapters.length
+      ? `${t("images.usedIn", "Used in")}: ${chapters.join(", ")}`
+      : t("images.unused", "not used");
+  }
+  const chapter = book.value?.chapters.find((item) => item.id === pendingDelete.value?.id);
+  const words = chapter?.source.trim().split(/\s+/).filter(Boolean).length ?? 0;
+  return `${t("delete.words", "Words")}: ${words}`;
+});
 function toggle(name: string) {
   collapsed.value[name] = !collapsed.value[name];
 }
@@ -64,15 +89,70 @@ function removeChapterAt(id: string) {
     search.deleteChapter(id);
     return;
   }
-  pendingDelete.value = id;
+  pendingDelete.value = { kind: "chapter", id };
 }
 function confirmDelete(value: { askAgain: boolean }) {
-  if (pendingDelete.value) search.deleteChapter(pendingDelete.value);
+  const target = pendingDelete.value;
+  if (target?.kind === "chapter" && target.id) search.deleteChapter(target.id);
+  if (target?.kind === "image" && target.id) search.deleteResource(target.id);
+  if (target?.kind === "unused")
+    for (const path of book.value
+      ? [...book.value.resources.keys()].filter((item) => !usage.value.has(item))
+      : [])
+      search.deleteResource(path);
   pendingDelete.value = null;
   if (!value.askAgain) {
     settings.confirmDelete = false;
     void settings.persist();
   }
+}
+function requestDelete(target: { kind: "chapter" | "image" | "unused"; id?: string }) {
+  if (!settings.confirmDelete) {
+    if (target.kind === "chapter" && target.id) search.deleteChapter(target.id);
+    if (target.kind === "image" && target.id) search.deleteResource(target.id);
+    if (target.kind === "unused")
+      for (const path of book.value
+        ? [...book.value.resources.keys()].filter((item) => !usage.value.has(item))
+        : [])
+        search.deleteResource(path);
+    return;
+  }
+  pendingDelete.value = target;
+  context.value = null;
+}
+function openChapterMenu(id: string, event: MouseEvent) {
+  context.value = { kind: "chapter", id, x: event.clientX, y: event.clientY };
+}
+function openImageMenu(path: string, event: MouseEvent) {
+  emit("image-context-menu", path, event);
+  context.value = { kind: "image", id: path, x: event.clientX, y: event.clientY };
+}
+function selectContextAction(value: string) {
+  const target = context.value;
+  if (!target) return;
+  if (target.kind === "chapter" && value === "new-after") {
+    const index = book.value?.chapters.findIndex((chapter) => chapter.id === target.id) ?? -1;
+    if (index >= 0) add(index + 1);
+  }
+  if (target.kind === "chapter" && value === "delete")
+    requestDelete({ kind: "chapter", id: target.id });
+  if (target.kind === "image" && value === "cover" && book.value)
+    project.applyMutation(setCover(book.value, target.id));
+  if (target.kind === "image" && value === "insert") insertImage(target.id);
+  if (target.kind === "image" && value === "search") {
+    layout.activeView = "search";
+    layout.setSidebarVisible(true);
+  }
+  if (target.kind === "image" && value === "delete")
+    requestDelete({ kind: "image", id: target.id });
+  context.value = null;
+}
+function insertImage(path: string) {
+  const id = layout.center.kind === "chapter" ? layout.center.id : book.value?.chapters[0]?.id;
+  const chapter = book.value?.chapters.find((item) => item.id === id);
+  if (!chapter) return;
+  project.updateChapterSource(chapter.id, `${chapter.source}\n\n![](${path})`);
+  layout.center = { kind: "chapter", id: chapter.id };
 }
 function openCss() {
   if (!book.value) return;
@@ -81,7 +161,7 @@ function openCss() {
   layout.center = { kind: "css" };
 }
 function imageContextMenu(path: string, event: MouseEvent) {
-  emit("image-context-menu", path, event);
+  openImageMenu(path, event);
 }
 function startDrag(index: number) {
   draggedChapter.value = index;
@@ -130,6 +210,7 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
         @move="move(index, $event)"
         @navigate="navigate(index, $event)"
         @remove="removeChapterAt(chapter.id)"
+        @contextmenu="openChapterMenu(chapter.id, $event)"
         @new-after="add(index + 1)"
         @drag-start="startDrag(index)"
         @drop="dropChapter(index)"
@@ -139,7 +220,9 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
       :count="book.resources.size"
       :collapsed="collapsed.images"
       @toggle="toggle('images')"
-      ><template #action><button type="button" @click.stop="requestImport">+</button></template
+      ><template #action
+        ><button type="button" @click.stop="requestImport">+</button
+        ><button type="button" @click.stop="requestDelete({ kind: 'unused' })">×</button></template
       ><ImageItem
         v-for="path in [...book.resources.keys()]"
         :key="path"
@@ -151,10 +234,32 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
     /></ExplorerSection>
     <ConfirmDialog
       :open="pendingDelete !== null"
-      title="Delete chapter"
-      message="This chapter will be removed from the book."
+      :title="deleteTitle"
+      :message="deleteMessage"
+      :details="deleteDetails"
+      :ask-again-label="t('common.doNotAskAgain', 'Do not ask again')"
       @cancel="pendingDelete = null"
       @confirm="confirmDelete"
+    />
+    <ContextMenu
+      v-if="context"
+      :x="context.x"
+      :y="context.y"
+      :items="
+        context.kind === 'chapter'
+          ? [
+              { label: t('chapters.newAfter', 'New chapter after'), value: 'new-after' },
+              { label: t('common.delete', 'Delete'), value: 'delete' },
+            ]
+          : [
+              { label: t('images.insert', 'Insert in text'), value: 'insert' },
+              { label: t('images.setCover', 'Make cover'), value: 'cover' },
+              { label: t('images.findUsage', 'Find usages'), value: 'search' },
+              { label: t('common.delete', 'Delete'), value: 'delete' },
+            ]
+      "
+      @select="selectContextAction"
+      @close="context = null"
     />
   </div>
 </template>

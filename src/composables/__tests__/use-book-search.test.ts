@@ -4,6 +4,9 @@ import { createBook } from "@/services/book/create";
 import { useBookSearch } from "@/composables/use-book-search";
 import { useNotificationsStore } from "@/stores/notifications";
 import { useProjectStore } from "@/stores/project";
+import { findInBook } from "@/services/search/find";
+import { chapterEditorStates, resetChapterEditors } from "@/components/editor/editor-commands";
+import { useLayoutStore } from "@/stores/layout";
 
 function makeBook() {
   const book = createBook({
@@ -19,6 +22,8 @@ function makeBook() {
 
 describe("useBookSearch", () => {
   beforeEach(() => setActivePinia(createPinia()));
+
+  beforeEach(() => resetChapterEditors());
 
   it("disables only stale chapter undo after a later edit", () => {
     const project = useProjectStore();
@@ -48,5 +53,75 @@ describe("useBookSearch", () => {
     notification.undo?.();
 
     expect(project.book?.chapters.map((chapter) => chapter.id)).toEqual(["chapter1", "chapter2"]);
+  });
+
+  it("does not partially undo when any replaced chapter became stale", () => {
+    const project = useProjectStore();
+    project.setBook(makeBook());
+    const search = useBookSearch();
+    const undo = search.replaceAll(
+      { text: "hero", caseSensitive: true, wholeWord: false, regex: false },
+      "x",
+    )!;
+
+    project.updateChapterSource("chapter2", "later edit");
+    search.undoReplace(undo);
+
+    expect(useNotificationsStore().items[0]?.undoEnabled).toBe(false);
+    expect(project.book?.chapters.map((chapter) => chapter.source)).toEqual([
+      "x one",
+      "later edit",
+    ]);
+  });
+
+  it("expands regex captures for one replacement and validates the original range", () => {
+    const project = useProjectStore();
+    const value = makeBook();
+    value.chapters[0]!.source = "hero 12";
+    project.setBook(value);
+    const search = useBookSearch();
+    const query = {
+      text: "(?<word>hero) (\\d+)",
+      caseSensitive: true,
+      wholeWord: false,
+      regex: true,
+    };
+    const found = findInBook(value, query);
+    if ("error" in found) throw new Error(found.error);
+
+    search.replaceOne(query, found[0]!, "$2 — $<word>");
+    expect(project.book?.chapters[0]?.source).toBe("12 — hero");
+
+    search.replaceOne(query, { ...found[0]!, from: 99, to: 105 }, "bad");
+    expect(project.book?.chapters[0]?.source).toBe("12 — hero");
+    expect(chapterEditorStates.get("chapter1")?.doc.toString()).toBe("12 — hero");
+  });
+
+  it("creates an editor history for an unopened chapter replacement", () => {
+    const project = useProjectStore();
+    project.setBook(makeBook());
+    const search = useBookSearch();
+
+    search.replaceChapter(
+      "chapter2",
+      { text: "hero", caseSensitive: true, wholeWord: false, regex: false },
+      "x",
+    );
+
+    expect(chapterEditorStates.get("chapter2")?.doc.toString()).toBe("x x");
+    expect(project.book?.chapters[1]?.source).toBe("x x");
+  });
+
+  it("selects the next chapter after deleting the current one and restores it on undo", () => {
+    const project = useProjectStore();
+    project.setBook(makeBook());
+    const layout = useLayoutStore();
+    layout.center = { kind: "chapter", id: "chapter1" };
+    const search = useBookSearch();
+
+    search.deleteChapter("chapter1");
+    expect(layout.center).toEqual({ kind: "chapter", id: "chapter2" });
+    useNotificationsStore().items[0]?.undo?.();
+    expect(layout.center).toEqual({ kind: "chapter", id: "chapter1" });
   });
 });

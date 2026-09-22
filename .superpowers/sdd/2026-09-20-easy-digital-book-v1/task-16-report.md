@@ -22,3 +22,18 @@ Implemented editor-backed book search, replacement, destructive-action confirmat
 ## Concern
 
 - Vite reports the existing single production chunk is larger than 500 kB; this is a warning only and does not fail the build.
+
+## Fix round 1 from `e129fa9`
+
+- Replace-all undo is now all-or-nothing: every affected chapter revision must still match; stale work disables the action and cannot partially revert.
+- `replaceOne` receives the original `SearchQuery`, expands regex captures, and rejects stale or invalid ranges before creating a transaction.
+- Search results preserve regex errors, localize them, group/collapse/hide by chapter, show replacement previews, support one/chapter/all replacement and Mod+Alt+Enter, and emit exact selection ranges to `EditorView`.
+- Explorer now uses common context menus for chapter/image actions, confirmation details, unused-image deletion, resource undo, and current-chapter neighbor selection.
+- ConfirmDialog focus/Escape/ask-again behavior and UndoToast pause/animation/reduced-motion behavior were hardened.
+- All new visible strings and regex errors were added to RU/EN/zh-CN; dead notification mutation API was removed.
+
+Fix-round verification:
+
+- `pnpm test -- src/composables/__tests__/use-book-search.test.ts src/components/common src/components/sidebar/SearchView.test.ts` — 48 files, 162 tests passed.
+- `pnpm check` — passed.
+- `pnpm build` — passed; Vite emitted only the existing >500 kB chunk warning.

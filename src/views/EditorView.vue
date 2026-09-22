@@ -35,10 +35,13 @@ const shell = ref<HTMLElement>();
 const sourceScroller = ref<HTMLElement | null>(null);
 const sourceEditor = ref<{
   focusPosition: (position: DiagnosticPosition) => void;
+  focusRange: (range: { from: number; to: number }) => void;
   syncSource: (source: string, cursor: number) => void;
 } | null>(null);
 const pendingFocusPosition = ref<DiagnosticPosition | null>(null);
 const focusRequest = ref(0);
+const pendingFocusRange = ref<{ from: number; to: number } | null>(null);
+const focusRangeRequest = ref(0);
 
 function hasChapter(id: string): boolean {
   return Boolean(project.book?.chapters.some((chapter) => chapter.id === id));
@@ -136,6 +139,14 @@ async function selectWarning(item: { chapterId?: string; position?: DiagnosticPo
   await nextTick();
   sourceEditor.value?.focusPosition(item.position);
 }
+async function selectSearchResult(chapterId: string, from: number, to: number) {
+  if (!hasChapter(chapterId)) return;
+  layout.center = { kind: "chapter", id: chapterId };
+  pendingFocusRange.value = { from, to };
+  focusRangeRequest.value++;
+  await nextTick();
+  if (pendingFocusRange.value) sourceEditor.value?.focusRange(pendingFocusRange.value);
+}
 
 function findSourceScroller() {
   sourceScroller.value = shell.value?.querySelector<HTMLElement>(".cm-scroller") ?? null;
@@ -179,6 +190,14 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () => focusRangeRequest.value,
+  () => {
+    if (pendingFocusRange.value) sourceEditor.value?.focusRange(pendingFocusRange.value);
+  },
+  { flush: "post" },
+);
+
 onMounted(findSourceScroller);
 </script>
 
@@ -200,7 +219,7 @@ onMounted(findSourceScroller);
         <template #sidebar>
           <div class="editor-sidebar__content">
             <ExplorerView v-if="layout.activeView === 'explorer'" @import="importImage" />
-            <SearchView v-else />
+            <SearchView v-else @select="selectSearchResult" />
           </div>
         </template>
         <template #single>

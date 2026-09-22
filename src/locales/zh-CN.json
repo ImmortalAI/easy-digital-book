@@ -9,7 +9,11 @@
   },
   "common": {
     "cancel": "取消",
-    "save": "保存"
+    "save": "保存",
+    "close": "关闭",
+    "delete": "删除",
+    "undo": "撤销",
+    "doNotAskAgain": "不再询问"
   },
   "metadata": {
     "title": "元数据",
@@ -36,8 +40,37 @@
     "chapters": "章节",
     "images": "图片"
   },
-  "images": { "usedIn": "使用于", "unused": "未使用" },
-  "chapters": { "fallback": "第 {number} 章" },
+  "images": {
+    "usedIn": "使用于",
+    "unused": "未使用",
+    "insert": "插入文本",
+    "setCover": "设为封面",
+    "findUsage": "查找使用位置"
+  },
+  "chapters": { "fallback": "第 {number} 章", "newAfter": "在后面新建章节" },
+  "search": {
+    "placeholder": "搜索",
+    "replacePlaceholder": "替换",
+    "caseSensitive": "Aa",
+    "wholeWord": "全字匹配",
+    "regex": ".*",
+    "summary": "{chapters} 个章节中的 {results} 个结果",
+    "replaceAll": "全部替换",
+    "replaceOne": "替换",
+    "replaceChapter": "替换本章",
+    "replaced": "已替换 {count} 个匹配项",
+    "hide": "隐藏",
+    "invalidRegex": "正则表达式无效"
+  },
+  "delete": {
+    "chapterTitle": "删除章节",
+    "chapterMessage": "此章节将从书中删除。",
+    "imageTitle": "删除图片",
+    "imageMessage": "此图片将从项目中删除。",
+    "words": "字数",
+    "chapterToast": "章节已删除",
+    "imageToast": "图片已删除"
+  },
   "unsaved": {
     "title": "未保存的更改",
     "message": "继续前保存更改吗？",

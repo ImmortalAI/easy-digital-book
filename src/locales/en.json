@@ -9,7 +9,11 @@
   },
   "common": {
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "close": "Close",
+    "delete": "Delete",
+    "undo": "Undo",
+    "doNotAskAgain": "Do not ask again"
   },
   "metadata": {
     "title": "Metadata",
@@ -36,8 +40,37 @@
     "chapters": "Chapters",
     "images": "Images"
   },
-  "images": { "usedIn": "Used in", "unused": "not used" },
-  "chapters": { "fallback": "Chapter {number}" },
+  "images": {
+    "usedIn": "Used in",
+    "unused": "not used",
+    "insert": "Insert in text",
+    "setCover": "Make cover",
+    "findUsage": "Find usages"
+  },
+  "chapters": { "fallback": "Chapter {number}", "newAfter": "New chapter after" },
+  "search": {
+    "placeholder": "Search",
+    "replacePlaceholder": "Replace",
+    "caseSensitive": "Aa",
+    "wholeWord": "Whole word",
+    "regex": ".*",
+    "summary": "{results} results in {chapters} chapters",
+    "replaceAll": "Replace all",
+    "replaceOne": "Replace",
+    "replaceChapter": "Replace chapter",
+    "replaced": "Replaced {count} matches",
+    "hide": "Hide",
+    "invalidRegex": "Invalid regular expression"
+  },
+  "delete": {
+    "chapterTitle": "Delete chapter",
+    "chapterMessage": "This chapter will be removed from the book.",
+    "imageTitle": "Delete image",
+    "imageMessage": "This image will be removed from the project.",
+    "words": "Words",
+    "chapterToast": "Chapter deleted",
+    "imageToast": "Image deleted"
+  },
   "unsaved": {
     "title": "Unsaved changes",
     "message": "Save your changes before continuing?",

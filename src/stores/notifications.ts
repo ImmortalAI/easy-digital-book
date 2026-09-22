@@ -36,12 +36,8 @@ export const useNotificationsStore = defineStore("notifications", () => {
   function remove(id: number) {
     items.value = items.value.filter((item) => item.id !== id);
   }
-  function setUndoEnabled(id: number, value: boolean) {
-    const item = items.value.find((candidate) => candidate.id === id);
-    if (item) item.undoEnabled = value;
-  }
   function clear() {
     items.value = [];
   }
-  return { items, add, remove, setUndoEnabled, dismiss: remove, clear };
+  return { items, add, remove, dismiss: remove, clear };
 });

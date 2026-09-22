@@ -5,16 +5,18 @@ const notifications = useNotificationsStore();
 </script>
 <template>
   <div class="toast-stack" aria-live="polite">
-    <UndoToast
-      v-for="notification in notifications.items"
-      :key="notification.id"
-      data-toast
-      :notification="notification"
-      @close="notifications.remove(notification.id)"
-      @undo="
-        notification.undo?.();
-        notifications.remove(notification.id);
-      "
-    />
+    <TransitionGroup name="toast" tag="div">
+      <UndoToast
+        v-for="notification in notifications.items"
+        :key="notification.id"
+        data-toast
+        :notification="notification"
+        @close="notifications.remove(notification.id)"
+        @undo="
+          notification.undo?.();
+          notifications.remove(notification.id);
+        "
+      />
+    </TransitionGroup>
   </div>
 </template>

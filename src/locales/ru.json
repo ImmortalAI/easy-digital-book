@@ -9,7 +9,11 @@
   },
   "common": {
     "cancel": "Отмена",
-    "save": "Сохранить"
+    "save": "Сохранить",
+    "close": "Закрыть",
+    "delete": "Удалить",
+    "undo": "Отменить",
+    "doNotAskAgain": "Больше не спрашивать"
   },
   "metadata": {
     "title": "Метаданные",
@@ -36,8 +40,37 @@
     "chapters": "Главы",
     "images": "Изображения"
   },
-  "images": { "usedIn": "Используется в", "unused": "не используется" },
-  "chapters": { "fallback": "Глава {number}" },
+  "images": {
+    "usedIn": "Используется в",
+    "unused": "не используется",
+    "insert": "Вставить в текст",
+    "setCover": "Сделать обложкой",
+    "findUsage": "Найти использования"
+  },
+  "chapters": { "fallback": "Глава {number}", "newAfter": "Новая глава после" },
+  "search": {
+    "placeholder": "Поиск",
+    "replacePlaceholder": "Замена",
+    "caseSensitive": "Aa",
+    "wholeWord": "Слово целиком",
+    "regex": ".*",
+    "summary": "Результатов: {results} в {chapters} главах",
+    "replaceAll": "Заменить всё",
+    "replaceOne": "Заменить",
+    "replaceChapter": "Заменить в главе",
+    "replaced": "Заменено вхождений: {count}",
+    "hide": "Скрыть",
+    "invalidRegex": "Неверное регулярное выражение"
+  },
+  "delete": {
+    "chapterTitle": "Удалить главу",
+    "chapterMessage": "Глава будет удалена из книги.",
+    "imageTitle": "Удалить изображение",
+    "imageMessage": "Изображение будет удалено из проекта.",
+    "words": "Слов",
+    "chapterToast": "Глава удалена",
+    "imageToast": "Изображение удалено"
+  },
   "unsaved": {
     "title": "Несохранённые изменения",
     "message": "Сохранить изменения перед продолжением?",

@@ -1,28 +1,45 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref, watch } from "vue";
-const props = defineProps<{
-  open: boolean;
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  showAskAgain?: boolean;
-}>();
+import { useSafeI18n } from "@/composables/use-safe-i18n";
+
+const props = withDefaults(
+  defineProps<{
+    open: boolean;
+    title: string;
+    message: string;
+    details?: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    askAgainLabel?: string;
+    showAskAgain?: boolean;
+  }>(),
+  { showAskAgain: true },
+);
 const emit = defineEmits<{ confirm: [value: { askAgain: boolean }]; cancel: [] }>();
-const dialog = ref<HTMLElement>();
+const confirmButton = ref<HTMLButtonElement>();
 const askAgainChoice = ref(true);
+const { t } = useSafeI18n();
+
+function focusConfirm() {
+  void nextTick(() => confirmButton.value?.focus());
+}
 watch(
   () => props.open,
   (open) => {
-    if (open) void nextTick(() => dialog.value?.focus());
+    if (open) focusConfirm();
   },
 );
 onMounted(() => {
-  if (props.open) dialog.value?.focus();
+  if (props.open) focusConfirm();
 });
 function keydown(event: KeyboardEvent) {
-  if (event.key === "Escape") emit("cancel");
+  if (event.key === "Escape") {
+    event.preventDefault();
+    emit("cancel");
+  }
 }
 </script>
+
 <template>
   <div
     v-if="open"
@@ -30,7 +47,6 @@ function keydown(event: KeyboardEvent) {
     @keydown="keydown"
   >
     <section
-      ref="dialog"
       tabindex="-1"
       role="dialog"
       aria-modal="true"
@@ -38,12 +54,20 @@ function keydown(event: KeyboardEvent) {
     >
       <h2>{{ title }}</h2>
       <p>{{ message }}</p>
+      <p v-if="details" class="confirm-dialog__details">{{ details }}</p>
       <label v-if="showAskAgain"
-        ><input v-model="askAgainChoice" type="checkbox" /> Do not ask again</label
+        ><input v-model="askAgainChoice" type="checkbox" />
+        {{ askAgainLabel ?? t("common.doNotAskAgain", "Do not ask again") }}</label
       >
-      <button type="button" @click="emit('cancel')">Cancel</button>
-      <button type="button" @click="emit('confirm', { askAgain: askAgainChoice })">
-        {{ confirmLabel ?? "Delete" }}
+      <button type="button" @click="emit('cancel')">
+        {{ cancelLabel ?? t("common.cancel", "Cancel") }}
+      </button>
+      <button
+        ref="confirmButton"
+        type="button"
+        @click="emit('confirm', { askAgain: askAgainChoice })"
+      >
+        {{ confirmLabel ?? t("common.delete", "Delete") }}
       </button>
     </section>
   </div>

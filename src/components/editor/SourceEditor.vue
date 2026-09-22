@@ -170,6 +170,13 @@ function focusAtPosition(position: FocusPosition | null | undefined) {
   view.dispatch({ selection: { anchor: range.from, head: range.to } });
   view.focus();
 }
+function focusRange(range: { from: number; to: number } | null | undefined) {
+  if (!view || !range) return;
+  const from = Math.max(0, Math.min(range.from, view.state.doc.length));
+  const to = Math.max(from, Math.min(range.to, view.state.doc.length));
+  view.dispatch({ selection: { anchor: from, head: to } });
+  view.focus();
+}
 
 onMounted(() => mountEditor(props.chapterId));
 
@@ -218,7 +225,7 @@ function syncSource(source: string, cursor: number) {
   });
 }
 
-defineExpose({ focusPosition: focusAtPosition, syncSource });
+defineExpose({ focusPosition: focusAtPosition, focusRange, syncSource });
 </script>
 
 <template>
