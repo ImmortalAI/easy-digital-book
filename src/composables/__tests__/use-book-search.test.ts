@@ -161,6 +161,24 @@ describe("useBookSearch", () => {
     expect(project.book?.metadata.cover).toBe("images/b.png");
   });
 
+  it("restores the deleted cover after an unrelated chapter edit", () => {
+    const project = useProjectStore();
+    const book = makeBook();
+    book.resources.set("images/a.png", { bytes: new Uint8Array([1]), mediaType: "image/png" });
+    book.metadata.cover = "images/a.png";
+    project.setBook(book);
+    const search = useBookSearch();
+
+    search.deleteResource("images/a.png");
+    const notification = useNotificationsStore().items[0]!;
+    project.updateChapterSource("chapter1", "unrelated edit");
+
+    notification.undo?.();
+
+    expect(project.book?.resources.has("images/a.png")).toBe(true);
+    expect(project.book?.metadata.cover).toBe("images/a.png");
+  });
+
   it("does not undo a resource deletion into a different book generation", () => {
     const project = useProjectStore();
     const first = makeBook("urn:uuid:550e8400-e29b-41d4-a716-446655440001");

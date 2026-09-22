@@ -7,6 +7,7 @@ import { useProjectStore } from "@/stores/project";
 import { useSettingsStore } from "@/stores/settings";
 import { getRuntimePlatformServices } from "@/services/platform";
 import type { PlatformServices, RecoverySessionSummary, Unlisten } from "@/types/platform";
+import type { Book } from "@/types/book";
 import type { ImageFile } from "./use-image-import";
 import { createErrorActions, type ErrorActions } from "./use-error-actions";
 import { createExportController, type ExportController } from "./use-export";
@@ -80,6 +81,11 @@ function projectFileName(title: string, fallback: string): string {
   return `${safe || fallback}.edb`;
 }
 
+function selectFirstChapter(book: Book, layout: ReturnType<typeof useLayoutStore>): void {
+  const firstChapter = book.chapters[0];
+  if (firstChapter) layout.center = { kind: "chapter", id: firstChapter.id };
+}
+
 export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesController {
   const services = options.services;
   const project = useProjectStore();
@@ -146,6 +152,7 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
       newChapterId: options.newChapterId ?? defaultChapterId,
     });
     project.setBook(book, null, { dirty: true });
+    selectFirstChapter(book, layout);
     diagnostics.clear();
     if (previousId) await services.recovery.remove(previousId);
     await refreshRecovery();
@@ -213,6 +220,7 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
       dirty: Boolean(recovered || result.migrated),
       fileMtime,
     });
+    selectFirstChapter(nextBook, layout);
     diagnostics.clear();
     diagnostics.setReadWarnings(result.warnings);
     try {
@@ -294,6 +302,7 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
       }
     }
     project.setBook(recovered, recovered.originalPath, { dirty: true, fileMtime });
+    selectFirstChapter(recovered, layout);
     diagnostics.clear();
     await refreshRecovery();
     return true;

@@ -6,6 +6,7 @@ import { chapterParseResults, resetChapterParseResults } from "@/composables/use
 import { useLayoutStore } from "@/stores/layout";
 import { createBook } from "@/services/book/create";
 import { createInMemoryPlatformServices } from "@/services/platform";
+import { writeEdb } from "@/services/edb/write";
 import { useProjectStore } from "@/stores/project";
 import { EditorView as CodeMirrorView } from "@codemirror/view";
 import EditorView from "@/views/EditorView.vue";
@@ -63,6 +64,34 @@ describe("EditorView Task 13 integration", () => {
 
     expect(wrapper.get("iframe").attributes("srcdoc")).toContain("<h1>Chapter 1</h1>");
     expect(chapterParseResults.has("chapter2")).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("parses and selects the first chapter when opening over a non-chapter center view", async () => {
+    const services = createInMemoryPlatformServices();
+    const files = createProjectFiles({ services, locale: "en" });
+    const openedBook = bookWithTwoChapters();
+    openedBook.chapters[0]!.source = "# Opened first chapter\n*unclosed";
+    const bytes = await writeEdb(openedBook, new Date("2026-01-02"));
+    await services.files.writeFile("opened.edb", bytes);
+
+    const layout = useLayoutStore();
+    layout.center = { kind: "metadata" };
+    const wrapper = mount(EditorView, {
+      global: { provide: { [projectFilesKey]: files } },
+    });
+
+    await expect(files.openPath("opened.edb")).resolves.toBe(true);
+    await nextTick();
+    await nextTick();
+
+    expect(layout.center).toEqual({ kind: "chapter", id: "chapter1" });
+    expect(chapterParseResults.has("chapter1")).toBe(true);
+    expect(chapterParseResults.has("chapter2")).toBe(true);
+    expect(useDiagnosticsStore().parse.has("chapter1")).toBe(true);
+    expect(useDiagnosticsStore().parse.has("chapter2")).toBe(true);
+    expect(wrapper.find(".cm-editor").exists()).toBe(true);
+    expect(wrapper.get("iframe").attributes("srcdoc")).toContain("Opened first chapter");
     wrapper.unmount();
   });
 

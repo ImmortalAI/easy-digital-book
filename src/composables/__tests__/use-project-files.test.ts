@@ -5,6 +5,7 @@ import { createInMemoryPlatformServices } from "@/services/platform";
 import { writeEdb } from "@/services/edb/write";
 import { useDiagnosticsStore } from "@/stores/diagnostics";
 import { useProjectStore } from "@/stores/project";
+import { useLayoutStore } from "@/stores/layout";
 import type { WindowCloseEvent } from "@/types/platform";
 import { createProjectFiles } from "../use-project-files";
 
@@ -33,6 +34,7 @@ describe("project files", () => {
     expect(useProjectStore().filePath).toBeNull();
     expect(useProjectStore().dirty).toBe(true);
     expect(useProjectStore().book?.chapters[0]?.source).toBe("# Chapter 1");
+    expect(useLayoutStore().center).toEqual({ kind: "chapter", id: "chapter2" });
   });
 
   it("does not replace the current project after a fatal open error", async () => {
@@ -90,12 +92,14 @@ describe("project files", () => {
     await services.files.writeFile("book.edb", bytes);
     services.files.stat = async () => ({ mtime: 300, size: bytes.byteLength });
     const files = createProjectFiles({ services, locale: "en" });
+    useLayoutStore().center = { kind: "metadata" };
 
     await expect(files.openPath("book.edb")).resolves.toBe(true);
     expect(useProjectStore().filePath).toBe("book.edb");
     expect(useProjectStore().dirty).toBe(false);
     expect(await services.settings.get("recentFiles", [])).toEqual(["book.edb"]);
     expect(useDiagnosticsStore().readWarnings).toEqual([]);
+    expect(useLayoutStore().center).toEqual({ kind: "chapter", id: "chapter1" });
   });
 
   it("drains native open paths after subscribing to the wakeup event", async () => {
@@ -193,10 +197,12 @@ describe("project files", () => {
     );
     services.files.stat = async () => ({ mtime: 123, size: 10 });
     const files = createProjectFiles({ services });
+    useLayoutStore().center = { kind: "css" };
 
     await expect(files.restoreRecovery(original.metadata.id)).resolves.toBe(true);
     expect(useProjectStore().filePath).toBe("book.edb");
     expect(useProjectStore().fileMtime).toBe(123);
+    expect(useLayoutStore().center).toEqual({ kind: "chapter", id: "chapter1" });
   });
 
   it("removes a recent entry when opening it proves that the file is missing", async () => {
