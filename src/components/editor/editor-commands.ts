@@ -15,7 +15,8 @@ export const chapterEditorStates = new Map<string, EditorState>();
 const chapterEditorCompartments = new Map<string, Compartment>();
 /** Backwards-compatible descriptive alias for consumers that own the editor lifecycle. */
 export const editorStates = chapterEditorStates;
-const chapterEditorViews = new Map<string, EditorView>();
+/** Mounted views, kept alongside the states so edits can reach a live editor. */
+export const chapterEditorViews = new Map<string, EditorView>();
 
 export function registerChapterEditorView(chapterId: string, view: EditorView): void {
   chapterEditorViews.set(chapterId, view);

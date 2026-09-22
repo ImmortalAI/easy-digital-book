@@ -5,7 +5,11 @@ import { createBook } from "@/services/book/create";
 import { useProjectStore } from "@/stores/project";
 import SourceEditor from "@/components/editor/SourceEditor.vue";
 import type { ImageFile, ImageImportIdentity } from "@/composables/use-image-import";
-import { chapterEditorStates, resetChapterEditors } from "@/components/editor/editor-commands";
+import {
+  chapterEditorStates,
+  chapterEditorViews,
+  resetChapterEditors,
+} from "@/components/editor/editor-commands";
 import { chapterParseResults, resetChapterParseResults } from "@/composables/use-novlang-parse";
 import { EditorView } from "@codemirror/view";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
@@ -63,6 +67,23 @@ describe("SourceEditor lifecycle", () => {
 
     expect(second.find(".cm-lintRange-warning").exists()).toBe(true);
     second.unmount();
+  });
+
+  it("unregisters the previous chapter's view when switching chapters", async () => {
+    const wrapper = mount(SourceEditor, { props: { chapterId: "chapter1" } });
+    const first = chapterEditorViews.get("chapter1");
+    expect(first).toBeDefined();
+
+    await wrapper.setProps({ chapterId: "chapter2" });
+
+    // chapter1's view is destroyed on switch; leaving it registered keeps its
+    // DOM alive and routes later edits for that chapter into a dead view.
+    expect(chapterEditorViews.get("chapter1")).toBeUndefined();
+    expect(chapterEditorViews.get("chapter2")).toBeDefined();
+    expect(chapterEditorViews.get("chapter2")).not.toBe(first);
+
+    wrapper.unmount();
+    expect(chapterEditorViews.size).toBe(0);
   });
 
   it("switches chapters without cross-writing and retains each chapter undo state", async () => {

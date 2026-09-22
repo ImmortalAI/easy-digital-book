@@ -39,6 +39,9 @@ const host = ref<HTMLElement>();
 const project = useProjectStore();
 const parser = useNovlangParse(toRef(props, "chapterId"));
 let view: EditorView | undefined;
+// props.chapterId has already advanced by the time the watcher runs, so the id
+// the current view was registered under has to be remembered separately.
+let mountedChapterId = "";
 
 // A definite height makes .cm-scroller the scroll container, which is what the
 // preview scroll sync binds to and what lets CodeMirror virtualise long chapters.
@@ -152,16 +155,22 @@ function mountEditor(chapterId: string) {
   if (!chapter || !host.value) return;
   const state = createChapterEditor(chapterId, chapter.source, editorExtensions(chapterId));
   view = new EditorView({ state, parent: host.value });
+  mountedChapterId = chapterId;
   registerChapterEditorView(chapterId, view);
   const effect = reconfigureChapterEditor(chapterId, editorExtensions(chapterId));
   if (effect) view.dispatch({ effects: effect });
   updateDiagnostics();
 }
 
-function remountEditor(chapterId: string) {
-  if (view) unregisterChapterEditorView(props.chapterId, view);
+function disposeEditor() {
+  if (view) unregisterChapterEditorView(mountedChapterId, view);
   view?.destroy();
   view = undefined;
+  mountedChapterId = "";
+}
+
+function remountEditor(chapterId: string) {
+  disposeEditor();
   mountEditor(chapterId);
 }
 
@@ -211,9 +220,7 @@ watch(
 
 onBeforeUnmount(() => {
   parser.dispose();
-  if (view) unregisterChapterEditorView(props.chapterId, view);
-  view?.destroy();
-  view = undefined;
+  disposeEditor();
 });
 
 function syncSource(source: string, cursor: number) {
