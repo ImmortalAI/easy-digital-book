@@ -33,13 +33,21 @@ jobs:
       - name: Install pinned epubcheck
         shell: bash
         run: |
-          if [[ ! -f ".tools/epubcheck/epubcheck-${EPUBCHECK_VERSION}.jar" ]]; then
+          # The jar's manifest declares Class-Path entries like lib/galimatias-*.jar,
+          # resolved next to the jar, so the whole distribution has to be installed.
+          # `lib` is part of the guard as well: a cache entry from the jar-only
+          # install would otherwise be restored and reused forever.
+          if [[ ! -f ".tools/epubcheck/epubcheck-${EPUBCHECK_VERSION}.jar" \
+                || ! -d ".tools/epubcheck/lib" ]]; then
+            rm -rf .tools/epubcheck /tmp/epubcheck
             mkdir -p .tools/epubcheck /tmp/epubcheck
             curl --fail --silent --show-error --location \
               "https://github.com/w3c/epubcheck/releases/download/v${EPUBCHECK_VERSION}/epubcheck-${EPUBCHECK_VERSION}.zip" \
               --output /tmp/epubcheck.zip
             unzip -q /tmp/epubcheck.zip -d /tmp/epubcheck
-            cp "$(find /tmp/epubcheck -name epubcheck.jar -print -quit)" \
+            dist="$(dirname "$(find /tmp/epubcheck -name epubcheck.jar -print -quit)")"
+            cp -R "$dist"/. .tools/epubcheck/
+            mv ".tools/epubcheck/epubcheck.jar" \
               ".tools/epubcheck/epubcheck-${EPUBCHECK_VERSION}.jar"
           fi
       - run: pnpm install --frozen-lockfile

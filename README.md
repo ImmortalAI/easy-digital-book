@@ -29,10 +29,14 @@ cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-`pnpm build:fixture-epubs` requires the pinned epubcheck 5.2.1 JAR and Java
-17+. It fails when either is unavailable; required EPUB validation is never
-silently skipped. See [the release checklist](docs/release-checklist.md) for
-manual checks on all supported desktop targets.
+`pnpm build:fixture-epubs` requires Java 17+ and the pinned epubcheck 5.2.1
+release unpacked whole into `.tools/epubcheck` — the released jar is thin and
+loads its dependencies from the `lib` directory beside it, so copying the jar
+on its own is not enough. Rename `epubcheck.jar` to `epubcheck-5.2.1.jar`, or
+point `EPUBCHECK_JAR` at it. The build fails when either requirement is
+unavailable; required EPUB validation is never silently skipped. See
+[the release checklist](docs/release-checklist.md) for manual checks on all
+supported desktop targets.
 
 ## First launch and releases
 
