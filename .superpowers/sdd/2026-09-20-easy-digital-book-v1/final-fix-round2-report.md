@@ -113,3 +113,72 @@ environment. No additional environment limit affected this fix wave. The
 production build warning about the large JavaScript chunk is pre-existing and
 non-fatal; no e2e or cross-platform native-runtime checks were part of this
 fix wave.
+
+## Fix wave 2 follow-up — cover revision guard
+
+Date: 2026-09-22
+Base: `2a785c5` (`docs: report final v1 fix round two`)
+Implementation commit: `9b52ce7` (`fix: guard cover undo by cover revision`)
+
+### Finding and root cause
+
+The prior resource undo guard compared the current cover with the expected
+post-delete value. Deleting cover A produced `null`; an explicit later
+`setCover(..., null)` left that value unchanged, so undo incorrectly restored
+A. A global project revision could not be used because an unrelated chapter
+edit must remain undo-compatible.
+
+### Fix
+
+- Added a per-project `coverRevision` to `projectStore`, reset on project
+  replacement and incremented for cover changes or explicit cover mutations.
+- Added an explicit `metadataCoverChanged` mutation marker so a deliberate
+  cover action is versioned even when it writes the same value, including an
+  explicit clear while the cover is already `null`.
+- Resource removal marks the cover mutation when it removes the current cover.
+- Resource undo captures the post-delete cover revision and restores the old
+  cover only when that revision and the post-delete cover value are unchanged.
+  Existing generation, book-ID, and resource-absence guards remain intact.
+
+### TDD evidence
+
+Added the regression before production changes:
+
+```text
+pnpm test -- src/composables/__tests__/use-book-search.test.ts
+```
+
+RED result: 1 expected failure (`does not restore a deleted cover after an
+explicit clear`), with 209 tests passing and 210 total tests. The failure was
+`expected null`, received `images/a.png`.
+
+After implementation, the same focused command passed: 61 test files and 210
+tests passed. This includes the explicit-clear, unrelated-chapter-edit,
+newer-different-cover, and cross-book-generation cases.
+
+### Verification
+
+- `pnpm check` — first run passed typecheck and Oxlint, then reported Oxfmt
+  issues in the two touched source files. `pnpm exec oxfmt
+  src/composables/use-book-search.ts src/services/book/metadata.ts` fixed the
+  mechanical formatting; the rerun passed with 61 test files and 210 tests,
+  plus typecheck, Oxlint, and Oxfmt.
+- `pnpm build` — passed, exit 0. Vite emitted the existing large-chunk
+  warning for the approximately 804 kB JavaScript bundle.
+- `cargo fmt --manifest-path src-tauri/Cargo.toml --check` — passed.
+- `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings` — passed.
+- `cargo test --manifest-path src-tauri/Cargo.toml` — passed: 9 Rust unit
+  tests, 0 failures; 0 main tests; 0 doc tests.
+- `git diff --check` — passed before the implementation commit.
+
+### Follow-up self-review
+
+The implementation remains limited to the cover mutation model, project
+store, resource undo guard, and focused regression. Unrelated chapter edits do
+not increment `coverRevision`; explicit cover actions do. Different-cover
+selection, explicit clear, cross-book replacement, and cross-generation
+replacement cannot restore the deleted cover, while an unrelated chapter edit
+still can. No export, parser, or delivery code was changed.
+
+The report was appended after implementation commit `9b52ce7`; its
+documentation commit is recorded in the final handoff.
