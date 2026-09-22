@@ -90,6 +90,11 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
+            // The body below is macOS-only. Without this the closure's
+            // parameters are unused everywhere else, and CI builds the crate
+            // with `-D warnings` on Linux and Windows too.
+            #[cfg(not(target_os = "macos"))]
+            let _ = (app, event);
             #[cfg(target_os = "macos")]
             if let tauri::RunEvent::Opened { urls } = event {
                 let paths = urls
