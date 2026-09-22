@@ -1,0 +1,12 @@
+import type { ManifestEnvelope } from "@/types/manifest";
+import { AppError } from "@/types/errors";
+
+export function migrateManifest(manifest: ManifestEnvelope, fromVersion: number): ManifestEnvelope {
+  let current = { ...manifest };
+  if (fromVersion === 0) {
+    current = { ...current, formatVersion: 1 };
+  }
+  if (current.formatVersion !== 1)
+    throw new AppError("edb.unsupportedVersion", `Unsupported migration from ${fromVersion}`);
+  return current;
+}

@@ -1,0 +1,96 @@
+import { describe, expect, it } from "vitest";
+import { createBook } from "@/services/book/create";
+import { findInBook } from "@/services/search/find";
+import { replaceMatches } from "@/services/search/replace";
+import type { SearchQuery } from "@/services/search/query";
+
+function book() {
+  const value = createBook({
+    locale: "ru",
+    now: new Date("2026-01-01"),
+    newUuid: () => "550e8400-e29b-41d4-a716-446655440000",
+    newChapterId: () => "chapter1",
+  });
+  return { ...value, chapters: [{ id: "chapter1", source: "герой геройский\nглава 12" }] };
+}
+
+describe("book search", () => {
+  it("matches Cyrillic whole words without matching a word prefix", () => {
+    expect(
+      findInBook(book(), { text: "герой", wholeWord: true, caseSensitive: false, regex: false }),
+    ).toHaveLength(1);
+  });
+
+  it("finds regex captures and previews replacement text", () => {
+    const query: SearchQuery = {
+      text: "(глава) (\\d+)",
+      wholeWord: false,
+      caseSensitive: false,
+      regex: true,
+    };
+    const result = replaceMatches(book(), query, "$2. $1");
+    if ("error" in result) throw new Error(result.error);
+    expect(result.changes[0]?.source).toContain("12. глава");
+    expect(result.changes[0]?.matches[0]?.replacementPreview).toBe("12. глава");
+  });
+
+  it("returns an error instead of throwing for invalid regex", () => {
+    expect(() =>
+      replaceMatches(
+        book(),
+        { text: "[", regex: true, wholeWord: false, caseSensitive: false },
+        "x",
+      ),
+    ).not.toThrow();
+    expect(
+      replaceMatches(
+        book(),
+        { text: "[", regex: true, wholeWord: false, caseSensitive: false },
+        "x",
+      ),
+    ).toEqual({ error: "search.invalidRegex" });
+  });
+
+  it("advances zero-width unicode matches by code point", () => {
+    const value = { ...book(), chapters: [{ id: "chapter1", source: "😀" }] };
+    const query: SearchQuery = {
+      text: "(?=.)",
+      regex: true,
+      wholeWord: false,
+      caseSensitive: true,
+    };
+    expect(findInBook(value, query)).toHaveLength(1);
+    const result = replaceMatches(value, query, "X");
+    if ("error" in result) throw new Error(result.error);
+    expect(result.changes[0]?.source).toBe("X😀");
+  });
+
+  it("expands context replacement tokens against the original chapter", () => {
+    const value = { ...book(), chapters: [{ id: "chapter1", source: "a hero b" }] };
+    const result = replaceMatches(
+      value,
+      { text: "hero", regex: false, wholeWord: false, caseSensitive: true },
+      "$`<$&>$'",
+    );
+    if ("error" in result) throw new Error(result.error);
+    expect(result.changes[0]?.matches[0]?.replacementPreview).toBe("a <hero> b");
+  });
+
+  it("matches String.replace semantics for named captures and numeric fallback", () => {
+    const named = replaceMatches(
+      { ...book(), chapters: [{ id: "chapter1", source: "hero" }] },
+      { text: "(?<word>hero)", regex: true, wholeWord: false, caseSensitive: true },
+      "$<word>",
+    );
+    if ("error" in named) throw new Error(named.error);
+    expect(named.changes[0]?.matches[0]?.replacementPreview).toBe("hero");
+
+    const numeric = replaceMatches(
+      { ...book(), chapters: [{ id: "chapter1", source: "hero" }] },
+      { text: "(hero)", regex: true, wholeWord: false, caseSensitive: true },
+      "$10",
+    );
+    if ("error" in numeric) throw new Error(numeric.error);
+    expect(numeric.changes[0]?.matches[0]?.replacementPreview).toBe("hero0");
+  });
+});

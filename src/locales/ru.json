@@ -1,0 +1,159 @@
+{
+  "welcome": {
+    "title": "Easy Digital Book",
+    "subtitle": "Создайте EPUB из своей новеллы.",
+    "newProject": "Новый проект",
+    "openProject": "Открыть проект",
+    "recovery": "Несохранённые изменения",
+    "recent": "Недавние"
+  },
+  "common": {
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "close": "Закрыть",
+    "delete": "Удалить",
+    "undo": "Отменить",
+    "doNotAskAgain": "Больше не спрашивать"
+  },
+  "toolbar": { "text": "Текст", "split": "Сплит", "preview": "Превью" },
+  "editor": {
+    "unnamedBook": "Безымянная книга",
+    "selectChapter": "Выберите главу",
+    "chooseChapter": "Выберите главу",
+    "status": "{words} слов · {characters} символов",
+    "openProblems": "При открытии обнаружено проблем: {count}"
+  },
+  "breadcrumbs": {
+    "aria": "Хлебные крошки",
+    "metadata": "Метаданные",
+    "settings": "Настройки",
+    "chapters": "Главы",
+    "fallback": "Глава {number}"
+  },
+  "warnings": { "currentChapter": "Эта глава", "book": "Книга", "none": "Нет предупреждений" },
+  "files": {
+    "openTitle": "Открыть проект",
+    "openFilter": "Easy Digital Book",
+    "saveTitle": "Сохранить проект",
+    "importImage": "Импортировать изображение",
+    "imageFilter": "Изображения",
+    "imageFallback": "изображение",
+    "untitled": "Без названия",
+    "fileNotFound": "Файл не найден: {path}",
+    "recentTitle": "Недавний файл",
+    "openFailed": "Не удалось открыть проект",
+    "recoverTitle": "Восстановить проект",
+    "recoverMessage": "Доступна более новая сессия восстановления. Восстановить её?",
+    "saveFailed": "Не удалось сохранить проект",
+    "fileChanged": "Файл изменён другой программой. Перезаписать его?",
+    "fileChangedTitle": "Файл изменён"
+  },
+  "metadata": {
+    "title": "Метаданные",
+    "bookTitle": "Название",
+    "version": "Версия",
+    "versionHint": "например, гл. 1–150",
+    "language": "Язык",
+    "authors": "Авторы",
+    "translators": "Переводчики",
+    "series": "Серия",
+    "description": "Аннотация",
+    "coverHint": "Рекомендуется 1600×2560",
+    "choose": "Выбрать…",
+    "remove": "Убрать",
+    "created": "Создана",
+    "modified": "Изменена",
+    "bytes": "байт"
+  },
+  "explorer": {
+    "title": "Проводник",
+    "book": "Книга",
+    "metadata": "Метаданные",
+    "createCss": "custom.css (создать)",
+    "chapters": "Главы",
+    "images": "Изображения"
+  },
+  "images": {
+    "usedIn": "Используется в",
+    "unused": "не используется",
+    "insert": "Вставить в текст",
+    "setCover": "Сделать обложкой",
+    "findUsage": "Найти использования"
+  },
+  "chapters": { "fallback": "Глава {number}", "newAfter": "Новая глава после" },
+  "search": {
+    "placeholder": "Поиск",
+    "replacePlaceholder": "Замена",
+    "caseSensitive": "Aa",
+    "wholeWord": "Слово целиком",
+    "regex": ".*",
+    "summary": "Результатов: {results} в {chapters} главах",
+    "replaceAll": "Заменить всё",
+    "replaceOne": "Заменить",
+    "replaceChapter": "Заменить в главе",
+    "replaced": "Заменено вхождений: {count}",
+    "hide": "Скрыть",
+    "invalidRegex": "Неверное регулярное выражение"
+  },
+  "delete": {
+    "chapterTitle": "Удалить главу",
+    "chapterMessage": "Глава будет удалена из книги.",
+    "imageTitle": "Удалить изображение",
+    "imageMessage": "Изображение будет удалено из проекта.",
+    "unusedTitle": "Удалить неиспользуемые изображения",
+    "unusedMessage": "Эти неиспользуемые изображения будут удалены из проекта.",
+    "words": "Слов",
+    "chapterToast": "Глава удалена",
+    "imageToast": "Изображение удалено"
+  },
+  "unsaved": {
+    "title": "Несохранённые изменения",
+    "message": "Сохранить изменения перед продолжением?",
+    "discard": "Не сохранять"
+  },
+  "export": {
+    "title": "Экспорт EPUB",
+    "preset": "Пресет изображений",
+    "kindle": "Kindle Paperwhite",
+    "original": "Без изменений",
+    "grayscale": "Оттенки серого",
+    "titlePage": "Добавить титульную страницу",
+    "versionInTitle": "Добавить версию к названию",
+    "action": "Экспортировать…",
+    "progressImages": "Картинки {done}/{total}",
+    "progressChapters": "Главы {done}/{total}",
+    "progressZip": "Создание EPUB…",
+    "saved": "EPUB сохранён",
+    "showInFolder": "Показать в папке",
+    "filterName": "Книга EPUB"
+  },
+  "settings": {
+    "title": "Настройки",
+    "language": "Язык интерфейса",
+    "export": "Экспорт",
+    "confirmDelete": "Подтверждать удаление",
+    "checkUpdates": "Проверить обновления",
+    "updateAlreadyChecked": "Обновления уже проверялись за последние сутки",
+    "updateAvailable": "Доступна новая версия",
+    "openUpdate": "Открыть релиз",
+    "upToDate": "Установлена последняя версия",
+    "updateCheckFailed": "Не удалось проверить обновления",
+    "openLogs": "Открыть папку логов"
+  },
+  "errors": {
+    "title": "Произошла непредвиденная ошибка",
+    "explanation": "Ошибка записана без содержимого книги.",
+    "copied": "Подробности скопированы",
+    "copy": "Копировать подробности",
+    "openLogs": "Папка логов",
+    "report": "Сообщить об ошибке",
+    "unexpected": "Произошла непредвиденная ошибка",
+    "platform": "Не удалось выполнить операцию платформы",
+    "updates": "Не удалось проверить обновления",
+    "export": {
+      "cancelled": "Экспорт отменён",
+      "noProject": "Проект не открыт",
+      "failed": "Не удалось экспортировать EPUB"
+    }
+  }
+}

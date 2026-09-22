@@ -1,0 +1,159 @@
+{
+  "welcome": {
+    "title": "Easy Digital Book",
+    "subtitle": "Create an EPUB from your novel.",
+    "newProject": "New project",
+    "openProject": "Open project",
+    "recovery": "Unsaved changes",
+    "recent": "Recent"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+    "delete": "Delete",
+    "undo": "Undo",
+    "doNotAskAgain": "Do not ask again"
+  },
+  "toolbar": { "text": "Text", "split": "Split", "preview": "Preview" },
+  "editor": {
+    "unnamedBook": "Untitled book",
+    "selectChapter": "Select a chapter",
+    "chooseChapter": "Select a chapter",
+    "status": "{words} words · {characters} characters",
+    "openProblems": "{count} problems found when opening"
+  },
+  "breadcrumbs": {
+    "aria": "Breadcrumbs",
+    "metadata": "Metadata",
+    "settings": "Settings",
+    "chapters": "Chapters",
+    "fallback": "Chapter {number}"
+  },
+  "warnings": { "currentChapter": "Current chapter", "book": "Book", "none": "No warnings" },
+  "files": {
+    "openTitle": "Open project",
+    "openFilter": "Easy Digital Book",
+    "saveTitle": "Save project",
+    "importImage": "Import image",
+    "imageFilter": "Images",
+    "imageFallback": "image",
+    "untitled": "Untitled",
+    "fileNotFound": "File not found: {path}",
+    "recentTitle": "Recent file",
+    "openFailed": "Could not open project",
+    "recoverTitle": "Recover project",
+    "recoverMessage": "A newer recovery session is available. Restore it?",
+    "saveFailed": "Could not save project",
+    "fileChanged": "The file was changed by another program. Overwrite it?",
+    "fileChangedTitle": "File changed"
+  },
+  "metadata": {
+    "title": "Metadata",
+    "bookTitle": "Title",
+    "version": "Version",
+    "versionHint": "e.g. ch. 1–150",
+    "language": "Language",
+    "authors": "Authors",
+    "translators": "Translators",
+    "series": "Series",
+    "description": "Description",
+    "coverHint": "Recommended 1600×2560",
+    "choose": "Choose…",
+    "remove": "Remove",
+    "created": "Created",
+    "modified": "Modified",
+    "bytes": "bytes"
+  },
+  "explorer": {
+    "title": "Explorer",
+    "book": "Book",
+    "metadata": "Metadata",
+    "createCss": "custom.css (create)",
+    "chapters": "Chapters",
+    "images": "Images"
+  },
+  "images": {
+    "usedIn": "Used in",
+    "unused": "not used",
+    "insert": "Insert in text",
+    "setCover": "Make cover",
+    "findUsage": "Find usages"
+  },
+  "chapters": { "fallback": "Chapter {number}", "newAfter": "New chapter after" },
+  "search": {
+    "placeholder": "Search",
+    "replacePlaceholder": "Replace",
+    "caseSensitive": "Aa",
+    "wholeWord": "Whole word",
+    "regex": ".*",
+    "summary": "{results} results in {chapters} chapters",
+    "replaceAll": "Replace all",
+    "replaceOne": "Replace",
+    "replaceChapter": "Replace chapter",
+    "replaced": "Replaced {count} matches",
+    "hide": "Hide",
+    "invalidRegex": "Invalid regular expression"
+  },
+  "delete": {
+    "chapterTitle": "Delete chapter",
+    "chapterMessage": "This chapter will be removed from the book.",
+    "imageTitle": "Delete image",
+    "imageMessage": "This image will be removed from the project.",
+    "unusedTitle": "Delete unused images",
+    "unusedMessage": "These unused images will be removed from the project.",
+    "words": "Words",
+    "chapterToast": "Chapter deleted",
+    "imageToast": "Image deleted"
+  },
+  "unsaved": {
+    "title": "Unsaved changes",
+    "message": "Save your changes before continuing?",
+    "discard": "Don't save"
+  },
+  "export": {
+    "title": "Export EPUB",
+    "preset": "Image preset",
+    "kindle": "Kindle Paperwhite",
+    "original": "Without changes",
+    "grayscale": "Grayscale",
+    "titlePage": "Add title page",
+    "versionInTitle": "Add version to title",
+    "action": "Export…",
+    "progressImages": "Images {done}/{total}",
+    "progressChapters": "Chapters {done}/{total}",
+    "progressZip": "Creating EPUB…",
+    "saved": "EPUB saved",
+    "showInFolder": "Show in folder",
+    "filterName": "EPUB book"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Interface language",
+    "export": "Export",
+    "confirmDelete": "Confirm deletions",
+    "checkUpdates": "Check for updates",
+    "updateAlreadyChecked": "Updates were checked within the last day",
+    "updateAvailable": "A new version is available",
+    "openUpdate": "Open release",
+    "upToDate": "You are up to date",
+    "updateCheckFailed": "Could not check for updates",
+    "openLogs": "Open log folder"
+  },
+  "errors": {
+    "title": "An unexpected error occurred",
+    "explanation": "The error was recorded without book contents.",
+    "copied": "Details copied",
+    "copy": "Copy details",
+    "openLogs": "Log folder",
+    "report": "Report issue",
+    "unexpected": "An unexpected error occurred",
+    "platform": "A platform operation failed",
+    "updates": "Could not check for updates",
+    "export": {
+      "cancelled": "Export cancelled",
+      "noProject": "No project is open",
+      "failed": "Could not export EPUB"
+    }
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "welcome": {
+    "title": "Easy Digital Book",
+    "subtitle": "将您的小说制作成 EPUB。",
+    "newProject": "新建项目",
+    "openProject": "打开项目",
+    "recovery": "未保存的更改",
+    "recent": "最近项目"
+  },
+  "common": {
+    "cancel": "取消",
+    "save": "保存",
+    "close": "关闭",
+    "delete": "删除",
+    "undo": "撤销",
+    "doNotAskAgain": "不再询问"
+  },
+  "toolbar": { "text": "文本", "split": "分栏", "preview": "预览" },
+  "editor": {
+    "unnamedBook": "未命名书籍",
+    "selectChapter": "请选择章节",
+    "chooseChapter": "请选择章节",
+    "status": "{words} 个词 · {characters} 个字符",
+    "openProblems": "打开时发现 {count} 个问题"
+  },
+  "breadcrumbs": {
+    "aria": "面包屑",
+    "metadata": "元数据",
+    "settings": "设置",
+    "chapters": "章节",
+    "fallback": "第 {number} 章"
+  },
+  "warnings": { "currentChapter": "当前章节", "book": "书籍", "none": "没有警告" },
+  "files": {
+    "openTitle": "打开项目",
+    "openFilter": "Easy Digital Book",
+    "saveTitle": "保存项目",
+    "importImage": "导入图片",
+    "imageFilter": "图片",
+    "imageFallback": "图片",
+    "untitled": "未命名",
+    "fileNotFound": "文件未找到：{path}",
+    "recentTitle": "最近文件",
+    "openFailed": "无法打开项目",
+    "recoverTitle": "恢复项目",
+    "recoverMessage": "有更新的恢复会话。是否恢复？",
+    "saveFailed": "无法保存项目",
+    "fileChanged": "文件已被其他程序修改。是否覆盖？",
+    "fileChangedTitle": "文件已修改"
+  },
+  "metadata": {
+    "title": "元数据",
+    "bookTitle": "书名",
+    "version": "版本",
+    "versionHint": "例如：第 1–150 章",
+    "language": "语言",
+    "authors": "作者",
+    "translators": "译者",
+    "series": "系列",
+    "description": "简介",
+    "coverHint": "建议 1600×2560",
+    "choose": "选择…",
+    "remove": "移除",
+    "created": "创建时间",
+    "modified": "修改时间",
+    "bytes": "字节"
+  },
+  "explorer": {
+    "title": "资源管理器",
+    "book": "书籍",
+    "metadata": "元数据",
+    "createCss": "custom.css（创建）",
+    "chapters": "章节",
+    "images": "图片"
+  },
+  "images": {
+    "usedIn": "使用于",
+    "unused": "未使用",
+    "insert": "插入文本",
+    "setCover": "设为封面",
+    "findUsage": "查找使用位置"
+  },
+  "chapters": { "fallback": "第 {number} 章", "newAfter": "在后面新建章节" },
+  "search": {
+    "placeholder": "搜索",
+    "replacePlaceholder": "替换",
+    "caseSensitive": "Aa",
+    "wholeWord": "全字匹配",
+    "regex": ".*",
+    "summary": "{chapters} 个章节中的 {results} 个结果",
+    "replaceAll": "全部替换",
+    "replaceOne": "替换",
+    "replaceChapter": "替换本章",
+    "replaced": "已替换 {count} 个匹配项",
+    "hide": "隐藏",
+    "invalidRegex": "正则表达式无效"
+  },
+  "delete": {
+    "chapterTitle": "删除章节",
+    "chapterMessage": "此章节将从书中删除。",
+    "imageTitle": "删除图片",
+    "imageMessage": "此图片将从项目中删除。",
+    "unusedTitle": "删除未使用的图片",
+    "unusedMessage": "这些未使用的图片将从项目中删除。",
+    "words": "字数",
+    "chapterToast": "章节已删除",
+    "imageToast": "图片已删除"
+  },
+  "unsaved": {
+    "title": "未保存的更改",
+    "message": "继续前保存更改吗？",
+    "discard": "不保存"
+  },
+  "export": {
+    "title": "导出 EPUB",
+    "preset": "图片预设",
+    "kindle": "Kindle Paperwhite",
+    "original": "不做更改",
+    "grayscale": "灰度",
+    "titlePage": "添加标题页",
+    "versionInTitle": "将版本添加到书名",
+    "action": "导出…",
+    "progressImages": "图片 {done}/{total}",
+    "progressChapters": "章节 {done}/{total}",
+    "progressZip": "正在创建 EPUB…",
+    "saved": "EPUB 已保存",
+    "showInFolder": "在文件夹中显示",
+    "filterName": "EPUB 书籍"
+  },
+  "settings": {
+    "title": "设置",
+    "language": "界面语言",
+    "export": "导出",
+    "confirmDelete": "确认删除",
+    "checkUpdates": "检查更新",
+    "updateAlreadyChecked": "最近一天内已经检查过更新",
+    "updateAvailable": "有新版本可用",
+    "openUpdate": "打开发布页面",
+    "upToDate": "已是最新版本",
+    "updateCheckFailed": "无法检查更新",
+    "openLogs": "打开日志文件夹"
+  },
+  "errors": {
+    "title": "发生了意外错误",
+    "explanation": "错误已记录，未包含书籍内容。",
+    "copied": "详细信息已复制",
+    "copy": "复制详细信息",
+    "openLogs": "日志文件夹",
+    "report": "报告问题",
+    "unexpected": "发生了意外错误",
+    "platform": "平台操作失败",
+    "updates": "无法检查更新",
+    "export": {
+      "cancelled": "导出已取消",
+      "noProject": "没有打开项目",
+      "failed": "无法导出 EPUB"
+    }
+  }
+}

@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            tauri_target: universal-apple-darwin
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+            bundles: dmg
+          - os: windows-latest
+            tauri_target: x86_64-pc-windows-msvc
+            rust_targets: x86_64-pc-windows-msvc
+            bundles: nsis
+          - os: ubuntu-22.04
+            tauri_target: x86_64-unknown-linux-gnu
+            rust_targets: x86_64-unknown-linux-gnu
+            bundles: appimage,deb,rpm
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+      - name: Install Ubuntu Tauri dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+      - run: pnpm install --frozen-lockfile
+      - name: Verify release tag matches package version
+        run: pnpm verify:release-tag "${{ github.ref_name }}"
+      - name: Prepare release notes from CHANGELOG.md
+        id: release-notes
+        shell: bash
+        run: pnpm exec tsx scripts/release-notes.mts "${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+      - run: pnpm sync:cargo-version
+      - run: pnpm build
+      - name: Prepare Windows signing
+        if: runner.os == 'Windows'
+        id: windows-signing
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        shell: pwsh
+        run: |
+          $signingDirectory = Join-Path $env:RUNNER_TEMP "easy-digital-book-signing"
+          $configPath = Join-Path $env:GITHUB_WORKSPACE "src-tauri/tauri.windows-signing.conf.json"
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE) -or [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
+            "tauri_args=" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          } else {
+            New-Item -ItemType Directory -Path $signingDirectory -Force | Out-Null
+            $encodedCertificate = Join-Path $signingDirectory "certificate.txt"
+            $certificatePath = Join-Path $signingDirectory "certificate.pfx"
+            try {
+              Set-Content -Path $encodedCertificate -Value $env:WINDOWS_CERTIFICATE -NoNewline
+              certutil -decode $encodedCertificate $certificatePath | Out-Host
+              $certificate = Import-PfxCertificate -FilePath $certificatePath -CertStoreLocation Cert:\CurrentUser\My -Password (ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText)
+              $thumbprint = $certificate.Thumbprint
+              if ([string]::IsNullOrWhiteSpace($thumbprint)) { throw "Imported Windows certificate has no thumbprint" }
+              $config = @{ bundle = @{ windows = @{ certificateThumbprint = $thumbprint; digestAlgorithm = "sha256"; timestampUrl = "http://timestamp.digicert.com" } } } | ConvertTo-Json -Depth 5
+              [IO.File]::WriteAllText($configPath, $config, [Text.UTF8Encoding]::new($false))
+              "tauri_args=--config src-tauri/tauri.windows-signing.conf.json" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+              "certificate_thumbprint=$thumbprint" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            } finally {
+              Remove-Item -Path $signingDirectory -Recurse -Force -ErrorAction SilentlyContinue
+            }
+          }
+      - name: Build and publish Tauri bundle
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: easy-digital-book ${{ github.ref_name }}
+          releaseBody: ${{ steps.release-notes.outputs.body }}
+          releaseDraft: true
+          prerelease: false
+          args: --target ${{ matrix.tauri_target }} --bundles ${{ matrix.bundles }} ${{ steps.windows-signing.outputs.tauri_args }}
+      - name: Clean up Windows signing material
+        if: always() && runner.os == 'Windows'
+        env:
+          WINDOWS_CERTIFICATE_THUMBPRINT: ${{ steps.windows-signing.outputs.certificate_thumbprint }}
+        shell: pwsh
+        run: |
+          if (-not [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_THUMBPRINT)) {
+            Remove-Item -Path "Cert:\CurrentUser\My\$env:WINDOWS_CERTIFICATE_THUMBPRINT" -Force -ErrorAction SilentlyContinue
+          }
+          Remove-Item -Recurse -Force -Path "src-tauri/tauri.windows-signing.conf.json" -ErrorAction SilentlyContinue
