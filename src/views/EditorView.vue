@@ -20,9 +20,8 @@ import CssEditor from "@/components/editor/CssEditor.vue";
 import ImageView from "@/components/editor/ImageView.vue";
 import SettingsView from "@/components/settings/SettingsView.vue";
 import ExportDialog from "@/components/export/ExportDialog.vue";
-import { createExportController } from "@/composables/use-export";
+import { createSettingsActions } from "@/composables/use-settings-actions";
 import { useSettingsStore } from "@/stores/settings";
-import { getRuntimePlatformServices } from "@/services/platform";
 import {
   captureImageImportIdentity,
   imageCursorPosition,
@@ -37,8 +36,8 @@ const project = useProjectStore();
 const files = inject(projectFilesKey, null);
 const layout = useLayoutStore();
 const settings = files?.settings ?? useSettingsStore();
-const platform = files?.services ?? getRuntimePlatformServices();
-const exportController = createExportController({ services: platform, project, settings });
+const settingsActions = files?.settingsActions ?? createSettingsActions({ settings });
+const exportController = files?.exportController;
 const exportOpen = ref(false);
 const shell = ref<HTMLElement>();
 const sourceScroller = ref<HTMLElement | null>(null);
@@ -240,8 +239,8 @@ onMounted(findSourceScroller);
             <ImageView v-else-if="layout.center.kind === 'image'" :path="layout.center.path" />
             <SettingsView
               v-else-if="layout.center.kind === 'settings'"
-              :services="platform"
               :settings="settings"
+              :actions="settingsActions"
             />
             <div v-else class="editor-placeholder">Select a chapter</div>
           </div>
@@ -280,10 +279,9 @@ onMounted(findSourceScroller);
     </div>
     <div v-if="exportOpen" class="editor-shell__dialog-backdrop">
       <ExportDialog
+        v-if="exportController"
         :controller="exportController"
-        :services="platform"
         :project="project"
-        :settings="settings"
         @close="exportOpen = false"
       />
     </div>

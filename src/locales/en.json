@@ -92,7 +92,8 @@
     "progressChapters": "Chapters {done}/{total}",
     "progressZip": "Creating EPUB…",
     "saved": "EPUB saved",
-    "showInFolder": "Show in folder"
+    "showInFolder": "Show in folder",
+    "filterName": "EPUB book"
   },
   "settings": {
     "title": "Settings",
@@ -115,6 +116,8 @@
     "openLogs": "Log folder",
     "report": "Report issue",
     "unexpected": "An unexpected error occurred",
+    "platform": "A platform operation failed",
+    "updates": "Could not check for updates",
     "export": {
       "cancelled": "Export cancelled",
       "noProject": "No project is open",

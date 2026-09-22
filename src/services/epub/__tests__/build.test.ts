@@ -152,7 +152,7 @@ describe("buildEpub", () => {
         ["images/a.png", { mediaType: "image/png" as const, bytes: new Uint8Array([1]) }],
       ]),
       customCss:
-        '.ok { background: url("images/a.png"); } .missing { background: url(images/no.png); }',
+        ".ok { background: url( images/a.png ); } .missing { background: url( images/no.png ); }",
     };
     const bytes = await buildEpub(
       cssBook,

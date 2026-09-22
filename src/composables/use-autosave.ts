@@ -3,6 +3,7 @@ import { onScopeDispose, watch } from "vue";
 import type { PlatformServices } from "@/types/platform";
 import { useNotificationsStore } from "@/stores/notifications";
 import { snapshotBook, useProjectStore } from "@/stores/project";
+import type { ProjectFilesController } from "@/composables/use-project-files";
 
 export interface AutosaveOptions {
   project?: ReturnType<typeof useProjectStore>;
@@ -136,4 +137,10 @@ export function useAutosave(options: AutosaveOptions) {
   const autosave = createAutosave(options);
   onScopeDispose(autosave.stop);
   return autosave;
+}
+
+export function useProjectAutosave(
+  controller: Pick<ProjectFilesController, "project" | "services">,
+) {
+  return useAutosave({ project: controller.project, services: controller.services });
 }

@@ -3,14 +3,10 @@ import { computed, ref } from "vue";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
 import type { ExportController } from "@/composables/use-export";
 import type { useProjectStore } from "@/stores/project";
-import type { useSettingsStore } from "@/stores/settings";
-import type { PlatformServices } from "@/types/platform";
 
 const props = defineProps<{
   controller: ExportController;
-  services?: PlatformServices;
   project?: ReturnType<typeof useProjectStore>;
-  settings?: ReturnType<typeof useSettingsStore>;
 }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useSafeI18n();
@@ -27,6 +23,7 @@ async function exportBook() {
     const target = await props.controller.exportEpub({
       signal: controller.signal,
       dialogTitle: t("export.title", "Export EPUB"),
+      dialogFilterName: t("export.filterName", "EPUB book"),
     });
     success.value = Boolean(target);
   } catch {
@@ -97,7 +94,7 @@ function cancelExport() {
       <span v-else>{{ t("export.progressZip", "Creating EPUB…") }}</span>
     </p>
     <p v-if="controller.error.value" class="export-dialog__error" role="alert">
-      {{ t(`errors.${controller.error.value.code}`, controller.error.value.message) }}
+      {{ t("errors.export.failed", "Could not export EPUB") }}
     </p>
     <p v-if="success" class="export-dialog__success" role="status">
       {{ t("export.saved", "EPUB saved") }}

@@ -95,11 +95,14 @@ describe("export controller", () => {
       imageProcessor: processor,
       build: vi.fn<typeof buildEpub>(async () => new Uint8Array([1, 2, 3])),
     });
+    const reveal = vi.spyOn(services.opener, "reveal");
     controller.options.value.imagePreset = "original";
     controller.options.value.grayscale = true;
     controller.options.value.titlePage = false;
 
     await controller.exportEpub({ path: "/exports/Novel.epub" });
+
+    expect(reveal).not.toHaveBeenCalled();
 
     expect(await services.settings.get("export", {})).toMatchObject({
       imagePreset: "original",
@@ -107,6 +110,24 @@ describe("export controller", () => {
       titlePage: false,
       lastDir: "/exports",
     });
+  });
+
+  it("passes a localized EPUB filter name to the native save dialog", async () => {
+    const { services, project, settings } = setup();
+    vi.spyOn(services.dialogs, "save").mockResolvedValue("/exports/Novel.epub");
+    const controller = createExportController({
+      services,
+      project,
+      settings,
+      imageProcessor: processor,
+      build: vi.fn<typeof buildEpub>(async () => new Uint8Array([1])),
+    });
+
+    await controller.exportEpub({ dialogFilterName: "Livre EPUB" });
+
+    expect(services.dialogs.save).toHaveBeenCalledWith(
+      expect.objectContaining({ filters: [{ name: "Livre EPUB", extensions: ["epub"] }] }),
+    );
   });
 
   it("logs export failures without book source text", async () => {

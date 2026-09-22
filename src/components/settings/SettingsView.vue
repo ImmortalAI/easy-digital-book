@@ -2,67 +2,45 @@
 import { ref } from "vue";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
 import type { useSettingsStore } from "@/stores/settings";
-import type { PlatformServices } from "@/types/platform";
 import type { SupportedLocale } from "@/plugins/i18n";
-import { appErrorFromUnknown } from "@/types/errors";
+import type { SettingsActions } from "@/composables/use-settings-actions";
 
 const props = defineProps<{
-  services: PlatformServices;
   settings: ReturnType<typeof useSettingsStore>;
+  actions: SettingsActions;
 }>();
 const { currentLocale, t, setLocale } = useSafeI18n();
 const update = ref<{ version: string; url: string } | null>(null);
 const updateMessage = ref("");
-const day = 24 * 60 * 60 * 1000;
 
-async function persist() {
-  await props.settings.persist();
-}
+const persist = () => props.actions.persist();
 
 async function changeLocale(value: string) {
   if (value !== "ru" && value !== "en" && value !== "zh-CN") return;
   props.settings.locale = value as SupportedLocale;
   setLocale(value);
-  await persist();
+  await props.actions.persist();
 }
 
 async function checkUpdates() {
-  const now = Date.now();
-  if (
-    props.settings.updates.lastCheckedAt !== null &&
-    now - props.settings.updates.lastCheckedAt < day
-  ) {
+  const result = await props.actions.checkUpdates();
+  if (result.status === "skipped") {
     updateMessage.value = t(
       "settings.updateAlreadyChecked",
       "Updates were checked within the last day",
     );
     return;
   }
-  props.settings.updates.lastCheckedAt = now;
-  await persist();
-  try {
-    const result = await props.services.updates.check();
-    update.value = result || null;
-    updateMessage.value = result
-      ? t("settings.updateAvailable", "A new version is available")
-      : t("settings.upToDate", "You are up to date");
-  } catch (error) {
-    props.services.logger.warn("Update check failed", {
-      code: appErrorFromUnknown(error, "updates.network").code,
-    });
-    updateMessage.value = "";
-  }
+  update.value = result.update;
+  updateMessage.value =
+    result.status === "failed"
+      ? t("settings.updateCheckFailed", "Could not check for updates")
+      : result.update
+        ? t("settings.updateAvailable", "A new version is available")
+        : t("settings.upToDate", "You are up to date");
 }
 
-async function openLogs() {
-  try {
-    await props.services.logs.openDirectory();
-  } catch (error) {
-    props.services.logger.warn("Could not open log directory", {
-      code: appErrorFromUnknown(error, "platform.logs").code,
-    });
-  }
-}
+const openLogs = () => props.actions.openLogs();
 </script>
 
 <template>
@@ -125,7 +103,9 @@ async function openLogs() {
         {{ t("settings.checkUpdates", "Check for updates") }}
       </button>
       <span role="status">{{ updateMessage }}</span>
-      <a v-if="update" :href="update.url" target="_blank" rel="noreferrer">{{ update.version }}</a>
+      <button v-if="update" type="button" @click="actions.openUpdate(update.url)">
+        {{ update.version }}
+      </button>
     </div>
     <button type="button" data-open-logs @click="openLogs">
       {{ t("settings.openLogs", "Open log folder") }}

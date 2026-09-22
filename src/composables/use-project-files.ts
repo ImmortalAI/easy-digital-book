@@ -8,6 +8,9 @@ import { useSettingsStore } from "@/stores/settings";
 import { getRuntimePlatformServices } from "@/services/platform";
 import type { PlatformServices, RecoverySessionSummary, Unlisten } from "@/types/platform";
 import type { ImageFile } from "./use-image-import";
+import { createErrorActions, type ErrorActions } from "./use-error-actions";
+import { createExportController, type ExportController } from "./use-export";
+import { createSettingsActions, type SettingsActions } from "./use-settings-actions";
 import {
   createUnsavedGuard,
   useUnsavedGuard,
@@ -30,6 +33,9 @@ export interface ProjectFilesController {
   services: PlatformServices;
   project: ReturnType<typeof useProjectStore>;
   settings: ReturnType<typeof useSettingsStore>;
+  settingsActions: SettingsActions;
+  errorActions: ErrorActions;
+  exportController: ExportController;
   recoverySessions: Ref<RecoverySessionSummary[]>;
   prompt: UnsavedPrompt | null;
   guard: UnsavedGuard;
@@ -90,6 +96,9 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
   project.configure(services);
   settings.configure(services.settings);
   layout.configure(services.settings);
+  const settingsActions = createSettingsActions({ services, settings });
+  const errorActions = createErrorActions(services);
+  const exportController = createExportController({ services, project, settings });
 
   let save!: () => Promise<boolean>;
   const guard = createUnsavedGuard({
@@ -315,6 +324,9 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
     services,
     project,
     settings,
+    settingsActions,
+    errorActions,
+    exportController,
     recoverySessions,
     prompt: null,
     guard,

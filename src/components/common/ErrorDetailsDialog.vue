@@ -1,26 +1,24 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
-import type { UnexpectedErrorReport } from "@/services/platform/error-reporting";
-import type { PlatformServices } from "@/types/platform";
+import {
+  errorTranslationKey,
+  type UnexpectedErrorReport,
+} from "@/services/platform/error-reporting";
+import type { ErrorActions } from "@/composables/use-error-actions";
 
-const props = defineProps<{ report: UnexpectedErrorReport; services: PlatformServices }>();
+const props = defineProps<{ report: UnexpectedErrorReport; actions: ErrorActions }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useSafeI18n();
 const copied = ref(false);
 
 async function copyDetails() {
-  await navigator.clipboard?.writeText(props.report.details);
+  await props.actions.copyDetails(props.report);
   copied.value = true;
 }
 
-async function openLogs() {
-  await props.services.logs.openDirectory();
-}
-
-async function reportIssue() {
-  await props.services.opener.open(props.report.issueUrl);
-}
+const openLogs = () => props.actions.openLogs();
+const reportIssue = () => props.actions.reportIssue(props.report);
 </script>
 
 <template>
@@ -31,7 +29,7 @@ async function reportIssue() {
     aria-labelledby="error-title"
   >
     <h2 id="error-title">
-      {{ t(`errors.${report.code}`, t("errors.title", "An unexpected error occurred")) }}
+      {{ t(errorTranslationKey(report.code), t("errors.title", "An unexpected error occurred")) }}
     </h2>
     <p>{{ t("errors.explanation", "The error was recorded without book contents.") }}</p>
     <pre data-error-details>{{ report.details }}</pre>

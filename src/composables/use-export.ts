@@ -17,6 +17,7 @@ export interface ExportRequest {
   path?: string;
   signal?: AbortSignal;
   dialogTitle?: string;
+  dialogFilterName?: string;
 }
 export interface ExportControllerOptions {
   services: PlatformServices;
@@ -98,7 +99,7 @@ export function createExportController(options: ExportControllerOptions): Export
         (await services.dialogs.save({
           title: request.dialogTitle ?? "Export EPUB",
           defaultPath: joinPath(settings.exportSettings.lastDir ?? "", fileName.value),
-          filters: [{ name: "EPUB book", extensions: ["epub"] }],
+          filters: [{ name: request.dialogFilterName ?? "EPUB", extensions: ["epub"] }],
         }));
       if (!target) return null;
       checkCancelled(request.signal);
@@ -126,7 +127,6 @@ export function createExportController(options: ExportControllerOptions): Export
       };
       settings.exportSettings = nextSettings;
       await settings.persist();
-      await revealOutput();
       return target;
     } catch (cause) {
       const cancelled = cause instanceof AppError && cause.code === "export.cancelled";

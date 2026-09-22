@@ -154,7 +154,7 @@ export async function buildEpub(
   const customCss = book.customCss;
   if (customCss)
     for (const match of customCss.matchAll(/url\(["']?([^"')]+)["']?\)/g))
-      if (book.resources.has(match[1])) used.add(match[1]);
+      if (book.resources.has(match[1].trim())) used.add(match[1].trim());
   const imagePaths = [...used].filter((p) => book.resources.has(p)).sort();
   const processed: Array<{ source: string; output: ProcessedImage }> = [];
   for (let i = 0; i < imagePaths.length; i++) {
@@ -214,13 +214,14 @@ export async function buildEpub(
   if (customCss)
     entries.push([
       "OEBPS/custom.css",
-      customCss.replace(/url\(["']?([^"')]+)["']?\)/g, (whole, path: string) =>
-        allMap.has(path)
-          ? `url("${allMap.get(path)}")`
-          : path.startsWith("images/")
+      customCss.replace(/url\(["']?([^"')]+)["']?\)/g, (whole, path: string) => {
+        const normalized = path.trim();
+        return allMap.has(normalized)
+          ? `url("${allMap.get(normalized)}")`
+          : normalized.startsWith("images/")
             ? 'url("data:,")'
-            : whole,
-      ),
+            : whole;
+      }),
     ]);
   for (const r of resourceEntries) entries.push([r.archivePath, r.output.bytes]);
   deps.onProgress?.({ stage: "zip", done: 0, total: entries.length });

@@ -92,7 +92,8 @@
     "progressChapters": "Главы {done}/{total}",
     "progressZip": "Создание EPUB…",
     "saved": "EPUB сохранён",
-    "showInFolder": "Показать в папке"
+    "showInFolder": "Показать в папке",
+    "filterName": "Книга EPUB"
   },
   "settings": {
     "title": "Настройки",
@@ -115,6 +116,8 @@
     "openLogs": "Папка логов",
     "report": "Сообщить об ошибке",
     "unexpected": "Произошла непредвиденная ошибка",
+    "platform": "Не удалось выполнить операцию платформы",
+    "updates": "Не удалось проверить обновления",
     "export": {
       "cancelled": "Экспорт отменён",
       "noProject": "Проект не открыт",

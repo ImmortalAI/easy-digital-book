@@ -8,6 +8,14 @@ export interface UnexpectedErrorReport {
   issueUrl: string;
 }
 
+export function errorTranslationKey(code: string): string {
+  if (code === "export.cancelled" || code === "export.noProject" || code === "export.failed")
+    return `errors.${code}`;
+  if (code.startsWith("updates.")) return "errors.updates";
+  if (code.startsWith("platform.")) return "errors.platform";
+  return "errors.unexpected";
+}
+
 export function reportUnexpectedError(
   error: unknown,
   logger: Logger,
