@@ -166,7 +166,8 @@
     "export": {
       "cancelled": "导出已取消",
       "noProject": "没有打开项目",
-      "failed": "无法导出 EPUB"
+      "failed": "无法导出 EPUB",
+      "invalidXhtml": "第 {chapter} 章《{title}》生成了无效的 XHTML"
     }
   }
 }

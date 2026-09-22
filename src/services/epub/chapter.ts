@@ -92,12 +92,17 @@ export function renderChapter(
   const validation = XMLValidator.validate(xhtml);
   if (validation !== true) {
     const issue = validation.err;
-    throw new AppError("export.invalidXhtml", `Глава ${index + 1} «${title}»: некорректный XHTML`, {
-      line: issue.line,
-      column: issue.col,
-      chapter: index + 1,
-      position: issue.line && issue.col ? { line: issue.line, column: issue.col } : undefined,
-    });
+    throw new AppError(
+      "export.invalidXhtml",
+      `Chapter ${index + 1} “${title}”: invalid XHTML`,
+      {
+        line: issue.line,
+        column: issue.col,
+        chapter: index + 1,
+        position: issue.line && issue.col ? { line: issue.line, column: issue.col } : undefined,
+      },
+      { params: { chapter: index + 1, title } },
+    );
   }
   return { id: chapter.id, title, xhtml, referencedPaths };
 }

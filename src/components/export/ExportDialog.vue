@@ -13,6 +13,12 @@ const { t } = useSafeI18n();
 const abortController = ref<AbortController | null>(null);
 const success = ref(false);
 const hasVersion = computed(() => Boolean(props.project?.book?.metadata.version));
+/** Prefer a message for the specific failure, falling back to the generic one. */
+const errorMessage = computed(() => {
+  const error = props.controller.error.value;
+  const generic = t("errors.export.failed", "Could not export EPUB");
+  return error ? t(`errors.${error.code}`, generic, error.params) : generic;
+});
 
 async function exportBook() {
   if (props.controller.exporting.value) return;
@@ -94,7 +100,7 @@ function cancelExport() {
       <span v-else>{{ t("export.progressZip", "Creating EPUB…") }}</span>
     </p>
     <p v-if="controller.error.value" class="export-dialog__error" role="alert">
-      {{ t("errors.export.failed", "Could not export EPUB") }}
+      {{ errorMessage }}
     </p>
     <p v-if="success" class="export-dialog__success" data-export-success role="status">
       {{ t("export.saved", "EPUB saved") }}

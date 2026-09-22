@@ -166,7 +166,8 @@
     "export": {
       "cancelled": "Экспорт отменён",
       "noProject": "Проект не открыт",
-      "failed": "Не удалось экспортировать EPUB"
+      "failed": "Не удалось экспортировать EPUB",
+      "invalidXhtml": "Глава {chapter} «{title}»: некорректный XHTML"
     }
   }
 }
