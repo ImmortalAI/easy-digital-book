@@ -18,9 +18,12 @@ import MetadataForm from "@/components/metadata/MetadataForm.vue";
 import CssEditor from "@/components/editor/CssEditor.vue";
 import ImageView from "@/components/editor/ImageView.vue";
 import {
+  captureImageImportIdentity,
   imageCursorPosition,
+  isImageImportIdentityCurrent,
   useImageImport,
   type ImageFile,
+  type ImageImportIdentity,
 } from "@/composables/use-image-import";
 import { setCover } from "@/services/book/metadata";
 
@@ -67,27 +70,27 @@ async function importImage() {
   await imageImport.pickAndImport();
 }
 
-async function importImageAt(file: ImageFile, position: number) {
+async function importImageAt(file: ImageFile, position: number, identity: ImageImportIdentity) {
   const chapter = selectedChapter.value;
   if (!chapter) return;
   const source = chapter.source;
-  const result = await imageImport.importFile(file, chapter.id, position);
+  const result = await imageImport.importFile(file, chapter.id, position, identity);
   if (!result) return;
   const next = project.book?.chapters.find((item) => item.id === chapter.id)?.source;
   if (next) sourceEditor.value?.syncSource(next, imageCursorPosition(source, position));
 }
 
-async function importCover(file: ImageFile) {
-  const result = await imageImport.importFile(file);
-  if (result && project.book) project.applyMutation(setCover(project.book, result.path));
+async function importCover(file: ImageFile, identity: ImageImportIdentity) {
+  const result = await imageImport.importFile(file, undefined, undefined, identity);
+  if (result && isImageImportIdentityCurrent(project, identity) && project.book)
+    project.applyMutation(setCover(project.book, result.path));
 }
 
 async function pickCover() {
-  const generation = project.bookGeneration;
-  const bookId = project.book?.metadata.id;
+  const identity = captureImageImportIdentity(project);
+  if (!identity) return;
   const file = await files?.pickImage();
-  if (file && project.bookGeneration === generation && project.book?.metadata.id === bookId)
-    await importCover(file);
+  if (file) await importCover(file, identity);
 }
 
 function setMode(mode: LayoutMode) {

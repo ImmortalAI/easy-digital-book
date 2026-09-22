@@ -84,3 +84,15 @@ Implemented the scoped review gaps from `92047d7`:
 - removed the stray literal template node from the chapter row.
 
 Fix-round 3 verification: focused brief tests, `pnpm check`, and `pnpm build` passed; 40 test files / 134 tests passed. The only concern is the existing non-failing main-chunk size warning (>500 kB).
+
+## Fix round 4
+
+Implemented the residual review findings from `2b720ac`:
+
+- captured `{ generation, bookId }` before every image `arrayBuffer()` and native picker await, then propagated that identity through `add`, `importFile`, clipboard, picker, SourceEditor, CoverPicker, and cover assignment;
+- stale image reads now return `null` or are discarded before callbacks, mutations, layout changes, cover assignment, editor resync, or cursor updates; stale clipboard/picker work does not start hashing;
+- WebP VP8L parsing now rejects a 24-byte truncated header and reads only the packed dimension bytes present in the valid 25-byte header;
+- added deferred project-switch coverage for SourceEditor paste/drop and CoverPicker drop, plus clipboard and picker flow coverage;
+- strengthened Explorer coverage to assert that an ImageItem context-menu event forwards its image path without changing the cover.
+
+Fix-round 4 verification: the focused workflow test command passed (40 test files / 139 tests); `pnpm check` passed (typecheck, Oxlint, Oxfmt, and 40 test files / 139 tests); `pnpm build` passed. The only concern remains the non-failing Vite main-chunk-size warning (722 kB minified, over 500 kB).

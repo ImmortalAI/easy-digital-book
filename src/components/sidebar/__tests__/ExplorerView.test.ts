@@ -25,7 +25,7 @@ describe("ExplorerView boundaries", () => {
     expect(project.dirty).toBe(false);
   });
 
-  it("forwards image contextmenu without changing the cover", async () => {
+  it("forwards image contextmenu with its path without changing the cover", async () => {
     const project = useProjectStore();
     const book = createBook({
       locale: "en",
@@ -37,6 +37,7 @@ describe("ExplorerView boundaries", () => {
     project.setBook(book);
     const wrapper = mount(ExplorerView);
     await wrapper.get(".explorer-image").trigger("contextmenu");
+    expect(wrapper.emitted("image-context-menu")?.[0]?.[0]).toBe("images/a.png");
     expect(project.book?.metadata.cover).toBeNull();
   });
 });

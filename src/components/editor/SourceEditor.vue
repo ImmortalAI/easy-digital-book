@@ -16,7 +16,12 @@ import {
 import { diagnosticRange, novlangHighlightStyle, novlangLanguage } from "./novlang-language";
 import { chapterParseResults, useNovlangParse } from "@/composables/use-novlang-parse";
 import { useProjectStore } from "@/stores/project";
-import type { ImageFile } from "@/composables/use-image-import";
+import {
+  captureImageImportIdentity,
+  isImageImportIdentityCurrent,
+  type ImageFile,
+  type ImageImportIdentity,
+} from "@/composables/use-image-import";
 
 interface FocusPosition {
   line: number;
@@ -26,7 +31,7 @@ const props = defineProps<{
   chapterId: string;
   focusPosition?: FocusPosition | null;
   focusRequest?: number;
-  importImage?: (file: ImageFile, position: number) => Promise<void>;
+  importImage?: (file: ImageFile, position: number, identity: ImageImportIdentity) => Promise<void>;
 }>();
 const host = ref<HTMLElement>();
 const project = useProjectStore();
@@ -81,15 +86,17 @@ function editorExtensions(chapterId: string) {
           item.type.startsWith("image/"),
         );
         if (!file || !props.importImage) return false;
+        const identity = captureImageImportIdentity(project);
+        if (!identity) return false;
         event.preventDefault();
-        void file
-          .arrayBuffer()
-          .then((bytes) =>
-            props.importImage?.(
-              { name: file.name || "pasted.png", bytes: new Uint8Array(bytes), type: file.type },
-              editor.state.selection.main.head,
-            ),
+        void file.arrayBuffer().then((bytes) => {
+          if (!isImageImportIdentityCurrent(project, identity)) return;
+          return props.importImage?.(
+            { name: file.name || "pasted.png", bytes: new Uint8Array(bytes), type: file.type },
+            editor.state.selection.main.head,
+            identity,
           );
+        });
         return true;
       },
       drop: (event, editor) => {
@@ -97,18 +104,20 @@ function editorExtensions(chapterId: string) {
           item.type.startsWith("image/"),
         );
         if (!file || !props.importImage) return false;
+        const identity = captureImageImportIdentity(project);
+        if (!identity) return false;
         event.preventDefault();
         const position =
           editor.posAtCoords({ x: event.clientX, y: event.clientY }) ??
           editor.state.selection.main.head;
-        void file
-          .arrayBuffer()
-          .then((bytes) =>
-            props.importImage?.(
-              { name: file.name || "dropped.png", bytes: new Uint8Array(bytes), type: file.type },
-              position,
-            ),
+        void file.arrayBuffer().then((bytes) => {
+          if (!isImageImportIdentityCurrent(project, identity)) return;
+          return props.importImage?.(
+            { name: file.name || "dropped.png", bytes: new Uint8Array(bytes), type: file.type },
+            position,
+            identity,
           );
+        });
         return true;
       },
     }),

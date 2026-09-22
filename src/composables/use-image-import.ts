@@ -1,6 +1,34 @@
 import { importImage, type ImageHash, type ImportImageResult } from "@/services/book/resources";
 import { useProjectStore } from "@/stores/project";
 import { useLayoutStore } from "@/stores/layout";
+import type { Book } from "@/types/book";
+
+export interface ImageImportIdentity {
+  generation: number;
+  bookId: string;
+}
+
+interface ImageImportProject {
+  book: Book | null;
+  bookGeneration: number;
+}
+
+export function captureImageImportIdentity(
+  project: ImageImportProject,
+): ImageImportIdentity | null {
+  return project.book
+    ? { generation: project.bookGeneration, bookId: project.book.metadata.id }
+    : null;
+}
+
+export function isImageImportIdentityCurrent(
+  project: ImageImportProject,
+  identity: ImageImportIdentity,
+): boolean {
+  return (
+    project.bookGeneration === identity.generation && project.book?.metadata.id === identity.bookId
+  );
+}
 
 export function validateLanguage(value: string): { valid: boolean; canonical?: string } {
   try {
@@ -54,17 +82,12 @@ export function useImageImport(options: ImageImportOptions = {}) {
     bytes: Uint8Array,
     chapterId = options.chapterId,
     position?: number,
-    expected?: { generation: number; bookId: string },
+    expected?: ImageImportIdentity | null,
   ) {
-    if (!project.book) throw new Error("No project is open");
-    const generation = expected?.generation ?? project.bookGeneration;
-    const bookId = expected?.bookId ?? project.book.metadata.id;
-    const sourceBook = project.book;
+    const identity = expected ?? captureImageImportIdentity(project);
+    if (!identity || !isImageImportIdentityCurrent(project, identity) || !project.book) return null;
     const result = await importImage(project.book, fileName, bytes, deps);
-    const isCurrent = () =>
-      project.bookGeneration === generation &&
-      project.book === sourceBook &&
-      project.book?.metadata.id === bookId;
+    const isCurrent = () => isImageImportIdentityCurrent(project, identity);
     if (!isCurrent()) return null;
     if (result.inserted) project.applyMutation(result);
     const chapter = chapterId
@@ -82,13 +105,18 @@ export function useImageImport(options: ImageImportOptions = {}) {
     return result;
   }
 
-  async function importFile(file: ImageFile, chapterId?: string, position?: number) {
-    return add(file.name, file.bytes, chapterId, position);
+  async function importFile(
+    file: ImageFile,
+    chapterId?: string,
+    position?: number,
+    identity?: ImageImportIdentity | null,
+  ) {
+    return add(file.name, file.bytes, chapterId, position, identity);
   }
 
   async function pickAndImport(chapterId?: string, position?: number) {
-    if (!project.book) return null;
-    const expected = { generation: project.bookGeneration, bookId: project.book.metadata.id };
+    const expected = captureImageImportIdentity(project);
+    if (!expected) return null;
     const file = await options.pickFile?.();
     return file ? add(file.name, file.bytes, chapterId, position, expected) : null;
   }
@@ -100,11 +128,14 @@ export function useImageImport(options: ImageImportOptions = {}) {
   ) {
     const file = [...(data?.files ?? [])].find((item) => item.type.startsWith("image/"));
     if (!file) return null;
+    const identity = captureImageImportIdentity(project);
+    if (!identity) return null;
     return add(
       options.fileName ?? `pasted-${timestamp()}.png`,
       new Uint8Array(await file.arrayBuffer()),
       chapterId,
       position,
+      identity,
     );
   }
 

@@ -4,10 +4,30 @@ import { addChapter } from "@/services/book/chapters";
 import { createBook } from "@/services/book/create";
 import { useProjectStore } from "@/stores/project";
 import SourceEditor from "@/components/editor/SourceEditor.vue";
+import type { ImageFile, ImageImportIdentity } from "@/composables/use-image-import";
 import { chapterEditorStates, resetChapterEditors } from "@/components/editor/editor-commands";
 import { chapterParseResults, resetChapterParseResults } from "@/composables/use-novlang-parse";
 import { EditorView } from "@codemirror/view";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+
+function deferredImageFile(name: string) {
+  let resolve!: (bytes: ArrayBuffer) => void;
+  const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], name, {
+    type: "image/png",
+  });
+  Object.defineProperty(file, "arrayBuffer", {
+    value: () => new Promise<ArrayBuffer>((done) => (resolve = done)),
+  });
+  return { file, resolve: () => resolve(new Uint8Array([0x89, 0x50, 0x4e, 0x47]).buffer) };
+}
+
+function dispatchImageEvent(target: Element, type: "paste" | "drop", file: File) {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperty(event, type === "paste" ? "clipboardData" : "dataTransfer", {
+    value: { files: [file] },
+  });
+  target.dispatchEvent(event);
+}
 
 function makeBook() {
   const initial = createBook({
@@ -143,6 +163,42 @@ describe("SourceEditor lifecycle", () => {
     const view = EditorView.findFromDOM(wrapper.find(".cm-editor").element as HTMLElement)!;
     expect(view.state.selection.main.from).toBeGreaterThan(0);
     expect(view.state.selection.main.to).toBeGreaterThan(view.state.selection.main.from);
+    wrapper.unmount();
+  });
+
+  it("discards a pasted image when its byte read outlives the project", async () => {
+    const importImage = vi.fn<
+      (file: ImageFile, position: number, identity: ImageImportIdentity) => Promise<void>
+    >(async () => undefined);
+    const wrapper = mount(SourceEditor, { props: { chapterId: "chapter1", importImage } });
+    const deferred = deferredImageFile("pasted.png");
+
+    dispatchImageEvent(wrapper.get(".cm-content").element, "paste", deferred.file);
+    useProjectStore().setBook(makeBook());
+    deferred.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(importImage).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it("discards a dropped image when its byte read outlives the project", async () => {
+    const importImage = vi.fn<
+      (file: ImageFile, position: number, identity: ImageImportIdentity) => Promise<void>
+    >(async () => undefined);
+    const wrapper = mount(SourceEditor, { props: { chapterId: "chapter1", importImage } });
+    const deferred = deferredImageFile("dropped.png");
+    const editor = EditorView.findFromDOM(wrapper.get(".cm-editor").element as HTMLElement)!;
+    vi.spyOn(editor, "posAtCoords").mockReturnValue(0);
+
+    dispatchImageEvent(wrapper.get(".cm-content").element, "drop", deferred.file);
+    useProjectStore().setBook(makeBook());
+    deferred.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(importImage).not.toHaveBeenCalled();
     wrapper.unmount();
   });
 });

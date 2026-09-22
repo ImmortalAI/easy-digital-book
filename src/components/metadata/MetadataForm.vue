@@ -7,13 +7,13 @@ import ContributorsList from "./ContributorsList.vue";
 import LanguageCombobox from "./LanguageCombobox.vue";
 import CoverPicker from "./CoverPicker.vue";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
-import type { ImageFile } from "@/composables/use-image-import";
+import type { ImageFile, ImageImportIdentity } from "@/composables/use-image-import";
 
 const project = useProjectStore();
 const { t } = useSafeI18n();
 const props = defineProps<{
   onPickCover?: () => Promise<void>;
-  onImportCover?: (file: ImageFile) => Promise<void>;
+  onImportCover?: (file: ImageFile, identity: ImageImportIdentity) => Promise<void>;
 }>();
 const languageError = ref("");
 const book = computed(() => project.book);

@@ -56,8 +56,9 @@ export function imageDimensions(
       };
     }
     if (bytes[15] === 0x4c && bytes[20] === 0x2f) {
+      if (bytes.length < 25) return null;
       const width = 1 + (bytes[21]! | (bytes[22]! << 8) | ((bytes[23]! & 0x3f) << 16));
-      const height = 1 + ((bytes[23]! >> 6) | (bytes[24]! << 2) | ((bytes[25]! & 0xf) << 10));
+      const height = 1 + ((bytes[23]! >> 6) | (bytes[24]! << 2));
       return { width, height };
     }
   }
