@@ -54,7 +54,8 @@
     "recoverMessage": "A newer recovery session is available. Restore it?",
     "saveFailed": "Could not save project",
     "fileChanged": "The file was changed by another program. Overwrite it?",
-    "fileChangedTitle": "File changed"
+    "fileChangedTitle": "File changed",
+    "imageReadFailed": "Could not read the image"
   },
   "metadata": {
     "title": "Metadata",

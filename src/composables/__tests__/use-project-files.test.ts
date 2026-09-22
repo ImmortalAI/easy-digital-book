@@ -230,4 +230,19 @@ describe("project files", () => {
 
     expect(open).not.toHaveBeenCalled();
   });
+
+  it("reports an unreadable picked image instead of crashing the app", async () => {
+    const services = createInMemoryPlatformServices();
+    services.dialogs.open = async () => "/images/pic.png";
+    services.files.readFile = async () => {
+      throw new Error("EACCES");
+    };
+    const message = vi.spyOn(services.dialogs, "message");
+    const files = createProjectFiles({ services, locale: "en" });
+
+    // pickImage is awaited from fire-and-forget click handlers, so a rejection
+    // here reaches window.onunhandledrejection and the crash dialog.
+    await expect(files.pickImage()).resolves.toBeNull();
+    expect(message).toHaveBeenCalledOnce();
+  });
 });

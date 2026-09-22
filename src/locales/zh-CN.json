@@ -54,7 +54,8 @@
     "recoverMessage": "有更新的恢复会话。是否恢复？",
     "saveFailed": "无法保存项目",
     "fileChanged": "文件已被其他程序修改。是否覆盖？",
-    "fileChangedTitle": "文件已修改"
+    "fileChangedTitle": "文件已修改",
+    "imageReadFailed": "无法读取图片"
   },
   "metadata": {
     "title": "元数据",

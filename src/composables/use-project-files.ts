@@ -258,12 +258,22 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
         },
       ],
     });
-    return path
-      ? {
-          name: path.split(/[\\/]/).pop() ?? t("files.imageFallback", "image"),
-          bytes: await services.files.readFile(path),
-        }
-      : null;
+    if (!path) return null;
+    try {
+      return {
+        name: path.split(/[\\/]/).pop() ?? t("files.imageFallback", "image"),
+        bytes: await services.files.readFile(path),
+      };
+    } catch (error) {
+      // Callers are fire-and-forget click handlers, so an unguarded rejection
+      // would surface as the global "unexpected error" dialog.
+      services.logger.error("Could not read the picked image", { error });
+      await services.dialogs.message(
+        t("files.imageReadFailed", "Could not read the image"),
+        t("files.importImage", "Import image"),
+      );
+      return null;
+    }
   }
 
   save = async () => {
