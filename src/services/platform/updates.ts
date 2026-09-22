@@ -1,5 +1,6 @@
 import type { Updates } from "@/types/platform";
 import packageJson from "../../../package.json";
+import { GITHUB_REPOSITORY } from "./repository";
 
 export interface GithubUpdatesOptions {
   currentVersion?: string;
@@ -29,7 +30,7 @@ export const noUpdates: Updates = {
   },
 };
 
-const repository = "alex/easy-digital-book";
+const repository = GITHUB_REPOSITORY;
 
 export function createGithubUpdates(options: GithubUpdatesOptions = {}): Updates {
   const currentVersion = options.currentVersion ?? packageJson.version;

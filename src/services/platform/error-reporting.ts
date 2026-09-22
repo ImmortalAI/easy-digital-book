@@ -1,5 +1,6 @@
 import { AppError } from "@/types/errors";
 import type { Logger } from "@/types/platform";
+import { GITHUB_REPOSITORY_URL } from "./repository";
 
 export interface UnexpectedErrorReport {
   code: string;
@@ -40,6 +41,6 @@ export function reportUnexpectedError(
     code,
     name,
     details,
-    issueUrl: `https://github.com/alex/easy-digital-book/issues/new?${new URLSearchParams({ title: `[${code}] Unexpected application error`, body: issueBody }).toString()}`,
+    issueUrl: `${GITHUB_REPOSITORY_URL}/issues/new?${new URLSearchParams({ title: `[${code}] Unexpected application error`, body: issueBody }).toString()}`,
   };
 }
