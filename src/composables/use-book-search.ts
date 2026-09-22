@@ -132,6 +132,8 @@ export function useBookSearch() {
 
   function deleteChapter(chapterId: string): void {
     if (!project.book) return;
+    const generationAtDelete = project.bookGeneration;
+    const bookIdAtDelete = project.book.metadata.id;
     const index = project.book.chapters.findIndex((chapter) => chapter.id === chapterId);
     const chapter = project.book.chapters[index];
     if (!chapter || project.book.chapters.length <= 1) return;
@@ -139,11 +141,16 @@ export function useBookSearch() {
     const nextChapterId =
       project.book.chapters[index + 1]?.id ?? project.book.chapters[index - 1]?.id ?? "";
     project.applyMutation(removeChapter(project.book, chapterId));
+    const canUndo = () =>
+      project.bookGeneration === generationAtDelete &&
+      project.book?.metadata.id === bookIdAtDelete &&
+      !project.book.chapters.some((item) => item.id === chapterId);
     if (wasCurrent && nextChapterId) layout.center = { kind: "chapter", id: nextChapterId };
     notifications.add({
       message: t("delete.chapterToast", "Chapter deleted"),
+      undoState: canUndo,
       undo: () => {
-        if (!project.book || project.book.chapters.some((item) => item.id === chapterId)) return;
+        if (!project.book || !canUndo()) return;
         const next = [...project.book.chapters];
         next.splice(Math.min(index, next.length), 0, chapter);
         project.applyMutation({
@@ -160,21 +167,36 @@ export function useBookSearch() {
 
   function deleteResource(path: string): void {
     if (!project.book) return;
+    const generationAtDelete = project.bookGeneration;
+    const bookIdAtDelete = project.book.metadata.id;
     const resource = project.book.resources.get(path);
     if (!resource) return;
     const previousCover = project.book.metadata.cover;
-    project.applyMutation(removeResource(project.book, path));
+    const removed = removeResource(project.book, path);
+    project.applyMutation(removed);
+    const expectedCoverAfterDelete = removed.book.metadata.cover;
+    const revisionAfterDelete = project.revision;
+    const canUndo = () =>
+      project.bookGeneration === generationAtDelete &&
+      project.book?.metadata.id === bookIdAtDelete &&
+      !project.book.resources.has(path);
     notifications.add({
       message: t("delete.imageToast", "Image deleted"),
+      undoState: canUndo,
       undo: () => {
-        if (!project.book || project.book.resources.has(path)) return;
+        if (!project.book || !canUndo()) return;
         const resources = new Map(project.book.resources);
         resources.set(path, resource);
+        const restoreCover =
+          project.revision === revisionAfterDelete &&
+          project.book.metadata.cover === expectedCoverAfterDelete;
         project.applyMutation({
           book: {
             ...project.book,
             resources,
-            metadata: { ...project.book.metadata, cover: previousCover },
+            metadata: restoreCover
+              ? { ...project.book.metadata, cover: previousCover }
+              : project.book.metadata,
           },
           changedChapters: new Set(),
           removedChapters: new Set(),

@@ -30,6 +30,10 @@ function isCodeMirrorTarget(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && Boolean(target.closest(".cm-editor"));
 }
 
+function isSearchTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && Boolean(target.closest(".search-view"));
+}
+
 export function handleGlobalShortcut(
   event: KeyboardEvent,
   handlers: GlobalShortcutHandlers,
@@ -66,7 +70,9 @@ export function handleGlobalShortcut(
   if (!shortcut) {
     return false;
   }
-  if (isEditableTarget(event.target) && !isCodeMirrorTarget(event.target)) return false;
+  const replaceAllInSearch = key === "enter" && event.altKey && isSearchTarget(event.target);
+  if (isEditableTarget(event.target) && !isCodeMirrorTarget(event.target) && !replaceAllInSearch)
+    return false;
   event.preventDefault();
   shortcut();
   return true;

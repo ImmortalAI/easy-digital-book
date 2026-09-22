@@ -211,4 +211,17 @@ describe("project files", () => {
     await expect(files.openPath("missing.edb")).resolves.toBe(false);
     expect(await services.settings.get("recentFiles", [])).toEqual([]);
   });
+
+  it("runs the unsaved guard before opening the native project picker", async () => {
+    const services = createInMemoryPlatformServices();
+    const project = useProjectStore();
+    project.configure(services);
+    project.setBook(makeBook(), null, { dirty: true });
+    const open = vi.spyOn(services.dialogs, "open");
+    const files = createProjectFiles({ services, requestDecision: async () => "cancel" });
+
+    await expect(files.open()).resolves.toBe(false);
+
+    expect(open).not.toHaveBeenCalled();
+  });
 });

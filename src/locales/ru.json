@@ -16,6 +16,38 @@
     "doNotAskAgain": "Больше не спрашивать"
   },
   "toolbar": { "text": "Текст", "split": "Сплит", "preview": "Превью" },
+  "editor": {
+    "unnamedBook": "Безымянная книга",
+    "selectChapter": "Выберите главу",
+    "chooseChapter": "Выберите главу",
+    "status": "{words} слов · {characters} символов",
+    "openProblems": "При открытии обнаружено проблем: {count}"
+  },
+  "breadcrumbs": {
+    "aria": "Хлебные крошки",
+    "metadata": "Метаданные",
+    "settings": "Настройки",
+    "chapters": "Главы",
+    "fallback": "Глава {number}"
+  },
+  "warnings": { "currentChapter": "Эта глава", "book": "Книга", "none": "Нет предупреждений" },
+  "files": {
+    "openTitle": "Открыть проект",
+    "openFilter": "Easy Digital Book",
+    "saveTitle": "Сохранить проект",
+    "importImage": "Импортировать изображение",
+    "imageFilter": "Изображения",
+    "imageFallback": "изображение",
+    "untitled": "Без названия",
+    "fileNotFound": "Файл не найден: {path}",
+    "recentTitle": "Недавний файл",
+    "openFailed": "Не удалось открыть проект",
+    "recoverTitle": "Восстановить проект",
+    "recoverMessage": "Доступна более новая сессия восстановления. Восстановить её?",
+    "saveFailed": "Не удалось сохранить проект",
+    "fileChanged": "Файл изменён другой программой. Перезаписать его?",
+    "fileChangedTitle": "Файл изменён"
+  },
   "metadata": {
     "title": "Метаданные",
     "bookTitle": "Название",

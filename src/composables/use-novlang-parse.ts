@@ -32,6 +32,19 @@ export function useNovlangParse(chapterId: MaybeRefOrGetter<string>) {
   ensureBookLifecycle(project.book?.metadata.id ?? null);
   const result = ref<ParseResult | null>(chapterParseResults.get(currentChapterId.value) ?? null);
 
+  function parseAllChapters(): void {
+    const book = project.book;
+    if (!book) return;
+    for (const chapter of book.chapters) {
+      const parsed = parse(chapter.source);
+      chapterParseResults.set(chapter.id, parsed);
+      diagnostics.setChapterDiagnostics(chapter.id, parsed.diagnostics);
+    }
+    result.value = chapterParseResults.get(currentChapterId.value) ?? null;
+  }
+
+  parseAllChapters();
+
   function parseCurrent(): ParseResult | undefined {
     const id = currentChapterId.value;
     const chapter = project.book?.chapters.find((item) => item.id === id);
@@ -62,11 +75,11 @@ export function useNovlangParse(chapterId: MaybeRefOrGetter<string>) {
   });
   const stopGenerationWatch = watch(bookGeneration, () => {
     scheduleParse.cancel();
-    chapterParseResults.clear();
+    resetChapterParseResults();
     resetChapterEditors();
     diagnostics.clearParse();
     activeBookId = project.book?.metadata.id ?? null;
-    result.value = chapterParseResults.get(currentChapterId.value) ?? null;
+    parseAllChapters();
   });
   function dispose(): void {
     scheduleParse.cancel();

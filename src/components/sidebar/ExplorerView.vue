@@ -16,10 +16,13 @@ import ConfirmDialog from "@/components/common/ConfirmDialog.vue";
 import ContextMenu from "@/components/common/ContextMenu.vue";
 import { useSettingsStore } from "@/stores/settings";
 import { useBookSearch } from "@/composables/use-book-search";
+import { useDiagnosticsStore } from "@/stores/diagnostics";
+import { checkBook } from "@/services/checks/book-checks";
 const project = useProjectStore();
 const { t } = useSafeI18n();
 const layout = useLayoutStore();
 const settings = useSettingsStore();
+const diagnostics = useDiagnosticsStore();
 const search = useBookSearch();
 type DeleteTarget = { kind: "chapter" | "image"; id: string } | { kind: "unused"; paths: string[] };
 const pendingDelete = ref<DeleteTarget | null>(null);
@@ -30,6 +33,18 @@ const book = computed(() => project.book);
 const usage = computed(() =>
   book.value ? collectImageUsage(book.value) : new Map<string, string[]>(),
 );
+const warningCounts = computed(() => {
+  const counts = new Map<string, number>();
+  for (const [chapterId, items] of diagnostics.parse) counts.set(chapterId, items.length);
+  const warnings = [
+    ...diagnostics.book,
+    ...diagnostics.read,
+    ...(book.value ? checkBook(book.value) : []),
+  ];
+  for (const warning of warnings)
+    if (warning.chapterId) counts.set(warning.chapterId, (counts.get(warning.chapterId) ?? 0) + 1);
+  return counts;
+});
 function unusedResourcePaths(): string[] {
   return book.value
     ? [...book.value.resources.keys()].filter((path) => !usage.value.has(path))
@@ -224,6 +239,7 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
         :chapter="chapter"
         :index="index"
         :active="layout.center.kind === 'chapter' && layout.center.id === chapter.id"
+        :warning-count="warningCounts.get(chapter.id) ?? 0"
         :fallback-title="
           t('chapters.fallback', 'Chapter {number}').replace('{number}', String(index + 1))
         "

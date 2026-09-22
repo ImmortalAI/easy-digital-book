@@ -22,6 +22,8 @@ import SettingsView from "@/components/settings/SettingsView.vue";
 import ExportDialog from "@/components/export/ExportDialog.vue";
 import { createSettingsActions } from "@/composables/use-settings-actions";
 import { useSettingsStore } from "@/stores/settings";
+import { useDiagnosticsStore } from "@/stores/diagnostics";
+import { useSafeI18n } from "@/composables/use-safe-i18n";
 import {
   captureImageImportIdentity,
   imageCursorPosition,
@@ -33,6 +35,8 @@ import {
 import { setCover } from "@/services/book/metadata";
 
 const project = useProjectStore();
+const diagnostics = useDiagnosticsStore();
+const { t } = useSafeI18n();
 const files = inject(projectFilesKey, null);
 const layout = useLayoutStore();
 const settings = files?.settings ?? useSettingsStore();
@@ -76,6 +80,14 @@ const wordCount = computed(
   () => selectedChapter.value?.source.trim().split(/\s+/).filter(Boolean).length ?? 0,
 );
 const characterCount = computed(() => selectedChapter.value?.source.length ?? 0);
+const statusLabel = computed(() =>
+  t("editor.status", "{words} words · {characters} characters", {
+    words: wordCount.value,
+    characters: characterCount.value,
+  })
+    .replace("{words}", String(wordCount.value))
+    .replace("{characters}", String(characterCount.value)),
+);
 const imageImport = useImageImport({ pickFile: files?.pickImage });
 
 async function importImage() {
@@ -171,6 +183,7 @@ useShortcuts({
   },
   explorer: () => showSidebarView("explorer"),
   searchBook: () => showSidebarView("search"),
+  exportEpub: () => (exportOpen.value = true),
   textMode: () => setMode("text"),
   splitMode: () => setMode("split"),
   previewMode: () => setMode("preview"),
@@ -213,10 +226,23 @@ onMounted(findSourceScroller);
   <main ref="shell" class="editor-shell">
     <header class="editor-shell__header">
       <div class="editor-shell__title" data-editor-title>
-        {{ project.filePath ?? "Безымянная книга" }}<span v-if="project.dirty"> •</span>
+        {{ project.filePath ?? t("editor.unnamedBook", "Untitled book")
+        }}<span v-if="project.dirty"> •</span>
       </div>
       <AppToolbar @export="exportOpen = true" />
     </header>
+    <div
+      v-if="diagnostics.read.length"
+      class="open-problems-banner"
+      data-open-problems-banner
+      role="status"
+    >
+      {{
+        t("editor.openProblems", "{count} problems found when opening", {
+          count: diagnostics.read.length,
+        }).replace("{count}", String(diagnostics.read.length))
+      }}
+    </div>
     <div class="editor-shell__body">
       <ResizableSplit :single-pane="singlePane">
         <template #activity>
@@ -242,7 +268,9 @@ onMounted(findSourceScroller);
               :settings="settings"
               :actions="settingsActions"
             />
-            <div v-else class="editor-placeholder">Select a chapter</div>
+            <div v-else class="editor-placeholder">
+              {{ t("editor.selectChapter", "Select a chapter") }}
+            </div>
           </div>
         </template>
         <template #source>
@@ -257,14 +285,16 @@ onMounted(findSourceScroller);
               :import-image="importImageAt"
             />
             <CssEditor v-else-if="layout.center.kind === 'css'" />
-            <div v-else class="editor-placeholder">Выберите главу</div>
+            <div v-else class="editor-placeholder">
+              {{ t("editor.chooseChapter", "Select a chapter") }}
+            </div>
             <div class="editor-pane__status">
               <WarningsPopover
                 v-if="!singlePane"
                 :chapter-id="selectedChapterId || previewChapterId"
                 @select="selectWarning"
               />
-              <StatusBadge :label="`${wordCount} слов · ${characterCount} симв.`" />
+              <StatusBadge :label="statusLabel" />
             </div>
           </div>
         </template>

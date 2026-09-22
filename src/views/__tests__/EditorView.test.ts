@@ -9,6 +9,8 @@ import { createInMemoryPlatformServices } from "@/services/platform";
 import { useProjectStore } from "@/stores/project";
 import { EditorView as CodeMirrorView } from "@codemirror/view";
 import EditorView from "@/views/EditorView.vue";
+import { useDiagnosticsStore } from "@/stores/diagnostics";
+import { projectFilesKey, createProjectFiles } from "@/composables/use-project-files";
 
 function bookWithTwoChapters() {
   const book = createBook({
@@ -51,6 +53,16 @@ describe("EditorView Task 13 integration", () => {
 
     expect(wrapper.get("iframe").element).toBe(iframe);
     expect(wrapper.get(".cm-editor").element).toBe(editor);
+    wrapper.unmount();
+  });
+
+  it("renders the initial chapter in preview without waiting for an edit", () => {
+    const layout = useLayoutStore();
+    layout.center = { kind: "chapter", id: "chapter1" };
+    const wrapper = mount(EditorView);
+
+    expect(wrapper.get("iframe").attributes("srcdoc")).toContain("<h1>Chapter 1</h1>");
+    expect(chapterParseResults.has("chapter2")).toBe(true);
     wrapper.unmount();
   });
 
@@ -133,6 +145,32 @@ describe("EditorView Task 13 integration", () => {
     const editor = CodeMirrorView.findFromDOM(wrapper.get(".cm-editor").element as HTMLElement)!;
     expect(editor.state.selection.main.from).toBeGreaterThan(0);
     expect(editor.state.selection.main.to).toBeGreaterThan(editor.state.selection.main.from);
+    wrapper.unmount();
+  });
+
+  it("shows a visible banner when opening reported problems", () => {
+    useDiagnosticsStore().setReadWarnings([
+      { code: "edb.missingChapter", message: "A chapter is missing" },
+      { code: "edb.invalidMetadata", message: "Metadata is invalid" },
+    ]);
+
+    const wrapper = mount(EditorView);
+
+    expect(wrapper.get("[data-open-problems-banner]").text()).toContain("2");
+    wrapper.unmount();
+  });
+
+  it("opens export from the global Mod+E shortcut", async () => {
+    const services = createInMemoryPlatformServices();
+    const files = createProjectFiles({ services });
+    const wrapper = mount(EditorView, {
+      global: { provide: { [projectFilesKey]: files } },
+    });
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "e", ctrlKey: true }));
+    await nextTick();
+
+    expect(wrapper.find("[data-export-submit]").exists()).toBe(true);
     wrapper.unmount();
   });
 });

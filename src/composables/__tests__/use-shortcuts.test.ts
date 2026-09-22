@@ -26,4 +26,18 @@ describe("global shortcut filtering", () => {
     expect(handleGlobalShortcut(eventFor(input, "s"), { save })).toBe(false);
     expect(save).not.toHaveBeenCalled();
   });
+
+  it("allows replace-all from the search view input", () => {
+    const search = document.createElement("section");
+    search.className = "search-view";
+    const input = document.createElement("input");
+    search.append(input);
+    document.body.append(search);
+    const replaceAll = vi.fn<() => void>();
+
+    expect(handleGlobalShortcut(eventFor(input, "Enter", { altKey: true }), { replaceAll })).toBe(
+      true,
+    );
+    expect(replaceAll).toHaveBeenCalledOnce();
+  });
 });

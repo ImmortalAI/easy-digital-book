@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { checkBook } from "@/services/checks/book-checks";
 import { useDiagnosticsStore } from "@/stores/diagnostics";
 import { useProjectStore } from "@/stores/project";
+import { useSafeI18n } from "@/composables/use-safe-i18n";
 
 const props = defineProps<{ chapterId?: string }>();
 const emit = defineEmits<{
@@ -10,6 +11,7 @@ const emit = defineEmits<{
 }>();
 const diagnostics = useDiagnosticsStore();
 const project = useProjectStore();
+const { t } = useSafeI18n();
 const open = ref(false);
 const chapterItems = computed(() =>
   props.chapterId ? (diagnostics.parse.get(props.chapterId) ?? []) : [],
@@ -51,7 +53,7 @@ function select(item: { chapterId?: string; position?: { line: number; column: n
     </button>
     <div v-if="open" class="warnings-popover__panel" role="dialog">
       <section>
-        <h3>Эта глава</h3>
+        <h3>{{ t("warnings.currentChapter", "Current chapter") }}</h3>
         <button
           v-for="(item, index) in chapterItems"
           :key="`chapter-${index}`"
@@ -60,10 +62,10 @@ function select(item: { chapterId?: string; position?: { line: number; column: n
         >
           {{ item.message }}
         </button>
-        <p v-if="chapterItems.length === 0">Нет предупреждений</p>
+        <p v-if="chapterItems.length === 0">{{ t("warnings.none", "No warnings") }}</p>
       </section>
       <section>
-        <h3>Книга</h3>
+        <h3>{{ t("warnings.book", "Book") }}</h3>
         <button
           v-for="(item, index) in bookItems"
           :key="`book-${index}`"
@@ -72,7 +74,7 @@ function select(item: { chapterId?: string; position?: { line: number; column: n
         >
           {{ item.message }}
         </button>
-        <p v-if="bookItems.length === 0">Нет предупреждений</p>
+        <p v-if="bookItems.length === 0">{{ t("warnings.none", "No warnings") }}</p>
       </section>
     </div>
   </div>

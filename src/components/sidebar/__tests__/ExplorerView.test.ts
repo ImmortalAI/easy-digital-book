@@ -3,6 +3,7 @@ import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createBook } from "@/services/book/create";
 import { useProjectStore } from "@/stores/project";
+import { useDiagnosticsStore } from "@/stores/diagnostics";
 import ExplorerView from "@/components/sidebar/ExplorerView.vue";
 
 describe("ExplorerView boundaries", () => {
@@ -39,5 +40,25 @@ describe("ExplorerView boundaries", () => {
     await wrapper.get(".explorer-image").trigger("contextmenu");
     expect(wrapper.emitted("image-context-menu")?.[0]?.[0]).toBe("images/a.png");
     expect(project.book?.metadata.cover).toBeNull();
+  });
+
+  it("passes chapter warning counts to chapter rows", () => {
+    const project = useProjectStore();
+    project.setBook(
+      createBook({
+        locale: "en",
+        now: new Date(),
+        newUuid: () => "550e8400-e29b-41d4-a716-446655440000",
+        newChapterId: () => "chapter1",
+      }),
+    );
+    useDiagnosticsStore().setChapterDiagnostics("chapter1", [
+      { severity: "warning", message: "Warning" },
+      { severity: "warning", message: "Another warning" },
+    ]);
+
+    const wrapper = mount(ExplorerView);
+
+    expect(wrapper.findComponent({ name: "ChapterItem" }).props("warningCount")).toBe(2);
   });
 });

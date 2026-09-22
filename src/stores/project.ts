@@ -5,6 +5,8 @@ import type { PlatformServices, RecoveryDelta } from "@/types/platform";
 import { writeEdb } from "@/services/edb/write";
 
 let configuredServices: PlatformServices | undefined;
+let translate: (key: string, fallback: string, params?: unknown) => string = (_key, fallback) =>
+  fallback;
 export function snapshotBook(book: Book): Book {
   return {
     metadata: {
@@ -43,8 +45,12 @@ export const useProjectStore = defineStore("project", () => {
   const chapterRevisions = ref(new Map<string, number>());
   const dirty = computed(() => revision.value !== savedRevision.value);
   let services: PlatformServices | undefined = configuredServices;
-  function configure(value: PlatformServices) {
+  function configure(
+    value: PlatformServices,
+    translator?: (key: string, fallback: string, params?: unknown) => string,
+  ) {
     services = value;
+    if (translator) translate = translator;
   }
   function setServices(value: PlatformServices) {
     configure(value);
@@ -122,8 +128,11 @@ export const useProjectStore = defineStore("project", () => {
           const current = await services.files.stat(path);
           if (current.mtime !== null && current.mtime !== fileMtime.value) {
             const overwrite = await services.dialogs.confirm(
-              "The file was changed by another program. Overwrite it?",
-              "File changed",
+              translate(
+                "files.fileChanged",
+                "The file was changed by another program. Overwrite it?",
+              ),
+              translate("files.fileChangedTitle", "File changed"),
             );
             if (!overwrite) return false;
           }
@@ -143,7 +152,10 @@ export const useProjectStore = defineStore("project", () => {
       } catch (error) {
         services.logger.error("Failed to save project", { error });
         try {
-          await services.dialogs.message("Could not save project", "Save project");
+          await services.dialogs.message(
+            translate("files.saveFailed", "Could not save project"),
+            translate("files.saveTitle", "Save project"),
+          );
         } catch (dialogError) {
           services.logger.warn("Could not show save error", { error: dialogError });
         }

@@ -19,11 +19,48 @@ const makeBook = () =>
     newChapterId: () => "chapter1",
   });
 
+const makeBookWithTwoChapters = () => {
+  const book = makeBook();
+  book.chapters.push({ id: "chapter2", source: "# Second\nText" });
+  return book;
+};
+
 describe("useNovlangParse", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     setActivePinia(createPinia());
     resetChapterParseResults();
+  });
+
+  it("parses every chapter before the first preview paint", () => {
+    const project = useProjectStore();
+    project.setBook(makeBookWithTwoChapters());
+
+    const parser = useNovlangParse("chapter1");
+
+    expect(parser.result.value?.document.type).toBe("document");
+    expect(chapterParseResults.has("chapter1")).toBe(true);
+    expect(chapterParseResults.has("chapter2")).toBe(true);
+    expect(useDiagnosticsStore().parse.has("chapter2")).toBe(true);
+  });
+
+  it("parses all chapters again when the project generation changes", async () => {
+    const project = useProjectStore();
+    project.setBook(makeBookWithTwoChapters());
+    const parser = useNovlangParse("chapter1");
+
+    project.setBook({
+      ...makeBookWithTwoChapters(),
+      chapters: [
+        { id: "chapter1", source: "# Replaced" },
+        { id: "chapter2", source: "# Replaced second" },
+      ],
+    });
+    await nextTick();
+
+    expect(parser.result.value?.document.type).toBe("document");
+    expect(chapterParseResults.get("chapter2")?.document.children[0]?.type).toBe("heading");
+    expect(useDiagnosticsStore().parse.has("chapter2")).toBe(true);
   });
 
   afterEach(() => {
@@ -37,10 +74,10 @@ describe("useNovlangParse", () => {
 
     parser.updateSource("# Updated\nText");
     expect(project.book?.chapters[0]?.source).toBe("# Updated\nText");
-    expect(chapterParseResults.has("chapter1")).toBe(false);
+    expect(chapterParseResults.has("chapter1")).toBe(true);
 
     vi.advanceTimersByTime(149);
-    expect(chapterParseResults.has("chapter1")).toBe(false);
+    expect(chapterParseResults.has("chapter1")).toBe(true);
     vi.advanceTimersByTime(1);
     expect(chapterParseResults.get("chapter1")?.document.type).toBe("document");
   });
@@ -52,7 +89,7 @@ describe("useNovlangParse", () => {
     });
   });
 
-  it("clears parse results and editor history when a project is replaced", async () => {
+  it("replaces parse results and editor history when a project is replaced", async () => {
     const project = useProjectStore();
     project.setBook(makeBook());
     const parser = useNovlangParse("chapter1");
@@ -62,7 +99,7 @@ describe("useNovlangParse", () => {
     project.setBook({ ...makeBook(), chapters: [{ id: "chapter1", source: "new" }] });
     await nextTick();
 
-    expect(chapterParseResults.has("chapter1")).toBe(false);
+    expect(chapterParseResults.has("chapter1")).toBe(true);
   });
 
   it("clears the old parse and diagnostics when the new project is edited before flush", async () => {
@@ -79,7 +116,7 @@ describe("useNovlangParse", () => {
 
     await nextTick();
 
-    expect(chapterParseResults.has("chapter1")).toBe(false);
-    expect(diagnostics.parse.has("chapter1")).toBe(false);
+    expect(chapterParseResults.has("chapter1")).toBe(true);
+    expect(diagnostics.parse.has("chapter1")).toBe(true);
   });
 });

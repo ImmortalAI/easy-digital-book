@@ -19,6 +19,7 @@ import {
   type UnsavedGuard,
   type UnsavedPrompt,
 } from "./use-unsaved-guard";
+import { useSafeI18n } from "./use-safe-i18n";
 
 export interface ProjectFilesOptions {
   services: PlatformServices;
@@ -70,13 +71,13 @@ function defaultChapterId(): string {
   return [...bytes].map((byte) => (byte % 36).toString(36)).join("");
 }
 
-function projectFileName(title: string): string {
+function projectFileName(title: string, fallback: string): string {
   const printable = [...title].filter((character) => character.charCodeAt(0) >= 32).join("");
   const safe = printable
     .trim()
     .replace(/[<>:"/\\|?*]/g, "-")
     .replace(/\s+/g, " ");
-  return `${safe || "Untitled"}.edb`;
+  return `${safe || fallback}.edb`;
 }
 
 export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesController {
@@ -85,6 +86,7 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
   const settings = useSettingsStore();
   const layout = useLayoutStore();
   const diagnostics = useDiagnosticsStore();
+  const { t } = useSafeI18n();
   const recoverySessions = ref<RecoverySessionSummary[]>([]);
   const now = options.now ?? (() => new Date());
   const detectedLocale = typeof navigator === "undefined" ? "en" : navigator.language;
@@ -93,7 +95,7 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
   let cleanup: Unlisten[] = [];
   let openQueue = Promise.resolve();
 
-  project.configure(services);
+  project.configure(services, t);
   settings.configure(services.settings);
   layout.configure(services.settings);
   const settingsActions = createSettingsActions({ services, settings });
@@ -122,7 +124,10 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
       try {
         if (!(await services.files.exists(path))) {
           await settings.removeRecent(path);
-          await services.dialogs.message(`File not found: ${path}`, "Recent file");
+          await services.dialogs.message(
+            t("files.fileNotFound", "File not found: {path}", { path }).replace("{path}", path),
+            t("files.recentTitle", "Recent file"),
+          );
         }
       } catch (error) {
         services.logger.warn("Could not validate recent file", { error });
@@ -147,8 +152,7 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
     return true;
   }
 
-  async function openPath(path: string): Promise<boolean> {
-    if (!(await guard.guard("open"))) return false;
+  async function openPathAfterGuard(path: string): Promise<boolean> {
     const previousId = project.book?.metadata.id;
     let bytes: Uint8Array;
     try {
@@ -161,8 +165,8 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
       }
       services.logger.error("Failed to read project", { error });
       await services.dialogs.message(
-        error instanceof Error ? error.message : "Could not open file",
-        "Open project",
+        t("files.openFailed", "Could not open project"),
+        t("files.openTitle", "Open project"),
       );
       return false;
     }
@@ -173,8 +177,8 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
     } catch (error) {
       services.logger.error("Failed to decode project", { error });
       await services.dialogs.message(
-        error instanceof Error ? error.message : "Could not open file",
-        "Open project",
+        t("files.openFailed", "Could not open project"),
+        t("files.openTitle", "Open project"),
       );
       return false;
     }
@@ -197,8 +201,8 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
     let recovered = null;
     if (matchingRecovery) {
       const restore = await services.dialogs.confirm(
-        "A newer recovery session is available. Restore it?",
-        "Recover project",
+        t("files.recoverMessage", "A newer recovery session is available. Restore it?"),
+        t("files.recoverTitle", "Recover project"),
       );
       if (restore) recovered = await services.recovery.restore(matchingRecovery.bookId);
       if (!recovered) await services.recovery.remove(matchingRecovery.bookId);
@@ -223,20 +227,34 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
   }
 
   async function open(): Promise<boolean> {
+    if (!(await guard.guard("open"))) return false;
     const path = await services.dialogs.open({
-      title: "Open project",
-      filters: [{ name: "Easy Digital Book", extensions: ["edb"] }],
+      title: t("files.openTitle", "Open project"),
+      filters: [{ name: t("files.openFilter", "Easy Digital Book"), extensions: ["edb"] }],
     });
-    return path ? openPath(path) : false;
+    return path ? openPathAfterGuard(path) : false;
+  }
+
+  async function openPath(path: string): Promise<boolean> {
+    if (!(await guard.guard("open"))) return false;
+    return openPathAfterGuard(path);
   }
 
   async function pickImage(): Promise<ImageFile | null> {
     const path = await services.dialogs.open({
-      title: "Import image",
-      filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }],
+      title: t("files.importImage", "Import image"),
+      filters: [
+        {
+          name: t("files.imageFilter", "Images"),
+          extensions: ["png", "jpg", "jpeg", "gif", "webp"],
+        },
+      ],
     });
     return path
-      ? { name: path.split(/[\\/]/).pop() ?? "image", bytes: await services.files.readFile(path) }
+      ? {
+          name: path.split(/[\\/]/).pop() ?? t("files.imageFallback", "image"),
+          bytes: await services.files.readFile(path),
+        }
       : null;
   }
 
@@ -250,9 +268,12 @@ export function createProjectFiles(options: ProjectFilesOptions): ProjectFilesCo
     const target =
       path ??
       (await services.dialogs.save({
-        title: "Save project",
-        defaultPath: projectFileName(project.book?.metadata.title ?? "Untitled"),
-        filters: [{ name: "Easy Digital Book", extensions: ["edb"] }],
+        title: t("files.saveTitle", "Save project"),
+        defaultPath: projectFileName(
+          project.book?.metadata.title ?? t("files.untitled", "Untitled"),
+          t("files.untitled", "Untitled"),
+        ),
+        filters: [{ name: t("files.openFilter", "Easy Digital Book"), extensions: ["edb"] }],
       }));
     return target ? project.save(target) : false;
   }

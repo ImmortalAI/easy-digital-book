@@ -20,6 +20,11 @@ export function parseManifest(value: unknown): {
     throw new AppError("edb.badManifest", "Invalid format version");
   if (envelope.output.chapters.some(({ id }) => !/^[a-z0-9]{8}$/.test(id)))
     throw new AppError("edb.badManifest", "Invalid chapter ID");
+  const chapterIds = new Set<string>();
+  for (const { id } of envelope.output.chapters) {
+    if (chapterIds.has(id)) throw new AppError("edb.badManifest", "Duplicate chapter ID");
+    chapterIds.add(id);
+  }
   if (envelope.output.formatVersion > CURRENT_EDB_FORMAT_VERSION)
     throw new AppError("edb.tooNew", "Project format is newer than this application");
   const migrated = envelope.output.formatVersion < CURRENT_EDB_FORMAT_VERSION;

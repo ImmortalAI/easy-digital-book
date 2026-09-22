@@ -60,6 +60,18 @@ describe("readEdb", () => {
     ).rejects.toMatchObject({ code: "edb.badManifest" });
   });
 
+  it("rejects duplicate valid chapter IDs before constructing a book", async () => {
+    await expect(
+      readEdb(
+        await archive({
+          "manifest.json": manifest({ chapters: [{ id: "chapter1" }, { id: "chapter1" }] }),
+          "chapters/chapter1.nov": "# One",
+        }),
+        deps,
+      ),
+    ).rejects.toMatchObject({ code: "edb.badManifest", message: /duplicate chapter id/i });
+  });
+
   it("skips invalid orphan chapter filenames and recovers valid orphans", async () => {
     const result = await readEdb(
       await archive({

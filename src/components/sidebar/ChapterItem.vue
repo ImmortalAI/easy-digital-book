@@ -25,6 +25,7 @@ const title = () =>
   <div
     class="explorer-chapter"
     data-explorer-chapter
+    :data-chapter-index="index"
     :class="{ 'is-active': active, 'has-warning': warningCount }"
     draggable="true"
     @contextmenu.prevent="emit('contextmenu', $event)"

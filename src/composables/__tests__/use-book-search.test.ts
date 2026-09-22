@@ -7,12 +7,13 @@ import { useProjectStore } from "@/stores/project";
 import { findInBook } from "@/services/search/find";
 import { chapterEditorStates, resetChapterEditors } from "@/components/editor/editor-commands";
 import { useLayoutStore } from "@/stores/layout";
+import { setCover } from "@/services/book/metadata";
 
-function makeBook() {
+function makeBook(id = "urn:uuid:550e8400-e29b-41d4-a716-446655440000") {
   const book = createBook({
     locale: "en",
     now: new Date("2026-01-01"),
-    newUuid: () => "550e8400-e29b-41d4-a716-446655440000",
+    newUuid: () => id.slice("urn:uuid:".length),
     newChapterId: () => "chapter1",
   });
   book.chapters.push({ id: "chapter2", source: "hero hero" });
@@ -123,5 +124,61 @@ describe("useBookSearch", () => {
     expect(layout.center).toEqual({ kind: "chapter", id: "chapter2" });
     useNotificationsStore().items[0]?.undo?.();
     expect(layout.center).toEqual({ kind: "chapter", id: "chapter1" });
+  });
+
+  it("does not undo a chapter deletion into a different book generation", () => {
+    const project = useProjectStore();
+    project.setBook(makeBook("urn:uuid:550e8400-e29b-41d4-a716-446655440001"));
+    const search = useBookSearch();
+
+    search.deleteChapter("chapter1");
+    const notification = useNotificationsStore().items[0]!;
+    project.setBook(makeBook("urn:uuid:550e8400-e29b-41d4-a716-446655440002"));
+
+    notification.undo?.();
+
+    expect(project.book?.metadata.id).toBe("urn:uuid:550e8400-e29b-41d4-a716-446655440002");
+    expect(project.book?.chapters).toHaveLength(2);
+    expect(notification.undoEnabled).toBe(false);
+  });
+
+  it("does not overwrite a newer cover selection when undoing resource deletion", () => {
+    const project = useProjectStore();
+    const book = makeBook();
+    book.resources.set("images/a.png", { bytes: new Uint8Array([1]), mediaType: "image/png" });
+    book.resources.set("images/b.png", { bytes: new Uint8Array([2]), mediaType: "image/png" });
+    book.metadata.cover = "images/a.png";
+    project.setBook(book);
+    const search = useBookSearch();
+
+    search.deleteResource("images/a.png");
+    const notification = useNotificationsStore().items[0]!;
+    project.applyMutation(setCover(project.book!, "images/b.png"));
+
+    notification.undo?.();
+
+    expect(project.book?.resources.has("images/a.png")).toBe(true);
+    expect(project.book?.metadata.cover).toBe("images/b.png");
+  });
+
+  it("does not undo a resource deletion into a different book generation", () => {
+    const project = useProjectStore();
+    const first = makeBook("urn:uuid:550e8400-e29b-41d4-a716-446655440001");
+    first.resources.set("images/a.png", {
+      bytes: new Uint8Array([1]),
+      mediaType: "image/png",
+    });
+    project.setBook(first);
+    const search = useBookSearch();
+
+    search.deleteResource("images/a.png");
+    const notification = useNotificationsStore().items[0]!;
+    project.setBook(makeBook("urn:uuid:550e8400-e29b-41d4-a716-446655440002"));
+
+    notification.undo?.();
+
+    expect(project.book?.metadata.id).toBe("urn:uuid:550e8400-e29b-41d4-a716-446655440002");
+    expect(project.book?.resources.has("images/a.png")).toBe(false);
+    expect(notification.undoEnabled).toBe(false);
   });
 });

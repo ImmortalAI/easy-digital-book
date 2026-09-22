@@ -16,6 +16,38 @@
     "doNotAskAgain": "Do not ask again"
   },
   "toolbar": { "text": "Text", "split": "Split", "preview": "Preview" },
+  "editor": {
+    "unnamedBook": "Untitled book",
+    "selectChapter": "Select a chapter",
+    "chooseChapter": "Select a chapter",
+    "status": "{words} words · {characters} characters",
+    "openProblems": "{count} problems found when opening"
+  },
+  "breadcrumbs": {
+    "aria": "Breadcrumbs",
+    "metadata": "Metadata",
+    "settings": "Settings",
+    "chapters": "Chapters",
+    "fallback": "Chapter {number}"
+  },
+  "warnings": { "currentChapter": "Current chapter", "book": "Book", "none": "No warnings" },
+  "files": {
+    "openTitle": "Open project",
+    "openFilter": "Easy Digital Book",
+    "saveTitle": "Save project",
+    "importImage": "Import image",
+    "imageFilter": "Images",
+    "imageFallback": "image",
+    "untitled": "Untitled",
+    "fileNotFound": "File not found: {path}",
+    "recentTitle": "Recent file",
+    "openFailed": "Could not open project",
+    "recoverTitle": "Recover project",
+    "recoverMessage": "A newer recovery session is available. Restore it?",
+    "saveFailed": "Could not save project",
+    "fileChanged": "The file was changed by another program. Overwrite it?",
+    "fileChangedTitle": "File changed"
+  },
   "metadata": {
     "title": "Metadata",
     "bookTitle": "Title",

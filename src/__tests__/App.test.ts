@@ -27,6 +27,6 @@ describe("App shell", () => {
 
     useLayoutStore().center = { kind: "metadata" };
     await wrapper.vm.$nextTick();
-    expect(wrapper.find(".breadcrumbs").text()).toBe("Метаданные");
+    expect(wrapper.find(".breadcrumbs").text()).toBe("Metadata");
   });
 });

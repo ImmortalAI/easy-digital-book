@@ -127,7 +127,7 @@ describe("SourceEditor lifecycle", () => {
     await wrapper.setProps({ chapterId: "chapter2" });
     vi.advanceTimersByTime(150);
 
-    expect(chapterParseResults.has("chapter1")).toBe(false);
+    expect(chapterParseResults.get("chapter1")?.diagnostics).toHaveLength(0);
     wrapper.unmount();
   });
 
@@ -139,7 +139,7 @@ describe("SourceEditor lifecycle", () => {
     wrapper.unmount();
     vi.advanceTimersByTime(150);
 
-    expect(chapterParseResults.has("chapter1")).toBe(false);
+    expect(chapterParseResults.get("chapter1")?.diagnostics).toHaveLength(0);
   });
 
   it("renders subdued NovLang token styling for stream-language tokens", () => {

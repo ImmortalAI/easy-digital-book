@@ -7,6 +7,7 @@ import { useLayoutStore } from "@/stores/layout";
 import { useProjectStore } from "@/stores/project";
 import { useBookSearch } from "@/composables/use-book-search";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
+import { useShortcuts } from "@/composables/use-shortcuts";
 import SearchResultItem from "./SearchResultItem.vue";
 
 const emit = defineEmits<{ select: [chapterId: string, from: number, to: number] }>();
@@ -82,12 +83,7 @@ function replaceChapter(chapterId: string) {
 function replaceAll() {
   search.replaceAll(query.value, replacement.value);
 }
-function onKeydown(event: KeyboardEvent) {
-  if (event.key === "Enter" && event.altKey && (event.ctrlKey || event.metaKey)) {
-    event.preventDefault();
-    replaceAll();
-  }
-}
+useShortcuts({ replaceAll });
 function toggleGroup(chapterId: string) {
   const next = new Set(collapsedGroups.value);
   if (next.has(chapterId)) next.delete(chapterId);
@@ -107,7 +103,7 @@ function hideResult(result: SearchResult) {
 </script>
 
 <template>
-  <section class="search-view" aria-label="Search" @keydown="onKeydown">
+  <section class="search-view" aria-label="Search">
     <div class="search-view__query">
       <input
         v-model="text"

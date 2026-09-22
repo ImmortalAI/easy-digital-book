@@ -27,7 +27,10 @@ test("new book, save/open, search/replace, undo delete, and export", async ({ pa
   await page.locator('[data-explorer-section="chapters"] [data-chapter-add]').click();
   await expect(page.locator("[data-explorer-chapter]")).toHaveCount(2);
 
-  await page.locator("[data-explorer-chapter]").nth(1).locator("[data-chapter-delete]").click();
+  await page
+    .locator('[data-explorer-chapter][data-chapter-index="1"]')
+    .locator("[data-chapter-delete]")
+    .click();
   await page.locator("[data-confirm-delete]").click();
   await expect(page.locator("[data-toast]")).toBeVisible();
   await page.locator("[data-toast] [data-undo]").click();
@@ -35,5 +38,5 @@ test("new book, save/open, search/replace, undo delete, and export", async ({ pa
 
   await page.locator("[data-export-button]").click();
   await page.locator("[data-export-submit]").click();
-  await expect(page.getByRole("status").filter({ hasText: /epub saved/i })).toBeVisible();
+  await expect(page.locator("[data-export-success]")).toBeVisible();
 });

@@ -96,7 +96,7 @@ function cancelExport() {
     <p v-if="controller.error.value" class="export-dialog__error" role="alert">
       {{ t("errors.export.failed", "Could not export EPUB") }}
     </p>
-    <p v-if="success" class="export-dialog__success" role="status">
+    <p v-if="success" class="export-dialog__success" data-export-success role="status">
       {{ t("export.saved", "EPUB saved") }}
       <button type="button" @click="controller.revealOutput()">
         {{ t("export.showInFolder", "Show in folder") }}
