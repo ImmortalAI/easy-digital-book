@@ -111,11 +111,11 @@ test.describe("shell fills the window height", () => {
     expect(box.scroll).toBeGreaterThan(box.client);
 
     // The last control can be scrolled into view rather than being clipped away.
-    const reachable = await content.evaluate((el, settingsSelector) => {
+    const reachable = await content.evaluate((el) => {
       el.scrollTop = el.scrollHeight;
-      const view = el.querySelector(settingsSelector) as HTMLElement;
+      const view = el.querySelector("[data-settings-view]") as HTMLElement;
       return view.getBoundingClientRect().bottom <= window.innerHeight + 1;
-    }, SETTINGS);
+    });
     expect(reachable).toBe(true);
   });
 });
