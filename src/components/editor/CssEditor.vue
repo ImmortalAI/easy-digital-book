@@ -7,6 +7,7 @@ import { css } from "@codemirror/lang-css";
 import { customCssTemplate } from "@/assets/epub/custom.css";
 import { useProjectStore } from "@/stores/project";
 import { setCustomCss } from "@/services/book/metadata";
+import { preserveOpenShortcutKeymap } from "@/components/editor/editor-commands";
 const project = useProjectStore();
 const host = ref<HTMLElement>();
 let view: EditorView | undefined;
@@ -26,7 +27,7 @@ function mount() {
         history(),
         css(),
         editorTheme,
-        keymap.of([...defaultKeymap, ...historyKeymap]),
+        keymap.of([...preserveOpenShortcutKeymap, ...defaultKeymap, ...historyKeymap]),
         EditorView.updateListener.of((update) => {
           if (!update.docChanged || !project.book) return;
           project.applyMutation(setCustomCss(project.book, update.state.doc.toString()));

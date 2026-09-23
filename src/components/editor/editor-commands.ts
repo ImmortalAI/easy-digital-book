@@ -8,7 +8,25 @@ import {
   type StateEffect,
   type Transaction,
 } from "@codemirror/state";
-import type { EditorView } from "@codemirror/view";
+import type { EditorView, KeyBinding } from "@codemirror/view";
+
+/**
+ * `@codemirror/commands`' `defaultKeymap` includes the Emacs-style `Ctrl-o`
+ * binding (`splitLine`), which on macOS collides with this app's global
+ * "open a book" shortcut (`Mod-o`/`Ctrl-o`, see `use-shortcuts.ts`): the
+ * editor's own keydown handling runs before that `window`-level listener, so
+ * without this override, opening a book while the editor is focused would
+ * first split the current line — mutating and dirtying the document — before
+ * the app's shortcut ever ran, sending the "open" flow straight into an
+ * unwanted unsaved-changes prompt. Spread this ahead of `defaultKeymap` in
+ * every CodeMirror instance so `Mod-o`/`Ctrl-o` is a no-op for CodeMirror
+ * (`preventDefault` only, no document change) and the keydown still bubbles
+ * to `window` for the app's own shortcut to handle.
+ */
+export const preserveOpenShortcutKeymap: KeyBinding[] = [
+  { key: "Mod-o", run: () => true },
+  { key: "Ctrl-o", run: () => true },
+];
 
 /** Editor states are deliberately kept outside Pinia's reactive book model. */
 export const chapterEditorStates = new Map<string, EditorState>();

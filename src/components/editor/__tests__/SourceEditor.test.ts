@@ -204,6 +204,30 @@ describe("SourceEditor lifecycle", () => {
     wrapper.unmount();
   });
 
+  it("leaves the document untouched on Ctrl+O, reserving it for the app's open shortcut", () => {
+    const wrapper = mount(SourceEditor, { props: { chapterId: "chapter1" } });
+    const view = EditorView.findFromDOM(wrapper.find(".cm-editor").element as HTMLElement)!;
+    const before = view.state.doc.toString();
+
+    // @codemirror/commands' defaultKeymap binds Ctrl-o to splitLine (an
+    // Emacs-style binding CodeMirror only activates on macOS); the app
+    // reserves Ctrl/Cmd+O for its own "open a book" shortcut (use-shortcuts.ts)
+    // and must not have the document mutated (and thus marked dirty) before
+    // that shortcut runs. preserveOpenShortcutKeymap intercepts the key ahead
+    // of defaultKeymap on every platform, so `handled` (false means the
+    // keydown's default was prevented, i.e. something claimed it) pins that
+    // interception directly, regardless of this test environment's platform.
+    const handled = wrapper
+      .get(".cm-content")
+      .element.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "o", ctrlKey: true, bubbles: true, cancelable: true }),
+      );
+
+    expect(handled).toBe(false);
+    expect(view.state.doc.toString()).toBe(before);
+    wrapper.unmount();
+  });
+
   it("discards a dropped image when its byte read outlives the project", async () => {
     const importImage = vi.fn<
       (file: ImageFile, position: number, identity: ImageImportIdentity) => Promise<void>
