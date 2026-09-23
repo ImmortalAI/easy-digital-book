@@ -1,62 +1,84 @@
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { nextTick } from "vue";
 import ResizableSplit from "@/components/layout/ResizableSplit.vue";
 import { useLayoutStore } from "@/stores/layout";
 
 describe("ResizableSplit", () => {
   beforeEach(() => setActivePinia(createPinia()));
 
-  it("captures the pointer and persists a sidebar resize", async () => {
-    const layout = useLayoutStore();
-    layout.sidebarWidth = 250;
+  it("collapses the preview in text mode instead of unmounting it", async () => {
     const wrapper = mount(ResizableSplit, {
-      slots: {
-        sidebar: "sidebar",
-        source: "source",
-        preview: "preview",
-      },
+      slots: { preview: '<div data-testid="preview-body" />' },
     });
-    const handle = wrapper.get('[data-resize="sidebar"]');
-    const capture = vi.fn<(pointerId: number) => void>();
-    Object.defineProperty(handle.element, "setPointerCapture", { value: capture });
+    useLayoutStore().mode = "text";
+    await nextTick();
+    // The iframe is built once and owns a blob cache; unmounting it loses both.
+    expect(wrapper.find('[data-testid="preview-body"]').exists()).toBe(true);
+    expect(wrapper.find('[data-pane="preview"]').attributes("data-state")).toBe("collapsed");
+  });
 
-    await handle.trigger("pointerdown", { clientX: 250, pointerId: 7 });
-    window.dispatchEvent(new PointerEvent("pointermove", { clientX: 310, pointerId: 7 }));
+  it("keeps the split ratio as a ratio when the group reports a layout", async () => {
+    const layout = useLayoutStore();
+    const wrapper = mount(ResizableSplit);
+    // Let the group derive its initial layout from the store first; its own
+    // report would otherwise land after the one under test.
+    await nextTick();
+    // The inner group (source/preview) is the last one; the outer group holds the sidebar.
+    const groups = wrapper.findAllComponents({ name: "SplitterGroup" });
+    await groups[groups.length - 1]!.vm.$emit("layout", [30, 70]);
+    expect(layout.splitRatio).toBeCloseTo(0.3, 5);
+  });
 
-    expect(capture).toHaveBeenCalledWith(7);
+  it("keeps the stored ratio while a pane is hidden", async () => {
+    const layout = useLayoutStore();
+    const wrapper = mount(ResizableSplit);
+    await nextTick();
+    layout.splitRatio = 0.35;
+    layout.mode = "text";
+    await nextTick();
+
+    const groups = wrapper.findAllComponents({ name: "SplitterGroup" });
+    await groups[groups.length - 1]!.vm.$emit("layout", [100, 0]);
+
+    expect(layout.splitRatio).toBe(0.35);
+    expect(wrapper.get('[aria-label="Resize editor and preview"]').attributes("style")).toContain(
+      "display: none",
+    );
+  });
+
+  it("persists the sidebar width in pixels within its limits", async () => {
+    const layout = useLayoutStore();
+    const wrapper = mount(ResizableSplit);
+    const outer = wrapper.findAllComponents({ name: "SplitterGroup" })[0]!;
+
+    await outer.vm.$emit("layout", [310, 900]);
     expect(layout.sidebarWidth).toBe(310);
+
+    await outer.vm.$emit("layout", [900, 300]);
+    expect(layout.sidebarWidth).toBe(400);
   });
 
   it("resets the persisted content ratio to 50/50 on double click", async () => {
     const layout = useLayoutStore();
-    layout.splitRatio = 0.7;
     const wrapper = mount(ResizableSplit, { slots: { source: "source", preview: "preview" } });
+    await nextTick();
+    layout.splitRatio = 0.7;
 
-    await wrapper.get('[data-resize="content"]').trigger("dblclick");
+    await wrapper.get('[aria-label="Resize editor and preview"]').trigger("dblclick");
 
-    expect(layout.splitRatio).toBe(0.5);
-    expect(wrapper.get('[data-pane="source"]').attributes("style")).toContain("min-width: 240px");
-    expect(wrapper.get('[data-pane="preview"]').attributes("style")).toContain("min-width: 240px");
+    expect(layout.splitRatio).toBeCloseTo(0.5, 5);
   });
 
-  it("uses the full main width for content resizing when the sidebar is hidden", async () => {
-    const layout = useLayoutStore();
-    layout.sidebarVisible = false;
-    layout.splitRatio = 0.5;
-    const wrapper = mount(ResizableSplit, { slots: { source: "source", preview: "preview" } });
-    Object.defineProperty(wrapper.get("[data-resizable-split]").element, "clientWidth", {
-      configurable: true,
-      value: 1000,
+  it("puts the single pane in place of the source and preview panes", () => {
+    const wrapper = mount(ResizableSplit, {
+      props: { singlePane: true },
+      slots: { single: '<div data-testid="single-body" />' },
     });
 
-    await wrapper.get('[data-resize="content"]').trigger("pointerdown", {
-      clientX: 500,
-      pointerId: 4,
-    });
-    window.dispatchEvent(new PointerEvent("pointermove", { clientX: 700, pointerId: 4 }));
-
-    expect(layout.splitRatio).toBeCloseTo(0.5 + 200 / (1000 - 48));
+    expect(wrapper.find("[data-single-pane] [data-testid=single-body]").exists()).toBe(true);
+    expect(wrapper.find('[data-pane="source"]').exists()).toBe(false);
   });
 
   it("retains pane slot elements while changing modes", async () => {
