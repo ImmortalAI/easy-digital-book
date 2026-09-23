@@ -223,7 +223,7 @@ onMounted(findSourceScroller);
 </script>
 
 <template>
-  <main ref="shell" class="editor-shell">
+  <main ref="shell" class="editor-shell" data-shell>
     <header class="editor-shell__header">
       <div class="editor-shell__title" data-editor-title>
         {{ project.filePath ?? t("editor.unnamedBook", "Untitled book")
@@ -243,7 +243,7 @@ onMounted(findSourceScroller);
         }).replace("{count}", String(diagnostics.read.length))
       }}
     </div>
-    <div class="editor-shell__body">
+    <div class="editor-shell__body" data-shell-body>
       <ResizableSplit :single-pane="singlePane">
         <template #activity>
           <ActivityBar :active="activeActivity" @select="selectActivity" />
@@ -256,7 +256,7 @@ onMounted(findSourceScroller);
         </template>
         <template #single>
           <Breadcrumbs />
-          <div class="editor-single-pane__content">
+          <div class="editor-single-pane__content" data-single-pane-content>
             <MetadataForm
               v-if="layout.center.kind === 'metadata'"
               :on-pick-cover="pickCover"

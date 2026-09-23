@@ -47,7 +47,12 @@ const resizable = useResizable({
     <aside class="resizable-split__activity" data-activity-bar data-width="48">
       <slot name="activity" />
     </aside>
-    <aside v-if="layout.sidebarVisible" class="resizable-split__sidebar" :style="sidebarStyle">
+    <aside
+      v-if="layout.sidebarVisible"
+      class="resizable-split__sidebar"
+      :style="sidebarStyle"
+      data-sidebar
+    >
       <slot name="sidebar" />
     </aside>
     <button
@@ -59,7 +64,7 @@ const resizable = useResizable({
       @pointerdown="resizable.begin('sidebar', $event)"
     />
     <main class="resizable-split__content">
-      <section v-if="props.singlePane" class="editor-single-pane">
+      <section v-if="props.singlePane" class="editor-single-pane" data-single-pane>
         <slot name="single" />
       </section>
       <template v-else>

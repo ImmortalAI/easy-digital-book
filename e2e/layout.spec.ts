@@ -3,6 +3,13 @@ import { test } from "./fixtures/platform";
 
 const VIEWPORT = { width: 1280, height: 800 };
 
+const SHELL = "[data-shell]";
+const BODY = "[data-shell-body]";
+const SIDEBAR = "[data-sidebar]";
+const SINGLE_PANE = "[data-single-pane]";
+const SINGLE_PANE_CONTENT = "[data-single-pane-content]";
+const SETTINGS = "[data-settings-view]";
+
 async function heightOf(page: import("playwright/test").Page, selector: string): Promise<number> {
   return page.locator(selector).evaluate((el) => el.getBoundingClientRect().height);
 }
@@ -16,7 +23,7 @@ test.describe("shell fills the window height", () => {
   });
 
   test("the split stretches to the full body height in split mode", async ({ page }) => {
-    const body = await heightOf(page, ".editor-shell__body");
+    const body = await heightOf(page, BODY);
     const split = await heightOf(page, "[data-resizable-split]");
 
     expect(body).toBeGreaterThan(VIEWPORT.height * 0.8);
@@ -25,7 +32,7 @@ test.describe("shell fills the window height", () => {
 
   test("editor and preview panes reach the bottom of the window", async ({ page }) => {
     const shellBottom = await page
-      .locator(".editor-shell")
+      .locator(SHELL)
       .evaluate((el) => el.getBoundingClientRect().bottom);
 
     for (const pane of ['[data-pane="source"]', '[data-pane="preview"]']) {
@@ -35,20 +42,20 @@ test.describe("shell fills the window height", () => {
   });
 
   test("the sidebar stretches to the full split height", async ({ page }) => {
-    await page.locator(".resizable-split__sidebar").waitFor();
+    await page.locator(SIDEBAR).waitFor();
 
     const split = await heightOf(page, "[data-resizable-split]");
-    const sidebar = await heightOf(page, ".resizable-split__sidebar");
+    const sidebar = await heightOf(page, SIDEBAR);
     expect(sidebar).toBeCloseTo(split, 0);
   });
 
   test("a single pane view stretches to the full body height", async ({ page }) => {
     await page.locator('[data-activity="settings"]').click();
-    await page.locator(".settings-view").waitFor();
+    await page.locator(SETTINGS).waitFor();
 
-    const body = await heightOf(page, ".editor-shell__body");
+    const body = await heightOf(page, BODY);
     const pane = await page
-      .locator(".editor-single-pane")
+      .locator(SINGLE_PANE)
       .first()
       .evaluate((el) => el.getBoundingClientRect().height);
     expect(pane).toBeCloseTo(body, 0);
@@ -94,9 +101,9 @@ test.describe("shell fills the window height", () => {
   test("settings stay reachable on a short window", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 500 });
     await page.locator('[data-activity="settings"]').click();
-    await page.locator(".settings-view").waitFor();
+    await page.locator(SETTINGS).waitFor();
 
-    const content = page.locator(".editor-single-pane__content");
+    const content = page.locator(SINGLE_PANE_CONTENT);
     const box = await content.evaluate((el) => ({
       client: el.clientHeight,
       scroll: el.scrollHeight,
@@ -104,11 +111,11 @@ test.describe("shell fills the window height", () => {
     expect(box.scroll).toBeGreaterThan(box.client);
 
     // The last control can be scrolled into view rather than being clipped away.
-    const reachable = await content.evaluate((el) => {
+    const reachable = await content.evaluate((el, settingsSelector) => {
       el.scrollTop = el.scrollHeight;
-      const view = el.querySelector(".settings-view") as HTMLElement;
+      const view = el.querySelector(settingsSelector) as HTMLElement;
       return view.getBoundingClientRect().bottom <= window.innerHeight + 1;
-    });
+    }, SETTINGS);
     expect(reachable).toBe(true);
   });
 });

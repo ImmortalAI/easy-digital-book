@@ -44,7 +44,7 @@ const openLogs = () => props.actions.openLogs();
 </script>
 
 <template>
-  <section class="settings-view" aria-labelledby="settings-title">
+  <section class="settings-view" aria-labelledby="settings-title" data-settings-view>
     <h1 id="settings-title">{{ t("settings.title", "Settings") }}</h1>
     <label data-setting="locale">
       {{ t("settings.language", "Interface language") }}
