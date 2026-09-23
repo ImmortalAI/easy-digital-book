@@ -13,7 +13,6 @@ import ExplorerSection from "./ExplorerSection.vue";
 import ChapterItem from "./ChapterItem.vue";
 import ImageItem from "./ImageItem.vue";
 import ConfirmDialog from "@/components/common/ConfirmDialog.vue";
-import ContextMenu from "@/components/common/ContextMenu.vue";
 import { useSettingsStore } from "@/stores/settings";
 import { useBookSearch } from "@/composables/use-book-search";
 import { useDiagnosticsStore } from "@/stores/diagnostics";
@@ -27,7 +26,6 @@ const diagnostics = useDiagnosticsStore();
 const search = useBookSearch();
 type DeleteTarget = { kind: "chapter" | "image"; id: string } | { kind: "unused"; paths: string[] };
 const pendingDelete = ref<DeleteTarget | null>(null);
-const context = ref<{ kind: "chapter" | "image"; id: string; x: number; y: number } | null>(null);
 const collapsed = ref<Record<string, boolean>>({});
 const draggedChapter = ref<number | null>(null);
 const book = computed(() => project.book);
@@ -159,18 +157,14 @@ function requestDelete(target: { kind: "chapter" | "image" | "unused"; id?: stri
     target.kind === "unused"
       ? { kind: "unused", paths: unusedResourcePaths() }
       : { kind: target.kind, id: target.id! };
-  context.value = null;
 }
-function openChapterMenu(id: string, event: MouseEvent) {
-  context.value = { kind: "chapter", id, x: event.clientX, y: event.clientY };
-}
-function openImageMenu(path: string, event: MouseEvent) {
-  emit("image-context-menu", path, event);
-  context.value = { kind: "image", id: path, x: event.clientX, y: event.clientY };
-}
-function selectContextAction(value: string) {
-  const target = context.value;
-  if (!target) return;
+/**
+ * The single dispatcher for every row's context menu. Each row's ContextMenu
+ * owns its own trigger and content now (no more shared coordinate state), so
+ * the target comes straight from the item that invoked this — the v-for scope
+ * that owns the menu the action was picked from.
+ */
+function selectContextAction(value: string, target: { kind: "chapter" | "image"; id: string }) {
   if (target.kind === "chapter" && value === "new-after") {
     const index = book.value?.chapters.findIndex((chapter) => chapter.id === target.id) ?? -1;
     if (index >= 0) add(index + 1);
@@ -186,7 +180,6 @@ function selectContextAction(value: string) {
   }
   if (target.kind === "image" && value === "delete")
     requestDelete({ kind: "image", id: target.id });
-  context.value = null;
 }
 function insertImage(path: string) {
   // layout.center starts as { kind: "chapter", id: "" }, so matching on the id
@@ -206,9 +199,6 @@ function openCss() {
     project.applyMutation(setCustomCss(book.value, customCssTemplate));
   layout.center = { kind: "css" };
 }
-function imageContextMenu(path: string, event: MouseEvent) {
-  openImageMenu(path, event);
-}
 function startDrag(index: number) {
   draggedChapter.value = index;
 }
@@ -220,7 +210,7 @@ function dropChapter(index: number) {
 function requestImport() {
   emit("import");
 }
-const emit = defineEmits<{ import: []; "image-context-menu": [path: string, event: MouseEvent] }>();
+const emit = defineEmits<{ import: [] }>();
 </script>
 <template>
   <div v-if="book" class="explorer-view">
@@ -259,7 +249,7 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
         @move="move(index, $event)"
         @navigate="navigate(index, $event)"
         @remove="removeChapterAt(chapter.id)"
-        @contextmenu="openChapterMenu(chapter.id, $event)"
+        @context-action="selectContextAction($event, { kind: 'chapter', id: chapter.id })"
         @new-after="add(index + 1)"
         @drag-start="startDrag(index)"
         @drop="dropChapter(index)"
@@ -279,7 +269,7 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
         :cover="book.metadata.cover === path"
         :unused="!usedImages.has(path)"
         @select="layout.center = { kind: 'image', path }"
-        @contextmenu="imageContextMenu(path, $event)"
+        @context-action="selectContextAction($event, { kind: 'image', id: path })"
     /></ExplorerSection>
     <ConfirmDialog
       :open="pendingDelete !== null"
@@ -289,26 +279,6 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
       :ask-again-label="t('common.doNotAskAgain', 'Do not ask again')"
       @cancel="pendingDelete = null"
       @confirm="confirmDelete"
-    />
-    <ContextMenu
-      v-if="context"
-      :x="context.x"
-      :y="context.y"
-      :items="
-        context.kind === 'chapter'
-          ? [
-              { label: t('chapters.newAfter', 'New chapter after'), value: 'new-after' },
-              { label: t('common.delete', 'Delete'), value: 'delete' },
-            ]
-          : [
-              { label: t('images.insert', 'Insert in text'), value: 'insert' },
-              { label: t('images.setCover', 'Make cover'), value: 'cover' },
-              { label: t('images.findUsage', 'Find usages'), value: 'search' },
-              { label: t('common.delete', 'Delete'), value: 'delete' },
-            ]
-      "
-      @select="selectContextAction"
-      @close="context = null"
     />
   </div>
 </template>

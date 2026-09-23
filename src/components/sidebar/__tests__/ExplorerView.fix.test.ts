@@ -1,5 +1,7 @@
 import { createPinia, setActivePinia } from "pinia";
 import { DOMWrapper, mount } from "@vue/test-utils";
+import { screen } from "@testing-library/vue";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createBook } from "@/services/book/create";
 import { useNotificationsStore } from "@/stores/notifications";
@@ -37,11 +39,12 @@ describe("ExplorerView destructive actions", () => {
     useSettingsStore().confirmDelete = false;
     const wrapper = mount(ExplorerView);
 
-    await wrapper.get(".explorer-image").trigger("contextmenu", { clientX: 10, clientY: 10 });
-    await wrapper.findComponent({ name: "ContextMenu" }).vm.$emit("select", "cover");
-    expect(project.book?.metadata.cover).toBe("images/cover.png");
     await wrapper.get(".explorer-image").trigger("contextmenu");
-    await wrapper.findComponent({ name: "ContextMenu" }).vm.$emit("select", "delete");
+    await userEvent.click(await screen.findByRole("menuitem", { name: /make cover/i }));
+    expect(project.book?.metadata.cover).toBe("images/cover.png");
+
+    await wrapper.get(".explorer-image").trigger("contextmenu");
+    await userEvent.click(await screen.findByRole("menuitem", { name: /^delete$/i }));
     expect(project.book?.resources.has("images/cover.png")).toBe(false);
     expect(project.book?.metadata.cover).toBeNull();
     const items = useNotificationsStore().items;
@@ -100,8 +103,8 @@ describe("ExplorerView destructive actions", () => {
     registerChapterEditorView("chapter1", view);
 
     const wrapper = mount(ExplorerView);
-    await wrapper.get(".explorer-image").trigger("contextmenu", { clientX: 10, clientY: 10 });
-    await wrapper.findComponent({ name: "ContextMenu" }).vm.$emit("select", "insert");
+    await wrapper.get(".explorer-image").trigger("contextmenu");
+    await userEvent.click(await screen.findByRole("menuitem", { name: /insert in text/i }));
 
     expect(project.book?.chapters[0]?.source).toContain("![](images/pic.png)");
     // The editor must carry the insert too: it writes its own doc back to the
@@ -131,7 +134,7 @@ describe("ExplorerView destructive actions", () => {
     const wrapper = mount(ExplorerView);
 
     await wrapper.get(".explorer-image").trigger("contextmenu");
-    await wrapper.findComponent({ name: "ContextMenu" }).vm.$emit("select", "delete");
+    await userEvent.click(await screen.findByRole("menuitem", { name: /^delete$/i }));
 
     expect(wrapper.findComponent({ name: "ConfirmDialog" }).exists()).toBe(true);
     // Scope by role rather than a styling/geometry data-* hook.
