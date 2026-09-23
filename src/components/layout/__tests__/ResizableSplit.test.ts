@@ -22,20 +22,51 @@ describe("ResizableSplit", () => {
   it("keeps the split ratio as a ratio when the group reports a layout", async () => {
     const layout = useLayoutStore();
     const wrapper = mount(ResizableSplit);
-    // Let the group derive its initial layout from the store first; its own
-    // report would otherwise land after the one under test.
-    await nextTick();
-    // The inner group (source/preview) is the last one; the outer group holds the sidebar.
+    // The inner group and handle (source/preview) come last; the outer ones hold the sidebar.
     const groups = wrapper.findAllComponents({ name: "SplitterGroup" });
+    const handles = wrapper.findAllComponents({ name: "SplitterResizeHandle" });
+    const handle = handles[handles.length - 1]!;
+    // A user drag on the handle is what makes a reported layout worth storing.
+    await handle.vm.$emit("dragging", true);
     await groups[groups.length - 1]!.vm.$emit("layout", [30, 70]);
+    await handle.vm.$emit("dragging", false);
     expect(layout.splitRatio).toBeCloseTo(0.3, 5);
+  });
+
+  it("stores a ratio chosen with the keyboard once the key is released", async () => {
+    const layout = useLayoutStore();
+    const wrapper = mount(ResizableSplit);
+    await nextTick();
+    const groups = wrapper.findAllComponents({ name: "SplitterGroup" });
+    const handle = wrapper.get('[aria-label="Resize editor and preview"]');
+
+    await handle.trigger("keydown", { key: "ArrowLeft" });
+    await groups[groups.length - 1]!.vm.$emit("layout", [40, 60]);
+    expect(layout.splitRatio).toBe(0.5);
+
+    await handle.trigger("keyup", { key: "ArrowLeft" });
+    expect(layout.splitRatio).toBeCloseTo(0.4, 5);
+  });
+
+  it("does not store a layout the group clamps on its own", async () => {
+    const layout = useLayoutStore();
+    layout.splitRatio = 0.3;
+    const wrapper = mount(ResizableSplit);
+    await nextTick();
+    // Mounting derived the first layout (clamped to 50/50 here, where the
+    // group measures 0 px wide); the stored ratio survives it.
+    expect(layout.splitRatio).toBe(0.3);
+
+    // A window resize raising the pane minimum clamps the layout without a drag.
+    const groups = wrapper.findAllComponents({ name: "SplitterGroup" });
+    await groups[groups.length - 1]!.vm.$emit("layout", [45, 55]);
+    expect(layout.splitRatio).toBe(0.3);
   });
 
   it("keeps the stored ratio while a pane is hidden", async () => {
     const layout = useLayoutStore();
-    const wrapper = mount(ResizableSplit);
-    await nextTick();
     layout.splitRatio = 0.35;
+    const wrapper = mount(ResizableSplit);
     layout.mode = "text";
     await nextTick();
 
@@ -48,15 +79,23 @@ describe("ResizableSplit", () => {
     );
   });
 
-  it("persists the sidebar width in pixels within its limits", async () => {
+  it("persists a dragged sidebar width in pixels within its limits", async () => {
     const layout = useLayoutStore();
     const wrapper = mount(ResizableSplit);
     const outer = wrapper.findAllComponents({ name: "SplitterGroup" })[0]!;
+    const handle = wrapper.findAllComponents({ name: "SplitterResizeHandle" })[0]!;
 
     await outer.vm.$emit("layout", [310, 900]);
+    expect(layout.sidebarWidth).toBe(250);
+
+    await handle.vm.$emit("dragging", true);
+    await outer.vm.$emit("layout", [310, 900]);
+    await handle.vm.$emit("dragging", false);
     expect(layout.sidebarWidth).toBe(310);
 
+    await handle.vm.$emit("dragging", true);
     await outer.vm.$emit("layout", [900, 300]);
+    await handle.vm.$emit("dragging", false);
     expect(layout.sidebarWidth).toBe(400);
   });
 

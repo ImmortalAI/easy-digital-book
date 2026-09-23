@@ -37,22 +37,44 @@ const sourceDefault = computed(() => {
 // as it always has, instead of snapping a pane shut.
 const collapsible = computed(() => layout.mode !== "split");
 
-function onOuterLayout(sizes: number[]) {
+// Groups also report layouts they derive on their own: on mount, when the
+// window or a pane minimum changes, on a mode switch. Those restate or clamp
+// the stored sizes and must not overwrite them. Only a resize the user makes
+// on a handle (pointer drag or arrow keys) is stored, once, when it ends.
+function trackUserResize(commit: (sizes: number[]) => void) {
+  let active = false;
+  let latest: number[] | undefined;
+  function start() {
+    active = true;
+  }
+  function end() {
+    if (!active) return;
+    active = false;
+    if (latest) commit(latest);
+    latest = undefined;
+  }
+  return {
+    start,
+    end,
+    dragging: (value: boolean) => (value ? start() : end()),
+    report: (sizes: number[]) => {
+      if (active) latest = sizes;
+    },
+  };
+}
+
+const sidebarResize = trackUserResize((sizes) => {
   if (!layout.sidebarVisible || sizes.length < 2) return;
   const width = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, Math.round(sizes[0] ?? 0)));
   if (width === layout.sidebarWidth) return;
   layout.sidebarWidth = width;
   void layout.persist();
-}
+});
 
-// A mode switch makes the group re-derive and re-balance its panes; the
-// layouts it reports meanwhile are not a user's choice of ratio.
-let switchingMode = false;
-function onInnerLayout(sizes: number[]) {
-  if (switchingMode || layout.mode !== "split") return;
+const contentResize = trackUserResize((sizes) => {
   layout.splitRatio = (sizes[0] ?? 50) / 100;
   void layout.persist();
-}
+});
 
 function applyMode(mode: LayoutMode) {
   const source = sourcePanel.value;
@@ -69,19 +91,7 @@ function applyMode(mode: LayoutMode) {
   }
 }
 
-watch(
-  () => layout.mode,
-  () => (switchingMode = true),
-  { flush: "sync" },
-);
-watch(
-  () => layout.mode,
-  (mode) => {
-    applyMode(mode);
-    switchingMode = false;
-  },
-  { flush: "post" },
-);
+watch(() => layout.mode, applyMode, { flush: "post" });
 
 function resetSplit() {
   sourcePanel.value?.resize(50);
@@ -100,7 +110,7 @@ function resetSplit() {
     >
       <slot name="activity" />
     </aside>
-    <SplitterGroup direction="horizontal" class="flex flex-1" @layout="onOuterLayout">
+    <SplitterGroup direction="horizontal" class="flex flex-1" @layout="sidebarResize.report">
       <SplitterPanel
         v-if="layout.sidebarVisible"
         :order="1"
@@ -117,12 +127,16 @@ function resetSplit() {
         v-if="layout.sidebarVisible"
         class="w-1 shrink-0 hover:bg-ring focus-visible:bg-ring focus-visible:outline-none"
         aria-label="Resize sidebar"
+        @dragging="sidebarResize.dragging"
+        @keydown="sidebarResize.start"
+        @keyup="sidebarResize.end"
+        @blur="sidebarResize.end"
       />
       <SplitterPanel ref="content" :order="2" class="flex min-w-0">
         <section v-if="props.singlePane" class="editor-single-pane" data-single-pane>
           <slot name="single" />
         </section>
-        <SplitterGroup v-else direction="horizontal" class="flex" @layout="onInnerLayout">
+        <SplitterGroup v-else direction="horizontal" class="flex" @layout="contentResize.report">
           <SplitterPanel
             ref="sourcePanel"
             :order="1"
@@ -139,6 +153,10 @@ function resetSplit() {
             v-show="layout.mode === 'split'"
             class="w-1 shrink-0 hover:bg-ring focus-visible:bg-ring focus-visible:outline-none"
             aria-label="Resize editor and preview"
+            @dragging="contentResize.dragging"
+            @keydown="contentResize.start"
+            @keyup="contentResize.end"
+            @blur="contentResize.end"
             @dblclick="resetSplit"
           />
           <SplitterPanel
