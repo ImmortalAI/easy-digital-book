@@ -199,7 +199,9 @@ describe("EditorView Task 13 integration", () => {
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "e", ctrlKey: true }));
     await nextTick();
 
-    expect(wrapper.find("[data-export-submit]").exists()).toBe(true);
+    // ExportDialog now teleports its content to document.body (Dialog's
+    // portal), so it is no longer reachable through the mounted wrapper's tree.
+    expect(document.body.querySelector("[data-export-submit]")).not.toBeNull();
     wrapper.unmount();
   });
 });

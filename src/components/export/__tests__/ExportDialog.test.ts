@@ -1,37 +1,43 @@
-import { mount } from "@vue/test-utils";
+import { cleanup, render, screen } from "@testing-library/vue";
+import userEvent from "@testing-library/user-event";
 import { computed, ref } from "vue";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ExportDialog from "@/components/export/ExportDialog.vue";
-import { createInMemoryPlatformServices } from "@/services/platform";
 import { useProjectStore } from "@/stores/project";
-import { useSettingsStore } from "@/stores/settings";
 import type { ExportController } from "@/composables/use-export";
+
+function bookMetadata(version: string | null) {
+  return {
+    id: "book",
+    title: "Novel",
+    version,
+    created: "",
+    modified: "",
+    language: "en",
+    authors: [],
+    translators: [],
+    series: null,
+    description: null,
+    cover: null,
+  };
+}
 
 describe("ExportDialog", () => {
   beforeEach(() => setActivePinia(createPinia()));
+  // Dialog teleports its content to document.body and this file renders it
+  // more than once; without cleanup the next render's query could match a
+  // still-mounted node left over from the previous test.
+  afterEach(() => cleanup());
 
-  it("disables adding a version to the filename when the book has no version", () => {
+  it("disables adding a version to the filename when the book has no version", async () => {
     const project = useProjectStore();
     project.setBook({
-      metadata: {
-        id: "book",
-        title: "Novel",
-        version: null,
-        created: "",
-        modified: "",
-        language: "en",
-        authors: [],
-        translators: [],
-        series: null,
-        description: null,
-        cover: null,
-      },
+      metadata: bookMetadata(null),
       chapters: [{ id: "chapter1", source: "# Chapter" }],
       resources: new Map(),
       customCss: null,
     });
-    const settings = useSettingsStore();
     const controller = {
       options: ref({
         imagePreset: "kindle-paperwhite",
@@ -49,10 +55,50 @@ describe("ExportDialog", () => {
       revealOutput: vi.fn<ExportController["revealOutput"]>(),
     } as unknown as ExportController;
 
-    const wrapper = mount(ExportDialog, {
-      props: { controller, services: createInMemoryPlatformServices(), project, settings },
-    });
+    render(ExportDialog, { props: { controller, project } });
 
-    expect(wrapper.get("[data-export-version]").attributes("disabled")).toBeDefined();
+    // ExportDialog now teleports its content to document.body (Dialog's
+    // portal), so it is queried through testing-library's document-wide screen
+    // rather than a mounted wrapper's tree.
+    const versionCheckbox = await screen.findByRole("checkbox", { name: /add version to title/i });
+    expect(versionCheckbox.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("exports with the chosen preset and reports success", async () => {
+    const project = useProjectStore();
+    project.setBook({
+      metadata: bookMetadata("1.0.0"),
+      chapters: [{ id: "chapter1", source: "# Chapter" }],
+      resources: new Map(),
+      customCss: null,
+    });
+    const controller = {
+      options: ref({
+        imagePreset: "kindle-paperwhite",
+        grayscale: false,
+        titlePage: true,
+        versionInTitle: false,
+      }),
+      fileName: computed(() => "Novel.epub"),
+      warnings: ref([]),
+      progress: ref(null),
+      exporting: ref(false),
+      error: ref(null),
+      lastOutput: ref(null),
+      exportEpub: vi.fn<ExportController["exportEpub"]>().mockResolvedValue("Novel.epub"),
+      revealOutput: vi.fn<ExportController["revealOutput"]>(),
+    } as unknown as ExportController;
+
+    render(ExportDialog, { props: { controller, project } });
+    // The preset control is a shadcn-vue Select (a Reka listbox), not a native
+    // <select>, so it is driven by opening the combobox and clicking an option
+    // rather than userEvent.selectOptions. findByRole (rather than getByRole)
+    // waits out Dialog's initial teleport-mount tick.
+    await userEvent.click(await screen.findByRole("combobox", { name: /image preset/i }));
+    await userEvent.click(await screen.findByRole("option", { name: /without changes/i }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /grayscale/i }));
+    await userEvent.click(screen.getByRole("button", { name: /export/i }));
+    const status = await screen.findByRole("status");
+    expect(status.textContent).toContain("EPUB saved");
   });
 });

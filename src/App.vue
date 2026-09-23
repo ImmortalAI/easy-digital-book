@@ -57,11 +57,10 @@ function chooseUnsaved(value: "save" | "discard" | "cancel") {
       {{ t("settings.openUpdate", "Open release") }}
     </button>
   </div>
-  <div v-if="unexpectedError" class="editor-shell__dialog-backdrop">
-    <ErrorDetailsDialog
-      :report="unexpectedError"
-      :actions="files.errorActions"
-      @close="unexpectedError = null"
-    />
-  </div>
+  <ErrorDetailsDialog
+    v-if="unexpectedError"
+    :report="unexpectedError"
+    :actions="files.errorActions"
+    @close="unexpectedError = null"
+  />
 </template>

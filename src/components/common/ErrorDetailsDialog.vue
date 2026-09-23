@@ -1,16 +1,31 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
 import {
   errorTranslationKey,
   type UnexpectedErrorReport,
 } from "@/services/platform/error-reporting";
 import type { ErrorActions } from "@/composables/use-error-actions";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 
 const props = defineProps<{ report: UnexpectedErrorReport; actions: ErrorActions }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useSafeI18n();
 const copied = ref(false);
+const open = ref(true);
+
+watch(open, (value) => {
+  if (!value) emit("close");
+});
 
 async function copyDetails() {
   await props.actions.copyDetails(props.report);
@@ -22,46 +37,36 @@ const reportIssue = () => props.actions.reportIssue(props.report);
 </script>
 
 <template>
-  <section
-    class="error-details-dialog"
-    role="alertdialog"
-    aria-modal="true"
-    aria-labelledby="error-title"
-  >
-    <h2 id="error-title">
-      {{ t(errorTranslationKey(report.code), t("errors.title", "An unexpected error occurred")) }}
-    </h2>
-    <p>{{ t("errors.explanation", "The error was recorded without book contents.") }}</p>
-    <pre data-error-details>{{ report.details }}</pre>
-    <p v-if="copied" role="status">{{ t("errors.copied", "Details copied") }}</p>
-    <footer>
-      <button type="button" @click="copyDetails">{{ t("errors.copy", "Copy details") }}</button>
-      <button type="button" @click="openLogs">{{ t("errors.openLogs", "Log folder") }}</button>
-      <button type="button" @click="reportIssue">{{ t("errors.report", "Report issue") }}</button>
-      <button type="button" @click="emit('close')">{{ t("common.close", "Close") }}</button>
-    </footer>
-  </section>
+  <Dialog v-model:open="open">
+    <DialogContent role="alertdialog" :show-close-button="false" class="grid gap-3 sm:max-w-lg">
+      <DialogHeader>
+        <DialogTitle>
+          {{
+            t(errorTranslationKey(report.code), t("errors.title", "An unexpected error occurred"))
+          }}
+        </DialogTitle>
+        <DialogDescription>
+          {{ t("errors.explanation", "The error was recorded without book contents.") }}
+        </DialogDescription>
+      </DialogHeader>
+      <ScrollArea class="border-border max-h-64 rounded-md border">
+        <pre data-error-details class="p-3 text-xs whitespace-pre-wrap">{{ report.details }}</pre>
+      </ScrollArea>
+      <p v-if="copied" role="status" class="text-primary text-sm">
+        {{ t("errors.copied", "Details copied") }}
+      </p>
+      <DialogFooter>
+        <Button type="button" variant="outline" @click="copyDetails">
+          {{ t("errors.copy", "Copy details") }}
+        </Button>
+        <Button type="button" variant="outline" @click="openLogs">
+          {{ t("errors.openLogs", "Log folder") }}
+        </Button>
+        <Button type="button" variant="outline" @click="reportIssue">
+          {{ t("errors.report", "Report issue") }}
+        </Button>
+        <Button type="button" @click="open = false">{{ t("common.close", "Close") }}</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
-
-<style scoped>
-.error-details-dialog {
-  display: grid;
-  gap: 0.8rem;
-  width: min(40rem, calc(100vw - 2rem));
-  padding: 1.25rem;
-  border: 1px solid var(--destructive);
-  border-radius: 0.75rem;
-  background: var(--background);
-  box-shadow: 0 1rem 3rem rgb(0 0 0 / 20%);
-}
-.error-details-dialog pre {
-  max-height: 16rem;
-  overflow: auto;
-  white-space: pre-wrap;
-}
-.error-details-dialog footer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-</style>

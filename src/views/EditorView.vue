@@ -307,13 +307,12 @@ onMounted(findSourceScroller);
         </template>
       </ResizableSplit>
     </div>
-    <div v-if="exportOpen" class="editor-shell__dialog-backdrop">
-      <ExportDialog
-        v-if="exportController"
-        :controller="exportController"
-        :project="project"
-        @close="exportOpen = false"
-      />
-    </div>
+    <ExportDialog
+      v-if="exportController"
+      v-model:open="exportOpen"
+      :controller="exportController"
+      :project="project"
+      @close="exportOpen = false"
+    />
   </main>
 </template>

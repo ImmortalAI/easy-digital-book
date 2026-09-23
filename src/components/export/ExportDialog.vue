@@ -1,14 +1,37 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
 import type { ExportController } from "@/composables/use-export";
 import type { useProjectStore } from "@/stores/project";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Field } from "@/components/ui/field";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@/components/ui/button";
 
 const props = defineProps<{
   controller: ExportController;
   project?: ReturnType<typeof useProjectStore>;
 }>();
 const emit = defineEmits<{ close: [] }>();
+const open = defineModel<boolean>("open", { default: true });
 const { t } = useSafeI18n();
 const abortController = ref<AbortController | null>(null);
 const success = ref(false);
@@ -18,6 +41,16 @@ const errorMessage = computed(() => {
   const error = props.controller.error.value;
   const generic = t("errors.export.failed", "Could not export EPUB");
   return error ? t(`errors.${error.code}`, generic, error.params) : generic;
+});
+const progressPercent = computed(() => {
+  const value = props.controller.progress.value;
+  if (!value) return 0;
+  if (value.stage === "zip") return 100;
+  return value.total > 0 ? Math.round((value.done / value.total) * 100) : 0;
+});
+
+watch(open, (value) => {
+  if (!value) emit("close");
 });
 
 async function exportBook() {
@@ -39,132 +72,112 @@ async function exportBook() {
   }
 }
 
-function cancelExport() {
-  if (props.controller.exporting.value) abortController.value?.abort();
-  else emit("close");
+/** Every dismissal path (Escape, outside click, footer button) routes through
+ * here so an in-flight export is aborted instead of silently orphaned. */
+function requestClose(next: boolean) {
+  if (!next && props.controller.exporting.value) {
+    abortController.value?.abort();
+    return;
+  }
+  open.value = next;
 }
 </script>
 
 <template>
-  <section class="export-dialog" role="dialog" aria-modal="true" aria-labelledby="export-title">
-    <header>
-      <h2 id="export-title">{{ t("export.title", "Export EPUB") }}</h2>
-      <button type="button" :aria-label="t('common.close', 'Close')" @click="cancelExport">
-        ×
-      </button>
-    </header>
-    <ul
-      v-if="controller.warnings.value.length"
-      class="export-dialog__warnings"
-      data-export-warnings
-    >
-      <li
-        v-for="warning in controller.warnings.value"
-        :key="`${warning.code}-${warning.chapterId ?? ''}`"
-      >
-        {{ warning.message }}
-      </li>
-    </ul>
-    <label>
-      {{ t("export.preset", "Image preset") }}
-      <select v-model="controller.options.value.imagePreset" data-export-preset>
-        <option value="kindle-paperwhite">{{ t("export.kindle", "Kindle Paperwhite") }}</option>
-        <option value="original">{{ t("export.original", "Without changes") }}</option>
-      </select>
-    </label>
-    <label
-      ><input v-model="controller.options.value.grayscale" type="checkbox" />
-      {{ t("export.grayscale", "Grayscale") }}</label
-    >
-    <label>
-      <input v-model="controller.options.value.titlePage" type="checkbox" />
-      {{ t("export.titlePage", "Add title page") }}
-    </label>
-    <label>
-      <input
-        v-model="controller.options.value.versionInTitle"
-        type="checkbox"
-        data-export-version
-        :disabled="!hasVersion"
-      />
-      {{ t("export.versionInTitle", "Add version to title") }}
-    </label>
-    <p class="export-dialog__filename" data-export-filename>{{ controller.fileName.value }}</p>
-    <p v-if="controller.progress.value" data-export-progress>
-      <span v-if="controller.progress.value.stage === 'images'">
-        {{ t("export.progressImages", "Images {done}/{total}", controller.progress.value) }}
-      </span>
-      <span v-else-if="controller.progress.value.stage === 'chapters'">
-        {{ t("export.progressChapters", "Chapters {done}/{total}", controller.progress.value) }}
-      </span>
-      <span v-else>{{ t("export.progressZip", "Creating EPUB…") }}</span>
-    </p>
-    <p v-if="controller.error.value" class="export-dialog__error" role="alert">
-      {{ errorMessage }}
-    </p>
-    <p v-if="success" class="export-dialog__success" data-export-success role="status">
-      {{ t("export.saved", "EPUB saved") }}
-      <button type="button" @click="controller.revealOutput()">
-        {{ t("export.showInFolder", "Show in folder") }}
-      </button>
-    </p>
-    <footer>
-      <button type="button" @click="cancelExport">
-        {{ controller.exporting.value ? t("common.cancel", "Cancel") : t("common.close", "Close") }}
-      </button>
-      <button
-        v-if="!success"
-        type="button"
-        data-export-submit
-        :disabled="controller.exporting.value"
-        @click="exportBook"
-      >
-        {{ t("export.action", "Export…") }}
-      </button>
-    </footer>
-  </section>
-</template>
+  <Dialog :open="open" @update:open="requestClose">
+    <DialogContent :show-close-button="false" class="grid gap-4 sm:max-w-md">
+      <DialogHeader>
+        <DialogTitle>{{ t("export.title", "Export EPUB") }}</DialogTitle>
+        <DialogDescription data-export-filename>{{ controller.fileName.value }}</DialogDescription>
+      </DialogHeader>
 
-<style scoped>
-.export-dialog {
-  display: grid;
-  gap: 0.8rem;
-  width: min(32rem, calc(100vw - 2rem));
-  padding: 1.25rem;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--background);
-  box-shadow: 0 1rem 3rem rgb(0 0 0 / 20%);
-}
-.export-dialog header,
-.export-dialog footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-.export-dialog label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.export-dialog select {
-  margin-left: auto;
-}
-.export-dialog__filename {
-  padding: 0.5rem;
-  background: var(--muted);
-  overflow-wrap: anywhere;
-}
-.export-dialog__warnings {
-  margin: 0;
-  padding-left: 1.25rem;
-  color: var(--destructive);
-}
-.export-dialog__error {
-  color: var(--destructive);
-}
-.export-dialog__success {
-  color: var(--primary);
-}
-</style>
+      <Alert v-if="controller.warnings.value.length" variant="destructive" data-export-warnings>
+        <AlertDescription>
+          <ul class="list-disc space-y-1 pl-4">
+            <li
+              v-for="warning in controller.warnings.value"
+              :key="`${warning.code}-${warning.chapterId ?? ''}`"
+            >
+              {{ warning.message }}
+            </li>
+          </ul>
+        </AlertDescription>
+      </Alert>
+
+      <Field>
+        <Label for="export-preset">{{ t("export.preset", "Image preset") }}</Label>
+        <Select v-model="controller.options.value.imagePreset">
+          <SelectTrigger id="export-preset" data-export-preset class="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="kindle-paperwhite">
+              {{ t("export.kindle", "Kindle Paperwhite") }}
+            </SelectItem>
+            <SelectItem value="original">{{ t("export.original", "Without changes") }}</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+
+      <div class="flex items-center gap-2">
+        <Checkbox id="export-grayscale" v-model="controller.options.value.grayscale" />
+        <Label for="export-grayscale">{{ t("export.grayscale", "Grayscale") }}</Label>
+      </div>
+      <div class="flex items-center gap-2">
+        <Checkbox id="export-title-page" v-model="controller.options.value.titlePage" />
+        <Label for="export-title-page">{{ t("export.titlePage", "Add title page") }}</Label>
+      </div>
+      <div class="flex items-center gap-2">
+        <Checkbox
+          id="export-version"
+          data-export-version
+          v-model="controller.options.value.versionInTitle"
+          :disabled="!hasVersion"
+        />
+        <Label for="export-version">{{ t("export.versionInTitle", "Add version to title") }}</Label>
+      </div>
+
+      <div v-if="controller.progress.value" class="grid gap-1.5" data-export-progress>
+        <p class="text-muted-foreground text-sm">
+          <span v-if="controller.progress.value.stage === 'images'">
+            {{ t("export.progressImages", "Images {done}/{total}", controller.progress.value) }}
+          </span>
+          <span v-else-if="controller.progress.value.stage === 'chapters'">
+            {{ t("export.progressChapters", "Chapters {done}/{total}", controller.progress.value) }}
+          </span>
+          <span v-else>{{ t("export.progressZip", "Creating EPUB…") }}</span>
+        </p>
+        <Progress :model-value="progressPercent" />
+      </div>
+
+      <Alert v-if="controller.error.value" variant="destructive">
+        <AlertDescription>{{ errorMessage }}</AlertDescription>
+      </Alert>
+
+      <p v-if="success" class="text-primary text-sm" data-export-success role="status">
+        {{ t("export.saved", "EPUB saved") }}
+        <Button type="button" variant="link" class="h-auto p-0" @click="controller.revealOutput()">
+          {{ t("export.showInFolder", "Show in folder") }}
+        </Button>
+      </p>
+
+      <DialogFooter>
+        <Button type="button" variant="outline" @click="requestClose(false)">
+          {{
+            controller.exporting.value ? t("common.cancel", "Cancel") : t("common.close", "Close")
+          }}
+        </Button>
+        <Button
+          v-if="!success"
+          type="button"
+          data-export-submit
+          :disabled="controller.exporting.value"
+          @click="exportBook"
+        >
+          <Spinner v-if="controller.exporting.value" />
+          {{ t("export.action", "Export…") }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+</template>
