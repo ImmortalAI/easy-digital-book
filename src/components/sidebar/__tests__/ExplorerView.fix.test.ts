@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from "pinia";
-import { mount } from "@vue/test-utils";
+import { DOMWrapper, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createBook } from "@/services/book/create";
 import { useNotificationsStore } from "@/stores/notifications";
@@ -12,6 +12,14 @@ import {
   registerChapterEditorView,
   resetChapterEditors,
 } from "@/components/editor/editor-commands";
+
+// ConfirmDialog now teleports its content to document.body (AlertDialog's
+// portal), so it is no longer reachable through the mounted wrapper's tree.
+function confirmDialog(): DOMWrapper<HTMLElement> {
+  const el = document.body.querySelector<HTMLElement>('[role="alertdialog"]');
+  if (!el) throw new Error("Expected the confirm dialog to be open");
+  return new DOMWrapper(el);
+}
 
 describe("ExplorerView destructive actions", () => {
   beforeEach(() => setActivePinia(createPinia()));
@@ -61,14 +69,16 @@ describe("ExplorerView destructive actions", () => {
     const imagesSection = wrapper.findAll(".explorer-section")[2]!;
     await imagesSection.findAll(".explorer-section__action button")[1]!.trigger("click");
 
-    const dialog = wrapper.findComponent({ name: "ConfirmDialog" });
-    expect(dialog.exists()).toBe(true);
+    expect(wrapper.findComponent({ name: "ConfirmDialog" }).exists()).toBe(true);
+    const dialog = confirmDialog();
     expect(dialog.get("h2").text()).toContain("Delete unused images");
-    expect(dialog.get(".confirm-dialog__details").text()).toContain("unused-a.png");
-    expect(dialog.get(".confirm-dialog__details").text()).toContain("unused-b.png");
-    expect(dialog.get(".confirm-dialog__details").text()).not.toContain("chapter1");
+    // The affected names live in the dialog's accessible description; scope by
+    // role rather than a styling/geometry data-* hook.
+    expect(dialog.text()).toContain("unused-a.png");
+    expect(dialog.text()).toContain("unused-b.png");
+    expect(dialog.text()).not.toContain("chapter1");
 
-    await dialog.get("button:last-child").trigger("click");
+    await dialog.get("[data-confirm-delete]").trigger("click");
     expect([...project.book!.resources.keys()]).toEqual(["images/used.png"]);
     wrapper.unmount();
   });
@@ -123,13 +133,13 @@ describe("ExplorerView destructive actions", () => {
     await wrapper.get(".explorer-image").trigger("contextmenu");
     await wrapper.findComponent({ name: "ContextMenu" }).vm.$emit("select", "delete");
 
-    const details = wrapper
-      .findComponent({ name: "ConfirmDialog" })
-      .get(".confirm-dialog__details");
-    expect(details.text()).toContain("First");
-    expect(details.text()).toContain("Second");
-    expect(details.text()).not.toContain("chapter1");
-    expect(details.text()).not.toContain("chapter2");
+    expect(wrapper.findComponent({ name: "ConfirmDialog" }).exists()).toBe(true);
+    // Scope by role rather than a styling/geometry data-* hook.
+    const details = confirmDialog().text();
+    expect(details).toContain("First");
+    expect(details).toContain("Second");
+    expect(details).not.toContain("chapter1");
+    expect(details).not.toContain("chapter2");
     wrapper.unmount();
   });
 
@@ -146,9 +156,10 @@ describe("ExplorerView destructive actions", () => {
     const settings = useSettingsStore();
     const wrapper = mount(ExplorerView);
     await wrapper.findAll(".explorer-chapter__actions button")[1]!.trigger("click");
-    const dialog = wrapper.findComponent({ name: "ConfirmDialog" });
-    await dialog.get('input[type="checkbox"]').setValue(false);
-    await dialog.get("button:last-child").trigger("click");
+    expect(wrapper.findComponent({ name: "ConfirmDialog" }).exists()).toBe(true);
+    const dialog = confirmDialog();
+    await dialog.get('[role="checkbox"]').trigger("click");
+    await dialog.get("[data-confirm-delete]").trigger("click");
     expect(settings.confirmDelete).toBe(false);
     expect(project.book?.chapters).toHaveLength(1);
     wrapper.unmount();
