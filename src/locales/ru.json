@@ -20,6 +20,11 @@
     "split": "Сплит",
     "preview": "Превью"
   },
+  "activity": {
+    "explorer": "Проводник",
+    "search": "Поиск",
+    "settings": "Настройки"
+  },
   "editor": {
     "unnamedBook": "Безымянная книга",
     "selectChapter": "Выберите главу",

@@ -20,6 +20,11 @@
     "split": "Split",
     "preview": "Preview"
   },
+  "activity": {
+    "explorer": "Explorer",
+    "search": "Search",
+    "settings": "Settings"
+  },
   "editor": {
     "unnamedBook": "Untitled book",
     "selectChapter": "Select a chapter",

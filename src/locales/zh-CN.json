@@ -20,6 +20,11 @@
     "split": "分栏",
     "preview": "预览"
   },
+  "activity": {
+    "explorer": "资源管理器",
+    "search": "搜索",
+    "settings": "设置"
+  },
   "editor": {
     "unnamedBook": "未命名书籍",
     "selectChapter": "请选择章节",
