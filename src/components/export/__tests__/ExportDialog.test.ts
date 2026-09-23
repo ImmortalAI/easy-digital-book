@@ -101,4 +101,44 @@ describe("ExportDialog", () => {
     const status = await screen.findByRole("status");
     expect(status.textContent).toContain("EPUB saved");
   });
+
+  it("starts fresh after closing and reopening, not stuck on the last success", async () => {
+    // EditorView keeps ExportDialog mounted permanently and only toggles its
+    // `open` model (it no longer remounts the component per open), so a
+    // successful export must not leave the dialog stuck on the "EPUB saved"
+    // screen the next time it's opened.
+    const project = useProjectStore();
+    project.setBook({
+      metadata: bookMetadata("1.0.0"),
+      chapters: [{ id: "chapter1", source: "# Chapter" }],
+      resources: new Map(),
+      customCss: null,
+    });
+    const controller = {
+      options: ref({
+        imagePreset: "kindle-paperwhite",
+        grayscale: false,
+        titlePage: true,
+        versionInTitle: false,
+      }),
+      fileName: computed(() => "Novel.epub"),
+      warnings: ref([]),
+      progress: ref(null),
+      exporting: ref(false),
+      error: ref(null),
+      lastOutput: ref(null),
+      exportEpub: vi.fn<ExportController["exportEpub"]>().mockResolvedValue("Novel.epub"),
+      revealOutput: vi.fn<ExportController["revealOutput"]>(),
+    } as unknown as ExportController;
+
+    const { rerender } = render(ExportDialog, { props: { controller, project, open: true } });
+    await userEvent.click(await screen.findByRole("button", { name: /export/i }));
+    expect((await screen.findByRole("status")).textContent).toContain("EPUB saved");
+
+    await rerender({ controller, project, open: false });
+    await rerender({ controller, project, open: true });
+
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(await screen.findByRole("button", { name: /export/i })).not.toBeNull();
+  });
 });

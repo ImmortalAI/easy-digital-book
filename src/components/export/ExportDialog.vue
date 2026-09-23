@@ -49,8 +49,16 @@ const progressPercent = computed(() => {
   return value.total > 0 ? Math.round((value.done / value.total) * 100) : 0;
 });
 
+// The dialog is now a long-lived component (EditorView keeps it mounted and
+// only toggles `open`), so per-open state that used to reset itself via
+// remounting must be reset explicitly here whenever the dialog opens again.
 watch(open, (value) => {
-  if (!value) emit("close");
+  if (value) {
+    success.value = false;
+    abortController.value = null;
+  } else {
+    emit("close");
+  }
 });
 
 async function exportBook() {
