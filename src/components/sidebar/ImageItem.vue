@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { FlattenedItem } from "reka-ui";
+import { IconStarFilled } from "@tabler/icons-vue";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
 import {
   ContextMenu,
@@ -6,27 +8,42 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { TreeItem } from "@/components/ui/tree";
 const { t } = useSafeI18n();
-defineProps<{ path: string; cover: boolean; unused: boolean }>();
+defineProps<{
+  /** The flattened tree node's bindings (value, level, aria-setsize/posinset). */
+  bind: FlattenedItem<Record<string, unknown>>["bind"];
+  path: string;
+  cover: boolean;
+  unused: boolean;
+}>();
 const emit = defineEmits<{
   select: [];
   contextmenu: [event: MouseEvent];
   "context-action": [value: string];
 }>();
+/** Selection is owned by the explorer (layout.center), not the tree's own model. */
+function select(event: Event) {
+  event.preventDefault();
+  emit("select");
+}
 </script>
 <template>
   <ContextMenu>
     <ContextMenuTrigger as-child>
-      <button
-        class="explorer-image"
-        :class="{ unused }"
-        type="button"
-        @click="emit('select')"
+      <TreeItem
+        v-bind="bind"
+        :class="{ 'text-muted-foreground': unused }"
+        @select="select"
         @contextmenu="emit('contextmenu', $event)"
       >
-        {{ path.replace(/^images\//, "") }} <small v-if="cover">★</small
-        ><small v-if="unused"> — {{ t("images.unused", "not used") }}</small>
-      </button>
+        <span class="min-w-0 truncate">{{ path.replace(/^images\//, "") }}</span>
+        <template v-if="cover">
+          <IconStarFilled class="size-3 shrink-0 text-amber-500" aria-hidden="true" />
+          <span class="sr-only">{{ t("images.usedAsCover", "Used as the cover") }}</span>
+        </template>
+        <small v-if="unused" class="shrink-0">— {{ t("images.unused", "not used") }}</small>
+      </TreeItem>
     </ContextMenuTrigger>
     <ContextMenuContent>
       <ContextMenuItem @select="emit('context-action', 'insert')">

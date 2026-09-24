@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, useId } from "vue";
 import { useProjectStore } from "@/stores/project";
 import { useLayoutStore } from "@/stores/layout";
 import { addChapter, moveChapter } from "@/services/book/chapters";
@@ -9,7 +9,9 @@ import { customCssTemplate } from "@/assets/epub/custom.css";
 import { uniqueRandomId } from "@/utils/random-id";
 import { extractTitle } from "@/services/book/extract-title";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
-import ExplorerSection from "./ExplorerSection.vue";
+import type { Chapter } from "@/types/book";
+import { IconChevronRight, IconPlus, IconX } from "@tabler/icons-vue";
+import { Tree, TreeItem } from "@/components/ui/tree";
 import ChapterItem from "./ChapterItem.vue";
 import ImageItem from "./ImageItem.vue";
 import ConfirmDialog from "@/components/common/ConfirmDialog.vue";
@@ -26,7 +28,15 @@ const diagnostics = useDiagnosticsStore();
 const search = useBookSearch();
 type DeleteTarget = { kind: "chapter" | "image"; id: string } | { kind: "unused"; paths: string[] };
 const pendingDelete = ref<DeleteTarget | null>(null);
-const collapsed = ref<Record<string, boolean>>({});
+type Section = "book" | "chapters" | "images";
+type ExplorerNode =
+  | { id: string; kind: "section"; section: Section; children: ExplorerNode[] }
+  | { id: "metadata"; kind: "metadata" }
+  | { id: "css"; kind: "css" }
+  | { id: string; kind: "chapter"; chapter: Chapter; index: number }
+  | { id: string; kind: "image"; path: string };
+const labelPrefix = useId();
+const expanded = ref<string[]>(["section:book", "section:chapters", "section:images"]);
 const draggedChapter = ref<number | null>(null);
 const book = computed(() => project.book);
 const usage = computed(() =>
@@ -94,8 +104,70 @@ const deleteDetails = computed(() => {
   const words = chapter?.source.trim().split(/\s+/).filter(Boolean).length ?? 0;
   return `${t("delete.words", "Words")}: ${words}`;
 });
-function toggle(name: string) {
-  collapsed.value[name] = !collapsed.value[name];
+/** The whole explorer as one tree: Book, Chapters and Images, each with its rows. */
+const nodes = computed<ExplorerNode[]>(() => {
+  if (!book.value) return [];
+  return [
+    {
+      id: "section:book",
+      kind: "section",
+      section: "book",
+      children: [
+        { id: "metadata", kind: "metadata" },
+        { id: "css", kind: "css" },
+      ],
+    },
+    {
+      id: "section:chapters",
+      kind: "section",
+      section: "chapters",
+      children: book.value.chapters.map((chapter, index) => ({
+        id: `chapter:${chapter.id}`,
+        kind: "chapter",
+        chapter,
+        index,
+      })),
+    },
+    {
+      id: "section:images",
+      kind: "section",
+      section: "images",
+      children: [...book.value.resources.keys()].map((path) => ({
+        id: `image:${path}`,
+        kind: "image",
+        path,
+      })),
+    },
+  ];
+});
+const nodeKey = (node: ExplorerNode) => node.id;
+const nodeChildren = (node: ExplorerNode) => (node.kind === "section" ? node.children : undefined);
+/** The tree's selection mirrors whatever the center pane shows. */
+const selectedNode = computed(() => {
+  const center = layout.center;
+  if (center.kind === "chapter") return { id: `chapter:${center.id}` };
+  if (center.kind === "image") return { id: `image:${center.path}` };
+  if (center.kind === "metadata" || center.kind === "css") return { id: center.kind };
+  return undefined;
+});
+function sectionTitle(section: Section): string {
+  if (section === "book") return t("explorer.book", "Book");
+  if (section === "chapters") return t("explorer.chapters", "Chapters");
+  return t("explorer.images", "Images");
+}
+function sectionCount(section: Section): number | undefined {
+  if (section === "chapters") return book.value?.chapters.length;
+  if (section === "images") return book.value?.resources.size;
+  return undefined;
+}
+/**
+ * Leaf rows act on select; selection itself is driven by layout.center, so
+ * the tree's own model is never written.
+ */
+function selectLeaf(event: Event, kind: "metadata" | "css") {
+  event.preventDefault();
+  if (kind === "metadata") layout.center = { kind: "metadata" };
+  else openCss();
 }
 function selectChapter(id: string) {
   layout.center = { kind: "chapter", id };
@@ -121,10 +193,6 @@ function move(index: number, direction: -1 | 1) {
     const mutation = moveChapter(book.value, index, index + direction);
     if (mutation.book !== book.value) project.applyMutation(mutation);
   }
-}
-function navigate(index: number, direction: -1 | 1) {
-  const target = book.value?.chapters[index + direction];
-  if (target) selectChapter(target.id);
 }
 function removeChapterAt(id: string) {
   if (!book.value) return;
@@ -222,65 +290,124 @@ function imageContextMenu(path: string, event: MouseEvent) {
 const emit = defineEmits<{ import: []; "image-context-menu": [path: string, event: MouseEvent] }>();
 </script>
 <template>
-  <div v-if="book" class="explorer-view">
-    <h2>{{ t("explorer.title", "Explorer") }}</h2>
-    <ExplorerSection
-      :title="t('explorer.book', 'Book')"
-      :collapsed="collapsed.book"
-      @toggle="toggle('book')"
-      ><button type="button" @click="layout.center = { kind: 'metadata' }">
-        {{ t("explorer.metadata", "Metadata") }}</button
-      ><button type="button" @click="openCss">
-        {{
-          book.customCss === null ? t("explorer.createCss", "custom.css (create)") : "custom.css"
-        }}
-      </button></ExplorerSection
+  <div v-if="book" class="explorer-view flex flex-col gap-1 p-2">
+    <h2 class="px-2 text-xs font-semibold uppercase text-muted-foreground">
+      {{ t("explorer.title", "Explorer") }}
+    </h2>
+    <Tree
+      v-slot="{ flattenItems }"
+      v-model:expanded="expanded"
+      :items="nodes"
+      :get-key="nodeKey"
+      :get-children="nodeChildren"
+      :model-value="selectedNode"
+      :aria-label="t('explorer.title', 'Explorer')"
     >
-    <ExplorerSection
-      data-explorer-section="chapters"
-      :title="t('explorer.chapters', 'Chapters')"
-      :count="book.chapters.length"
-      :collapsed="collapsed.chapters"
-      @toggle="toggle('chapters')"
-      ><template #action
-        ><button type="button" data-chapter-add @click.stop="add()">+</button></template
-      ><ChapterItem
-        v-for="(chapter, index) in book.chapters"
-        :key="chapter.id"
-        :chapter="chapter"
-        :index="index"
-        :active="layout.center.kind === 'chapter' && layout.center.id === chapter.id"
-        :warning-count="warningCounts.get(chapter.id) ?? 0"
-        :fallback-title="
-          t('chapters.fallback', 'Chapter {number}').replace('{number}', String(index + 1))
-        "
-        @select="selectChapter(chapter.id)"
-        @move="move(index, $event)"
-        @navigate="navigate(index, $event)"
-        @remove="removeChapterAt(chapter.id)"
-        @context-action="selectContextAction($event, { kind: 'chapter', id: chapter.id })"
-        @new-after="add(index + 1)"
-        @drag-start="startDrag(index)"
-        @drop="dropChapter(index)"
-    /></ExplorerSection>
-    <ExplorerSection
-      :title="t('explorer.images', 'Images')"
-      :count="book.resources.size"
-      :collapsed="collapsed.images"
-      @toggle="toggle('images')"
-      ><template #action
-        ><button type="button" @click.stop="requestImport">+</button
-        ><button type="button" @click.stop="requestDelete({ kind: 'unused' })">×</button></template
-      ><ImageItem
-        v-for="path in [...book.resources.keys()]"
-        :key="path"
-        :path="path"
-        :cover="book.metadata.cover === path"
-        :unused="!usedImages.has(path)"
-        @select="layout.center = { kind: 'image', path }"
-        @contextmenu="imageContextMenu(path, $event)"
-        @context-action="selectContextAction($event, { kind: 'image', id: path })"
-    /></ExplorerSection>
+      <template v-for="item in flattenItems" :key="item._id">
+        <TreeItem
+          v-if="item.value.kind === 'section'"
+          v-slot="{ isExpanded }"
+          v-bind="item.bind"
+          :aria-labelledby="`${labelPrefix}-${item.value.section}`"
+          :data-explorer-section="item.value.section"
+          class="font-medium"
+          @select="$event.preventDefault()"
+        >
+          <IconChevronRight
+            class="size-3.5 shrink-0 transition-transform"
+            :class="{ 'rotate-90': isExpanded }"
+            aria-hidden="true"
+          />
+          <span :id="`${labelPrefix}-${item.value.section}`" class="min-w-0 flex-1 truncate">{{
+            sectionTitle(item.value.section)
+          }}</span>
+          <small
+            v-if="sectionCount(item.value.section) !== undefined"
+            class="text-muted-foreground"
+            >{{ sectionCount(item.value.section) }}</small
+          >
+          <span
+            v-if="item.value.section === 'chapters'"
+            class="flex shrink-0 text-muted-foreground"
+          >
+            <button
+              type="button"
+              class="rounded-sm p-0.5 hover:bg-background"
+              data-chapter-add
+              :aria-label="t('explorer.newChapter', 'New chapter')"
+              @click.stop="add()"
+            >
+              <IconPlus class="size-3.5" aria-hidden="true" />
+            </button>
+          </span>
+          <span
+            v-else-if="item.value.section === 'images'"
+            class="flex shrink-0 text-muted-foreground"
+          >
+            <button
+              type="button"
+              class="rounded-sm p-0.5 hover:bg-background"
+              :aria-label="t('files.importImage', 'Import image')"
+              @click.stop="requestImport"
+            >
+              <IconPlus class="size-3.5" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              class="rounded-sm p-0.5 hover:bg-background"
+              :aria-label="t('delete.unusedTitle', 'Delete unused images')"
+              @click.stop="requestDelete({ kind: 'unused' })"
+            >
+              <IconX class="size-3.5" aria-hidden="true" />
+            </button>
+          </span>
+        </TreeItem>
+        <TreeItem
+          v-else-if="item.value.kind === 'metadata' || item.value.kind === 'css'"
+          v-bind="item.bind"
+          @select="selectLeaf($event, item.value.kind)"
+        >
+          <span v-if="item.value.kind === 'metadata'" class="truncate">{{
+            t("explorer.metadata", "Metadata")
+          }}</span>
+          <span v-else class="truncate">{{
+            book.customCss === null ? t("explorer.createCss", "custom.css (create)") : "custom.css"
+          }}</span>
+        </TreeItem>
+        <ChapterItem
+          v-else-if="item.value.kind === 'chapter'"
+          :bind="item.bind"
+          :chapter="item.value.chapter"
+          :index="item.value.index"
+          :warning-count="warningCounts.get(item.value.chapter.id) ?? 0"
+          :fallback-title="
+            t('chapters.fallback', 'Chapter {number}').replace(
+              '{number}',
+              String(item.value.index + 1),
+            )
+          "
+          @select="selectChapter(item.value.chapter.id)"
+          @move="move(item.value.index, $event)"
+          @remove="removeChapterAt(item.value.chapter.id)"
+          @context-action="
+            selectContextAction($event, { kind: 'chapter', id: item.value.chapter.id })
+          "
+          @new-after="add(item.value.index + 1)"
+          @drag-start="startDrag(item.value.index)"
+          @drop="dropChapter(item.value.index)"
+        />
+        <ImageItem
+          v-else-if="item.value.kind === 'image'"
+          :bind="item.bind"
+          :path="item.value.path"
+          :cover="book.metadata.cover === item.value.path"
+          :unused="!usedImages.has(item.value.path)"
+          @select="layout.center = { kind: 'image', path: item.value.path }"
+          @contextmenu="imageContextMenu(item.value.path, $event)"
+          @context-action="selectContextAction($event, { kind: 'image', id: item.value.path })"
+        />
+      </template>
+    </Tree>
     <ConfirmDialog
       :open="pendingDelete !== null"
       :title="deleteTitle"

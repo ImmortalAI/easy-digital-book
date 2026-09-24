@@ -1,10 +1,25 @@
+import { defineComponent, h } from "vue";
 import { mount } from "@vue/test-utils";
 import { cleanup, render, screen } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import ChapterItem from "@/components/sidebar/ChapterItem.vue";
+import { Tree } from "@/components/ui/tree";
 
 const chapter = { id: "chapter1", source: "# Chapter" };
+const node = { id: "chapter:chapter1" };
+
+/** ChapterItem renders a TreeItem, which only works inside a Tree. */
+function inTree(props: { index: number; onRemove?: () => void }) {
+  return defineComponent({
+    setup: () => () =>
+      h(
+        Tree,
+        { items: [node], getKey: (item: Record<string, unknown>) => String(item.id) },
+        { default: () => h(ChapterItem, { bind: { value: node, level: 1 }, chapter, ...props }) },
+      ),
+  });
+}
 
 describe("ChapterItem", () => {
   // ContextMenuContent teleports to document.body and this file renders the
@@ -12,33 +27,40 @@ describe("ChapterItem", () => {
   // match a leftover menu from a previous test.
   afterEach(() => cleanup());
 
-  it("emits navigation and action events for keyboard and HTML5 DnD", async () => {
-    const wrapper = mount(ChapterItem, { props: { chapter, index: 1, active: true } });
-    const select = wrapper.get(".explorer-chapter__select");
-    await select.trigger("keydown", { key: "ArrowUp" });
-    await select.trigger("keydown", { key: "ArrowDown" });
-    await select.trigger("keydown", { key: "Enter" });
-    await select.trigger("keydown", { key: "ArrowUp", altKey: true });
-    // ChapterItem's root is now the ContextMenu wrapper (multiple root nodes),
-    // so drag events must target the row itself rather than the component root.
-    const row = wrapper.get(".explorer-chapter");
+  it("emits select, reorder and HTML5 DnD events from its tree row", async () => {
+    const wrapper = mount(inTree({ index: 1 }));
+    const item = wrapper.findComponent(ChapterItem);
+    const row = wrapper.get('[role="treeitem"]');
+    await row.trigger("keydown", { key: "Enter" });
+    await row.trigger("keydown", { key: "ArrowUp", altKey: true });
+    await row.trigger("keydown", { key: "ArrowDown", altKey: true });
     await row.trigger("dragstart", { dataTransfer: new DataTransfer() });
     await row.trigger("dragover", { dataTransfer: new DataTransfer() });
     await row.trigger("drop", { dataTransfer: new DataTransfer() });
-    expect(wrapper.emitted("move")?.map(([direction]) => direction)).toEqual([-1]);
-    expect(wrapper.emitted("navigate")?.map(([direction]) => direction)).toEqual([-1, 1]);
-    expect(wrapper.emitted("select")).toHaveLength(1);
-    expect(wrapper.emitted("drag-start")).toHaveLength(1);
-    expect(wrapper.emitted("drop")).toHaveLength(1);
+    expect(item.emitted("select")).toHaveLength(1);
+    expect(item.emitted("move")?.map(([direction]) => direction)).toEqual([-1, 1]);
+    expect(item.emitted("drag-start")).toHaveLength(1);
+    expect(item.emitted("drop")).toHaveLength(1);
+    // Selection belongs to the explorer (layout.center), so the tree's own
+    // model must not pick the row up on its own.
+    expect(row.attributes("aria-selected")).toBe("false");
+  });
+
+  it("names the row by its number and title, not its action buttons", () => {
+    render(inTree({ index: 0 }));
+    expect(screen.getByRole("treeitem")).toHaveAccessibleName("1. Chapter");
+    expect(screen.getByRole("button", { name: /new chapter after/i })).toBeVisible();
+    expect(screen.getByRole("button", { name: /^delete$/i })).toBeVisible();
   });
 
   it("opens its own menu on a right click without firing an unrelated action", async () => {
-    const { emitted } = render(ChapterItem, { props: { chapter, index: 0, active: false } });
+    const onRemove = vi.fn<() => void>();
+    render(inTree({ index: 0, onRemove }));
     await userEvent.pointer({
       keys: "[MouseRight]",
       target: screen.getByText("Chapter"),
     });
     expect(await screen.findByRole("menuitem", { name: /delete/i })).toBeVisible();
-    expect(emitted().remove).toBeUndefined();
+    expect(onRemove).not.toHaveBeenCalled();
   });
 });

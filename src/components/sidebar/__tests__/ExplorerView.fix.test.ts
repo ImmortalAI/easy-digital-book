@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from "pinia";
-import { DOMWrapper, mount } from "@vue/test-utils";
+import { DOMWrapper, mount, type VueWrapper } from "@vue/test-utils";
 import { screen } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -23,6 +23,13 @@ function confirmDialog(): DOMWrapper<HTMLElement> {
   return new DOMWrapper(el);
 }
 
+/** The explorer's tree row whose text contains `text`. */
+function treeItem(wrapper: VueWrapper, text: string): DOMWrapper<Element> {
+  const item = wrapper.findAll('[role="treeitem"]').find((row) => row.text().includes(text));
+  if (!item) throw new Error(`Expected a tree item containing “${text}”`);
+  return item;
+}
+
 describe("ExplorerView destructive actions", () => {
   beforeEach(() => setActivePinia(createPinia()));
 
@@ -39,11 +46,11 @@ describe("ExplorerView destructive actions", () => {
     useSettingsStore().confirmDelete = false;
     const wrapper = mount(ExplorerView);
 
-    await wrapper.get(".explorer-image").trigger("contextmenu");
+    await treeItem(wrapper, "cover.png").trigger("contextmenu");
     await userEvent.click(await screen.findByRole("menuitem", { name: /make cover/i }));
     expect(project.book?.metadata.cover).toBe("images/cover.png");
 
-    await wrapper.get(".explorer-image").trigger("contextmenu");
+    await treeItem(wrapper, "cover.png").trigger("contextmenu");
     await userEvent.click(await screen.findByRole("menuitem", { name: /^delete$/i }));
     expect(project.book?.resources.has("images/cover.png")).toBe(false);
     expect(project.book?.metadata.cover).toBeNull();
@@ -69,8 +76,7 @@ describe("ExplorerView destructive actions", () => {
     project.setBook(book);
     const wrapper = mount(ExplorerView);
 
-    const imagesSection = wrapper.findAll(".explorer-section")[2]!;
-    await imagesSection.findAll(".explorer-section__action button")[1]!.trigger("click");
+    await wrapper.get('button[aria-label="Delete unused images"]').trigger("click");
 
     expect(wrapper.findComponent({ name: "ConfirmDialog" }).exists()).toBe(true);
     const dialog = confirmDialog();
@@ -103,7 +109,7 @@ describe("ExplorerView destructive actions", () => {
     registerChapterEditorView("chapter1", view);
 
     const wrapper = mount(ExplorerView);
-    await wrapper.get(".explorer-image").trigger("contextmenu");
+    await treeItem(wrapper, "pic.png").trigger("contextmenu");
     await userEvent.click(await screen.findByRole("menuitem", { name: /insert in text/i }));
 
     expect(project.book?.chapters[0]?.source).toContain("![](images/pic.png)");
@@ -133,7 +139,7 @@ describe("ExplorerView destructive actions", () => {
     project.setBook(book);
     const wrapper = mount(ExplorerView);
 
-    await wrapper.get(".explorer-image").trigger("contextmenu");
+    await treeItem(wrapper, "used.png").trigger("contextmenu");
     await userEvent.click(await screen.findByRole("menuitem", { name: /^delete$/i }));
 
     expect(wrapper.findComponent({ name: "ConfirmDialog" }).exists()).toBe(true);
@@ -158,7 +164,7 @@ describe("ExplorerView destructive actions", () => {
     project.setBook(book);
     const settings = useSettingsStore();
     const wrapper = mount(ExplorerView);
-    await wrapper.findAll(".explorer-chapter__actions button")[1]!.trigger("click");
+    await treeItem(wrapper, "Two").get('button[aria-label="Delete"]').trigger("click");
     expect(wrapper.findComponent({ name: "ConfirmDialog" }).exists()).toBe(true);
     const dialog = confirmDialog();
     await dialog.get('[role="checkbox"]').trigger("click");
