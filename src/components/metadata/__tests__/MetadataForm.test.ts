@@ -1,6 +1,7 @@
 import { createPinia, setActivePinia } from "pinia";
 import { mount } from "@vue/test-utils";
 import { cleanup, render, screen } from "@testing-library/vue";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createBook } from "@/services/book/create";
 import { useProjectStore } from "@/stores/project";
@@ -90,5 +91,34 @@ describe("MetadataForm language field", () => {
     // wraps LanguageCombobox in a second <label>Language…</label>.
     expect(screen.getAllByText("Language")).toHaveLength(1);
     expect(screen.getByRole("combobox", { name: "Language" })).toBeInTheDocument();
+  });
+});
+
+describe("MetadataForm field labelling", () => {
+  let pinia: ReturnType<typeof createPinia>;
+
+  beforeEach(() => {
+    pinia = createPinia();
+    setActivePinia(pinia);
+    const project = useProjectStore();
+    const book = createBook({
+      locale: "en",
+      now: new Date("2026-01-01"),
+      newUuid: () => "550e8400-e29b-41d4-a716-446655440000",
+      newChapterId: () => "chapter1",
+    });
+    // A series-less book keeps the volume spinbutton disabled, and at least
+    // one author is needed for a "move up" button to exist at all.
+    book.metadata.authors = ["Ann"];
+    project.setBook(book);
+  });
+  afterEach(cleanup);
+
+  it("labels every field and names the contributor controls", async () => {
+    render(MetadataForm, { global: { plugins: [pinia] } });
+    await userEvent.type(screen.getByRole("textbox", { name: /^title$/i }), "!");
+    expect(useProjectStore().book!.metadata.title).toContain("!");
+    expect(screen.getByRole("spinbutton", { name: /volume/i })).toBeDisabled();
+    expect(screen.getAllByRole("button", { name: /move author up/i })[0]).toBeDisabled();
   });
 });

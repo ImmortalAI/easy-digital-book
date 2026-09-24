@@ -31,7 +31,7 @@ describe("CoverPicker", () => {
     const file = new File([new Uint8Array([1, 2])], "cover.png", { type: "image/png" });
     const dataTransfer = new DataTransfer();
     dataTransfer.items.add(file);
-    await wrapper.get(".cover-picker__drop").trigger("drop", { dataTransfer });
+    await wrapper.get('[data-slot="empty"]').trigger("drop", { dataTransfer });
     expect(pick).toHaveBeenCalledOnce();
     expect(onDropFile).toHaveBeenCalledWith(
       expect.objectContaining({ name: "cover.png" }),
@@ -52,7 +52,7 @@ describe("CoverPicker", () => {
     const event = new Event("drop", { bubbles: true, cancelable: true });
     Object.defineProperty(event, "dataTransfer", { value: { files: [file] } });
 
-    wrapper.get(".cover-picker__drop").element.dispatchEvent(event);
+    wrapper.get('[data-slot="empty"]').element.dispatchEvent(event);
     useProjectStore().setBook(makeBook());
     resolve(new Uint8Array([1, 2]).buffer);
     await Promise.resolve();

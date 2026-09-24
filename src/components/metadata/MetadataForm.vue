@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from "vue";
 import { useProjectStore } from "@/stores/project";
-import { normalizeSeriesIndex, updateMetadata, setCover } from "@/services/book/metadata";
+import { updateMetadata, setCover } from "@/services/book/metadata";
 import { validateLanguage } from "@/composables/use-image-import";
 import ContributorsList from "./ContributorsList.vue";
 import LanguageCombobox from "./LanguageCombobox.vue";
 import CoverPicker from "./CoverPicker.vue";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
+import { Field, FieldSet, FieldLegend } from "@/components/ui/field";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { NumberField, NumberFieldInput } from "@/components/ui/number-field";
+import { Separator } from "@/components/ui/separator";
 import type { ImageFile, ImageImportIdentity } from "@/composables/use-image-import";
 import type { Resource } from "@/types/book";
 
@@ -23,7 +29,7 @@ function patch(value: Record<string, unknown>) {
 }
 function updateLanguage(value: string) {
   const result = validateLanguage(value);
-  languageError.value = result.valid ? "" : "Invalid language tag";
+  languageError.value = result.valid ? "" : t("metadata.invalidLanguage", "Invalid language tag");
   if (result.valid) patch({ language: result.canonical });
 }
 function updatePeople(field: "authors" | "translators", value: string[]) {
@@ -32,10 +38,9 @@ function updatePeople(field: "authors" | "translators", value: string[]) {
 function updateSeriesName(value: string) {
   patch({ series: value ? { name: value, index: book.value?.metadata.series?.index ?? 1 } : null });
 }
-function updateSeriesIndex(value: string) {
-  const index = normalizeSeriesIndex(value);
-  if (book.value?.metadata.series && index !== null)
-    patch({ series: { ...book.value.metadata.series, index } });
+function updateSeriesIndex(value: number | undefined) {
+  if (book.value?.metadata.series && typeof value === "number" && Number.isFinite(value))
+    patch({ series: { ...book.value.metadata.series, index: value } });
 }
 function removeCover() {
   if (project.book) project.applyMutation(setCover(project.book, null));
@@ -73,56 +78,78 @@ const coverPreview = computed(() => {
 onBeforeUnmount(releaseCover);
 </script>
 <template>
-  <form v-if="book" class="metadata-form" @submit.prevent>
-    <h2>{{ t("metadata.title", "Metadata") }}</h2>
-    <label
-      >{{ t("metadata.bookTitle", "Title")
-      }}<input
-        :value="book.metadata.title"
-        @input="patch({ title: ($event.target as HTMLInputElement).value })"
-    /></label>
-    <label
-      >{{ t("metadata.version", "Version")
-      }}<input
-        :value="book.metadata.version ?? ''"
+  <form v-if="book" class="flex flex-col gap-6" @submit.prevent>
+    <h2 class="text-base font-semibold">{{ t("metadata.title", "Metadata") }}</h2>
+
+    <Field>
+      <Label for="metadata-title">{{ t("metadata.bookTitle", "Title") }}</Label>
+      <Input
+        id="metadata-title"
+        :model-value="book.metadata.title"
+        @update:model-value="(value) => patch({ title: String(value) })"
+      />
+    </Field>
+
+    <Field>
+      <Label for="metadata-version">{{ t("metadata.version", "Version") }}</Label>
+      <Input
+        id="metadata-version"
+        :model-value="book.metadata.version ?? ''"
         :placeholder="t('metadata.versionHint', 'e.g. ch. 1–150')"
-        @input="patch({ version: ($event.target as HTMLInputElement).value || null })"
-    /></label>
+        @update:model-value="(value) => patch({ version: String(value) || null })"
+      />
+    </Field>
+
     <LanguageCombobox
       :model-value="book.metadata.language"
       :error="languageError"
       @update:model-value="updateLanguage"
     />
+
     <ContributorsList
       :model-value="book.metadata.authors"
-      :label="t('metadata.authors', 'Authors')"
+      :label="t('metadata.authors', 'Author')"
       @update:model-value="updatePeople('authors', $event)"
     />
     <ContributorsList
       :model-value="book.metadata.translators"
-      :label="t('metadata.translators', 'Translators')"
+      :label="t('metadata.translators', 'Translator')"
       @update:model-value="updatePeople('translators', $event)"
     />
-    <fieldset>
-      <legend>{{ t("metadata.series", "Series") }}</legend>
-      <input
-        :value="book.metadata.series?.name ?? ''"
-        @input="updateSeriesName(($event.target as HTMLInputElement).value)"
-      /><input
-        type="number"
-        step="any"
-        :value="book.metadata.series?.index ?? 1"
-        :disabled="!book.metadata.series"
-        @input="updateSeriesIndex(($event.target as HTMLInputElement).value)"
+
+    <FieldSet>
+      <FieldLegend>{{ t("metadata.series", "Series") }}</FieldLegend>
+      <Field>
+        <Label for="metadata-series-name">{{ t("metadata.seriesName", "Series name") }}</Label>
+        <Input
+          id="metadata-series-name"
+          :model-value="book.metadata.series?.name ?? ''"
+          @update:model-value="(value) => updateSeriesName(String(value))"
+        />
+      </Field>
+      <Field>
+        <Label for="metadata-series-index">{{ t("metadata.seriesIndex", "Volume") }}</Label>
+        <NumberField
+          id="metadata-series-index"
+          :model-value="book.metadata.series?.index ?? 1"
+          :disabled="!book.metadata.series"
+          :format-options="{ maximumFractionDigits: 2 }"
+          @update:model-value="updateSeriesIndex"
+        >
+          <NumberFieldInput />
+        </NumberField>
+      </Field>
+    </FieldSet>
+
+    <Field>
+      <Label for="metadata-description">{{ t("metadata.description", "Description") }}</Label>
+      <Textarea
+        id="metadata-description"
+        :model-value="book.metadata.description ?? ''"
+        @update:model-value="(value) => patch({ description: String(value) || null })"
       />
-    </fieldset>
-    <label
-      >{{ t("metadata.description", "Description")
-      }}<textarea
-        :value="book.metadata.description ?? ''"
-        @input="patch({ description: ($event.target as HTMLTextAreaElement).value || null })"
-      />
-    </label>
+    </Field>
+
     <CoverPicker
       :cover="book.metadata.cover"
       :preview="coverPreview"
@@ -130,12 +157,15 @@ onBeforeUnmount(releaseCover);
       :on-drop-file="props.onImportCover"
       @remove="removeCover"
     />
-    <dl class="metadata-readonly">
-      <dt>UUID</dt>
+
+    <Separator />
+
+    <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm text-muted-foreground">
+      <dt class="font-medium text-foreground">UUID</dt>
       <dd>{{ book.metadata.id }}</dd>
-      <dt>{{ t("metadata.created", "Created") }}</dt>
+      <dt class="font-medium text-foreground">{{ t("metadata.created", "Created") }}</dt>
       <dd>{{ book.metadata.created }}</dd>
-      <dt>{{ t("metadata.modified", "Modified") }}</dt>
+      <dt class="font-medium text-foreground">{{ t("metadata.modified", "Modified") }}</dt>
       <dd>{{ book.metadata.modified }}</dd>
     </dl>
   </form>

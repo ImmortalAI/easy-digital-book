@@ -7,6 +7,10 @@ import {
   type ImageImportIdentity,
 } from "@/composables/use-image-import";
 import { useProjectStore } from "@/stores/project";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Empty, EmptyDescription } from "@/components/ui/empty";
 const { t } = useSafeI18n();
 const project = useProjectStore();
 const props = defineProps<{
@@ -41,16 +45,30 @@ async function drop(event: DragEvent) {
 }
 </script>
 <template>
-  <div class="cover-picker">
-    <img v-if="preview" :src="preview" :alt="cover ?? 'Cover'" class="cover-picker__thumbnail" />
-    <div v-if="cover" class="cover-picker__path">{{ cover }}</div>
-    <small>{{ t("metadata.coverHint", "Recommended 1600×2560") }}</small>
-    <button type="button" @click="choose">{{ t("metadata.choose", "Choose…") }}</button>
-    <div class="cover-picker__drop" @dragover.prevent @drop="drop">
-      {{ t("metadata.drop", "Drop an image here") }}
-    </div>
-    <button v-if="cover" type="button" @click="emit('remove')">
-      {{ t("metadata.remove", "Remove") }}
-    </button>
-  </div>
+  <Card>
+    <CardContent class="flex flex-col gap-3">
+      <AspectRatio
+        v-if="preview"
+        :ratio="1600 / 2560"
+        class="w-32 overflow-hidden rounded-lg bg-muted"
+      >
+        <img :src="preview" :alt="cover ?? ''" class="h-full w-full object-cover" />
+      </AspectRatio>
+      <div v-if="cover" class="break-all text-sm text-muted-foreground">{{ cover }}</div>
+      <p class="text-xs text-muted-foreground">
+        {{ t("metadata.coverHint", "Recommended 1600×2560") }}
+      </p>
+      <div class="flex items-center gap-2">
+        <Button type="button" variant="outline" size="sm" @click="choose">
+          {{ t("metadata.choose", "Choose…") }}
+        </Button>
+        <Button v-if="cover" type="button" variant="ghost" size="sm" @click="emit('remove')">
+          {{ t("metadata.remove", "Remove") }}
+        </Button>
+      </div>
+      <Empty @dragover.prevent @drop="drop">
+        <EmptyDescription>{{ t("metadata.drop", "Drop an image here") }}</EmptyDescription>
+      </Empty>
+    </CardContent>
+  </Card>
 </template>
