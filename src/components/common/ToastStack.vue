@@ -26,5 +26,10 @@ function viewportLabel(hotkey: string) {
     @close="notifications.remove(notification.id)"
     @undo="notification.undo?.()"
   />
-  <ToastViewport :label="viewportLabel" />
+  <!-- One bottom-right column: the toasts, then whatever App parks in the same
+       corner (the update notice), so the two never overlap. -->
+  <div class="fixed right-4 bottom-4 z-50 flex flex-col items-end gap-2">
+    <ToastViewport :label="viewportLabel" class="static" />
+    <slot />
+  </div>
 </template>

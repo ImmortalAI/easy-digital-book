@@ -55,4 +55,26 @@ describe("ToastStack", () => {
     expect(undo).toHaveBeenCalledOnce();
     expect(notifications.items).toHaveLength(0);
   });
+
+  it("stacks what it is given below the toasts instead of overlapping them", async () => {
+    const notifications = useNotificationsStore();
+    render(
+      defineComponent({
+        setup: () => () =>
+          h(ToastProvider, null, {
+            default: () =>
+              h(ToastStack, null, { default: () => h("p", "A new version is available") }),
+          }),
+      }),
+    );
+    notifications.add({ message: "Chapter deleted" });
+    await nextTick();
+    await nextTick();
+
+    const region = screen.getByRole("region", { name: /notifications/i });
+    const notice = screen.getByText("A new version is available");
+    expect(region.parentElement).toBe(notice.parentElement);
+    expect(region.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(region).toHaveTextContent("Chapter deleted");
+  });
 });

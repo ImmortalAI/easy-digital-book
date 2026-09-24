@@ -38,22 +38,33 @@ onMounted(() => {
   if (!open.value) emit("close");
 });
 
-// Reka listens for Escape on the whole window; only close when the key was
-// pressed inside the notifications, not while a dialog or the editor has focus.
-function keepEscapeOutside(event: KeyboardEvent) {
+// Reka listens for Escape on the whole window, and every other layer (dialogs,
+// menus) shares that keydown, so the event itself must stay untouched: a
+// preventDefault here would stop the dialog from closing. Instead the toast's
+// `open` is controlled, and a close that Escape caused outside the
+// notifications is ignored. Reka closes synchronously right after emitting
+// escapeKeyDown, so the flag never outlives the keystroke.
+let escapedOutside = false;
+function noteEscape(event: KeyboardEvent) {
   const target = event.target instanceof Node ? event.target : null;
-  if (!provider.viewport.value?.contains(target)) event.preventDefault();
+  escapedOutside = !provider.viewport.value?.contains(target);
+}
+function updateOpen(value: boolean) {
+  const ignore = !value && escapedOutside;
+  escapedOutside = false;
+  if (!ignore) open.value = value;
 }
 </script>
 
 <template>
   <Toast
-    v-model:open="open"
+    :open="open"
     :duration="notification.duration ?? 8000"
     class="undo-toast flex items-center gap-2 overflow-hidden pr-2"
     @pause="paused = true"
     @resume="paused = false"
-    @escape-key-down="keepEscapeOutside"
+    @update:open="updateOpen"
+    @escape-key-down="noteEscape"
   >
     <ToastDescription class="min-w-0 flex-1">{{ notification.message }}</ToastDescription>
     <ToastAction v-if="notification.undo" as-child :alt-text="t('common.undo', 'Undo')">

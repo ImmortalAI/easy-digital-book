@@ -59,20 +59,17 @@ function chooseUnsaved(value: "save" | "discard" | "cancel") {
       :action="files.prompt.pending.value"
       @decision="chooseUnsaved"
     />
-    <ToastStack />
-    <Alert
-      v-if="availableUpdate"
-      role="status"
-      class="fixed right-4 bottom-4 z-5 w-auto max-w-sm shadow-lg"
-    >
-      <IconDownload aria-hidden="true" />
-      <AlertTitle>{{ t("settings.updateAvailable", "A new version is available") }}</AlertTitle>
-      <AlertAction>
-        <Button size="xs" @click="files.settingsActions.openUpdate(availableUpdate!.url)">
-          {{ t("settings.openUpdate", "Open release") }}
-        </Button>
-      </AlertAction>
-    </Alert>
+    <ToastStack>
+      <Alert v-if="availableUpdate" role="status" class="w-auto max-w-sm shadow-lg">
+        <IconDownload aria-hidden="true" />
+        <AlertTitle>{{ t("settings.updateAvailable", "A new version is available") }}</AlertTitle>
+        <AlertAction>
+          <Button size="xs" @click="files.settingsActions.openUpdate(availableUpdate!.url)">
+            {{ t("settings.openUpdate", "Open release") }}
+          </Button>
+        </AlertAction>
+      </Alert>
+    </ToastStack>
     <ErrorDetailsDialog
       v-if="unexpectedError"
       :report="unexpectedError"

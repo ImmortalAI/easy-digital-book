@@ -1,9 +1,10 @@
-import { defineComponent, h, nextTick } from "vue";
-import { cleanup, render as renderComponent, screen } from "@testing-library/vue";
+import { defineComponent, h, nextTick, ref } from "vue";
+import { cleanup, render as renderComponent, screen, waitFor } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import UndoToast from "@/components/common/UndoToast.vue";
 import { ToastProvider, ToastViewport } from "@/components/ui/toast";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { Notification } from "@/stores/notifications";
 
 const notification: Notification = { id: 1, message: "Removed", undo: () => {}, undoEnabled: true };
@@ -88,5 +89,68 @@ describe("UndoToast", () => {
   it("hands the notification's lifetime to the progress bar", async () => {
     await render(UndoToast, { props: { notification: { ...notification, duration: 3000 } } });
     expect(screen.getByTestId("undo-progress")).toHaveStyle({ animationDuration: "3000ms" });
+  });
+
+  describe("Escape", () => {
+    const dialogOpen = ref(false);
+    /** A toast that is already showing, then a dialog opened on top of it. */
+    const WithDialog = defineComponent({
+      emits: ["close"],
+      setup:
+        (_props, { emit }) =>
+        () =>
+          h(ToastProvider, null, {
+            default: () => [
+              h(ToastViewport),
+              h(UndoToast, { notification, onClose: () => emit("close") }),
+              h(
+                Dialog,
+                {
+                  open: dialogOpen.value,
+                  "onUpdate:open": (value: boolean) => (dialogOpen.value = value),
+                },
+                {
+                  default: () =>
+                    h(DialogContent, null, {
+                      default: () => [
+                        h(DialogTitle, null, { default: () => "Delete chapter?" }),
+                        h(DialogDescription, null, { default: () => "It can be undone." }),
+                      ],
+                    }),
+                },
+              ),
+            ],
+          }),
+    });
+
+    afterEach(() => {
+      dialogOpen.value = false;
+    });
+
+    it("still closes a dialog opened while a toast is visible, and leaves the toast", async () => {
+      const { emitted } = renderComponent(WithDialog);
+      await nextTick();
+      dialogOpen.value = true;
+      await waitFor(() =>
+        expect(screen.getByRole("dialog")).toContainElement(document.activeElement as HTMLElement),
+      );
+
+      await userEvent.keyboard("{Escape}");
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      expect(screen.getByTestId("undo-progress")).toBeInTheDocument();
+      expect(emitted().close).toBeUndefined();
+    });
+
+    it("closes the toast when Escape is pressed inside the notifications", async () => {
+      const { emitted } = renderComponent(WithDialog);
+      await nextTick();
+      screen.getByRole("button", { name: /close/i }).focus();
+
+      await userEvent.keyboard("{Escape}");
+
+      await waitFor(() => expect(emitted().close).toHaveLength(1));
+      expect(screen.queryByTestId("undo-progress")).not.toBeInTheDocument();
+    });
   });
 });
