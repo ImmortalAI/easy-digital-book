@@ -68,6 +68,7 @@
     "version": "Version",
     "versionHint": "e.g. ch. 1–150",
     "language": "Language",
+    "languageNoMatches": "No matching suggestions",
     "authors": "Authors",
     "translators": "Translators",
     "series": "Series",

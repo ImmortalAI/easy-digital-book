@@ -68,6 +68,7 @@
     "version": "Версия",
     "versionHint": "например, гл. 1–150",
     "language": "Язык",
+    "languageNoMatches": "Нет подходящих вариантов",
     "authors": "Авторы",
     "translators": "Переводчики",
     "series": "Серия",

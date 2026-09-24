@@ -1,0 +1,41 @@
+<script setup lang="ts">
+import type { AutocompleteInputEmits, AutocompleteInputProps } from "reka-ui";
+
+import type { HTMLAttributes } from "vue";
+import { IconSearch } from "@tabler/icons-vue";
+import { reactiveOmit } from "@vueuse/core";
+import { AutocompleteInput, useForwardPropsEmits } from "reka-ui";
+import { cn } from "@/lib/utils";
+import { InputGroup, InputGroupAddon } from "@/components/ui/input-group";
+
+defineOptions({
+  inheritAttrs: false,
+});
+
+const props = defineProps<
+  AutocompleteInputProps & {
+    class?: HTMLAttributes["class"];
+  }
+>();
+
+const emits = defineEmits<AutocompleteInputEmits>();
+
+const delegatedProps = reactiveOmit(props, "class");
+
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
+</script>
+
+<template>
+  <InputGroup>
+    <InputGroupAddon>
+      <IconSearch class="size-4 shrink-0 opacity-50" aria-hidden="true" />
+    </InputGroupAddon>
+    <AutocompleteInput
+      data-slot="autocomplete-input"
+      :class="
+        cn('flex-1 outline-hidden disabled:cursor-not-allowed disabled:opacity-50', props.class)
+      "
+      v-bind="{ ...$attrs, ...forwarded }"
+    />
+  </InputGroup>
+</template>

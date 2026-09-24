@@ -68,6 +68,7 @@
     "version": "版本",
     "versionHint": "例如：第 1–150 章",
     "language": "语言",
+    "languageNoMatches": "无匹配建议",
     "authors": "作者",
     "translators": "译者",
     "series": "系列",
