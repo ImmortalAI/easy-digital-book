@@ -7,6 +7,7 @@ import { reactiveOmit } from "@vueuse/core";
 import { ToggleGroupRoot, useForwardPropsEmits } from "reka-ui";
 import { provide } from "vue";
 import { cn } from "@/lib/utils";
+import { toggleGroupClasses } from ".";
 
 type ToggleGroupVariants = VariantProps<typeof toggleVariants>;
 
@@ -47,12 +48,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
       '--gap': spacing,
     }"
     v-bind="forwarded"
-    :class="
-      cn(
-        'rounded-lg data-[size=sm]:rounded-[min(var(--radius-md),10px)] group/toggle-group flex w-fit flex-row items-center gap-[--spacing(var(--gap))] data-vertical:flex-col data-vertical:items-stretch',
-        props.class,
-      )
-    "
+    :class="cn(toggleGroupClasses, props.class)"
   >
     <slot v-bind="slotProps" />
   </ToggleGroupRoot>

@@ -1,5 +1,15 @@
 <script setup lang="ts">
+import { IconFileExport } from "@tabler/icons-vue";
+import { ToolbarButton } from "reka-ui";
 import { computed } from "vue";
+import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
+import {
+  Toolbar,
+  ToolbarSeparator,
+  ToolbarToggleGroup,
+  ToolbarToggleItem,
+} from "@/components/ui/toolbar";
 import { useLayoutStore, type LayoutMode } from "@/stores/layout";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
 
@@ -13,34 +23,48 @@ const modes: Array<{ value: LayoutMode; label: string; shortcut: string }> = [
 ];
 const disabled = computed(() => !["chapter", "css"].includes(layout.center.kind));
 
-function setMode(mode: LayoutMode) {
-  if (disabled.value) return;
+function isMode(value: unknown): value is LayoutMode {
+  return modes.some((mode) => mode.value === value);
+}
+
+// A single-choice toggle group deselects its item on a second click and
+// reports an empty value. Ignore it: the controlled model keeps the current
+// mode checked, so the toolbar never ends up with no mode selected.
+function setMode(mode: unknown) {
+  if (disabled.value || !isMode(mode)) return;
   layout.mode = mode;
   void layout.persist();
 }
 </script>
 
 <template>
-  <div class="app-toolbar" role="toolbar" aria-label="Editor mode">
-    <div class="app-toolbar__modes" role="group" aria-label="Preview mode">
-      <button
+  <Toolbar aria-label="Editor mode">
+    <ToolbarToggleGroup
+      type="single"
+      variant="outline"
+      size="sm"
+      aria-label="Preview mode"
+      :model-value="layout.mode"
+      @update:model-value="setMode"
+    >
+      <ToolbarToggleItem
         v-for="item in modes"
         :key="item.value"
+        :value="item.value"
         :data-mode="item.value"
-        class="app-toolbar__mode"
-        :class="{ 'is-active': layout.mode === item.value }"
-        type="button"
         :disabled="disabled"
-        :aria-pressed="layout.mode === item.value"
-        @click="setMode(item.value)"
       >
         {{ item.label }}
-        <kbd>Mod+{{ item.shortcut }}</kbd>
-      </button>
-    </div>
-    <button class="editor-shell__export" data-export-button type="button" @click="emit('export')">
-      {{ t("export.action", "Export…") }}
-    </button>
+        <Kbd>Mod+{{ item.shortcut }}</Kbd>
+      </ToolbarToggleItem>
+    </ToolbarToggleGroup>
+    <ToolbarSeparator class="my-1" />
+    <ToolbarButton as-child>
+      <Button variant="ghost" size="sm" data-export-button @click="emit('export')">
+        <IconFileExport data-icon="inline-start" aria-hidden="true" />
+        {{ t("export.action", "Export…") }}
+      </Button>
+    </ToolbarButton>
     <slot />
-  </div>
+  </Toolbar>
 </template>
