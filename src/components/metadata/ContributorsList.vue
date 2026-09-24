@@ -19,8 +19,10 @@ const { t } = useSafeI18n();
  * trailing replace() covers that fallback path the same way EditorView does
  * for its interpolated status line.
  */
-function named(key: string, fallback: string) {
-  return t(key, fallback, { label: props.itemLabel }).replace("{label}", props.itemLabel);
+function named(key: string, fallback: string, number?: number) {
+  return t(key, fallback, { label: props.itemLabel, number })
+    .replace("{label}", props.itemLabel)
+    .replace("{number}", String(number));
 }
 
 function update(index: number, value: string) {
@@ -53,7 +55,11 @@ function add() {
       :key="`${index}-${person}`"
       class="flex items-center gap-2"
     >
-      <Input :value="person" @input="update(index, ($event.target as HTMLInputElement).value)" />
+      <Input
+        :model-value="person"
+        :aria-label="named('metadata.contributorName', '{label} {number}', index + 1)"
+        @update:model-value="update(index, String($event))"
+      />
       <Button
         type="button"
         variant="ghost"

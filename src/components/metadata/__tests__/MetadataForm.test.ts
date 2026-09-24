@@ -1,3 +1,4 @@
+import { createI18nPlugin } from "@/plugins/i18n";
 import { createPinia, setActivePinia } from "pinia";
 import { mount } from "@vue/test-utils";
 import { cleanup, render, screen } from "@testing-library/vue";
@@ -120,5 +121,16 @@ describe("MetadataForm field labelling", () => {
     expect(useProjectStore().book!.metadata.title).toContain("!");
     expect(screen.getByRole("spinbutton", { name: /volume/i })).toBeDisabled();
     expect(screen.getAllByRole("button", { name: /move author up/i })[0]).toBeDisabled();
+  });
+
+  it("names each contributor's text box by role and position", async () => {
+    render(MetadataForm, { global: { plugins: [pinia, createI18nPlugin("ru")] } });
+
+    // The box shows the stored name and writes an edit back.
+    expect(screen.getByRole("textbox", { name: "Автор 1" })).toHaveValue("Ann");
+    await userEvent.type(screen.getByRole("textbox", { name: "Автор 1" }), "e");
+    expect(useProjectStore().book!.metadata.authors).toEqual(["Anne"]);
+    await userEvent.click(screen.getByRole("button", { name: "Добавить Автор" }));
+    expect(screen.getByRole("textbox", { name: "Автор 2" })).toHaveValue("");
   });
 });

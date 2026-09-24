@@ -9,6 +9,7 @@ import {
   IconSearch,
   IconX,
 } from "@tabler/icons-vue";
+import { extractTitle } from "@/services/book/extract-title";
 import { findInBook } from "@/services/search/find";
 import { replaceMatches } from "@/services/search/replace";
 import type { SearchError, SearchQuery, SearchResult } from "@/services/search/query";
@@ -20,6 +21,7 @@ import { useShortcuts } from "@/composables/use-shortcuts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import SearchResultItem from "./SearchResultItem.vue";
@@ -81,11 +83,21 @@ const groups = computed(() => {
   return [...grouped].map(([chapterId, results]) => ({
     chapterId,
     results,
-    title:
-      project.book?.chapters.find((chapter) => chapter.id === chapterId)?.source.split("\n")[0] ??
-      chapterId,
+    title: chapterTitle(chapterId),
   }));
 });
+/** Named as the explorer names the chapter, so a blank first line still yields a title. */
+function chapterTitle(chapterId: string): string {
+  const chapters = project.book?.chapters ?? [];
+  const index = chapters.findIndex((chapter) => chapter.id === chapterId);
+  return (
+    (index >= 0 && extractTitle(chapters[index]!.source)) ||
+    t("chapters.fallback", "Chapter {number}", { number: index + 1 }).replace(
+      "{number}",
+      String(index + 1),
+    )
+  );
+}
 /**
  * What a replace acts on. Hiding is the user excluding a match; collapsing is
  * only a fold, so a collapsed group is still replaced and still counts towards
@@ -141,6 +153,8 @@ function hideResult(result: SearchResult) {
 
 <template>
   <section class="search-view flex flex-col gap-2 p-2" :aria-label="t('activity.search', 'Search')">
+    <!-- `search-view` is the hook use-shortcuts.ts looks for so that
+         Ctrl+Alt+Enter replaces all from inside this panel's inputs. -->
     <InputGroup>
       <InputGroupAddon align="inline-start">
         <IconSearch class="size-4 text-muted-foreground" aria-hidden="true" />
@@ -183,15 +197,14 @@ function hideResult(result: SearchResult) {
         </Button>
       </InputGroupAddon>
     </InputGroup>
-    <input
+    <Input
       v-model="replacement"
       v-show="replacementOpen"
       type="text"
       :aria-label="t('search.replacePlaceholder', 'Replace')"
       :placeholder="t('search.replacePlaceholder', 'Replace')"
-      class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 py-1 text-sm outline-none placeholder:text-muted-foreground"
     />
-    <p v-if="error" class="search-error text-sm text-destructive" role="alert">
+    <p v-if="error" class="text-sm text-destructive" role="alert">
       {{ t(error.error, "Invalid regular expression") }}
     </p>
     <p v-else class="text-xs text-muted-foreground">

@@ -38,6 +38,11 @@ const sourceDefault = computed(() => {
 // Only a hidden pane may collapse: in Split mode a drag stops at the minimum,
 // as it always has, instead of snapping a pane shut.
 const collapsible = computed(() => layout.mode !== "split");
+// A collapsed pane is 0 px wide but stays mounted (the preview iframe must
+// survive mode switches), so its content would still take focus: Tab could
+// reach an invisible editor and typing would edit the chapter unseen.
+const sourceInert = computed(() => layout.mode === "preview");
+const previewInert = computed(() => layout.mode === "text");
 
 // Groups also report layouts they derive on their own: on mount, when the
 // window or a pane minimum changes, on a mode switch. Those restate or clamp
@@ -151,6 +156,7 @@ function resetSplit() {
             :min-size="paneMin"
             :default-size="sourceDefault"
             class="relative min-h-0 overflow-hidden"
+            :inert="sourceInert"
             data-pane="source"
           >
             <slot name="source" />
@@ -173,6 +179,7 @@ function resetSplit() {
             :min-size="paneMin"
             :default-size="100 - sourceDefault"
             class="relative min-h-0 overflow-hidden"
+            :inert="previewInert"
             data-pane="preview"
           >
             <slot name="preview" />

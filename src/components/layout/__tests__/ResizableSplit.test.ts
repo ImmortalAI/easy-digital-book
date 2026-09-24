@@ -20,6 +20,34 @@ describe("ResizableSplit", () => {
     expect(wrapper.find('[data-pane="preview"]').attributes("data-state")).toBe("collapsed");
   });
 
+  it("makes the collapsed pane inert so Tab cannot reach its content", async () => {
+    const layout = useLayoutStore();
+    const wrapper = mount(ResizableSplit, {
+      slots: {
+        source: '<textarea aria-label="source body" />',
+        preview: '<button type="button">preview body</button>',
+      },
+    });
+    const source = () => wrapper.get('[data-pane="source"]').element as HTMLElement;
+    const preview = () => wrapper.get('[data-pane="preview"]').element as HTMLElement;
+    await nextTick();
+    expect(source().inert).toBe(false);
+    expect(preview().inert).toBe(false);
+
+    layout.mode = "preview";
+    await nextTick();
+    // A 0-width editor that still takes focus would let typing edit the chapter unseen.
+    expect(source().hasAttribute("inert")).toBe(true);
+    expect(preview().hasAttribute("inert")).toBe(false);
+
+    layout.mode = "text";
+    await nextTick();
+    expect(source().hasAttribute("inert")).toBe(false);
+    expect(preview().hasAttribute("inert")).toBe(true);
+    // Collapsed and inert, but still mounted: the preview iframe must survive.
+    expect(wrapper.find("button").exists()).toBe(true);
+  });
+
   it("keeps the split ratio as a ratio when the group reports a layout", async () => {
     const layout = useLayoutStore();
     const wrapper = mount(ResizableSplit);

@@ -21,7 +21,7 @@ function installBook() {
   project.setBook(book);
 }
 
-/** A chapter's result group, named after the chapter's first line. */
+/** A chapter's result group, named after the chapter's title as the explorer shows it. */
 function resultGroup(wrapper: VueWrapper, title: string): HTMLElement {
   return within(wrapper.element as HTMLElement).getByRole("group", { name: title });
 }
@@ -80,13 +80,13 @@ describe("SearchView review contracts", () => {
     const wrapper = mount(SearchView);
     await wrapper.get('input[type="search"]').setValue("hero");
 
-    expect(within(resultGroup(wrapper, "# First")).getByText("2")).toBeTruthy();
-    expect(within(resultGroup(wrapper, "# Second")).getByText("1")).toBeTruthy();
-    await click(collapseTrigger(wrapper, "# First"));
+    expect(within(resultGroup(wrapper, "First")).getByText("2")).toBeTruthy();
+    expect(within(resultGroup(wrapper, "Second")).getByText("1")).toBeTruthy();
+    await click(collapseTrigger(wrapper, "First"));
     expect(
-      within(resultGroup(wrapper, "# First")).queryAllByRole("button", { name: "Replace" }),
+      within(resultGroup(wrapper, "First")).queryAllByRole("button", { name: "Replace" }),
     ).toHaveLength(0);
-    await click(within(resultGroup(wrapper, "# Second")).getByRole("button", { name: /hero/ }));
+    await click(within(resultGroup(wrapper, "Second")).getByRole("button", { name: /hero/ }));
     expect(wrapper.emitted("select")?.[0]).toEqual(["chapter2", 9, 13]);
     wrapper.unmount();
   });
@@ -95,11 +95,11 @@ describe("SearchView review contracts", () => {
     const wrapper = mount(SearchView);
     await wrapper.get('input[type="search"]').setValue("hero");
 
-    await click(hideGroupButton(wrapper, "# First"));
+    await click(hideGroupButton(wrapper, "First"));
 
     const groups = within(wrapper.element as HTMLElement);
-    expect(groups.queryByRole("group", { name: "# First" })).toBeNull();
-    expect(groups.getByRole("group", { name: "# Second" })).toBeTruthy();
+    expect(groups.queryByRole("group", { name: "First" })).toBeNull();
+    expect(groups.getByRole("group", { name: "Second" })).toBeTruthy();
     wrapper.unmount();
   });
 
@@ -110,16 +110,25 @@ describe("SearchView review contracts", () => {
     await click(button(wrapper, "Show replace"));
 
     // Hiding is the user excluding something from the operation.
-    await click(hideGroupButton(wrapper, "# Second"));
+    await click(hideGroupButton(wrapper, "Second"));
     // The first Hide is the header's; the second belongs to the first result.
-    await click(
-      within(resultGroup(wrapper, "# First")).getAllByRole("button", { name: "Hide" })[1]!,
-    );
+    await click(within(resultGroup(wrapper, "First")).getAllByRole("button", { name: "Hide" })[1]!);
     await click(button(wrapper, "Replace all"));
 
     const chapters = useProjectStore().book!.chapters;
     expect(chapters[1]!.source).toBe("# Second\nhero");
     expect(chapters[0]!.source).toBe("# First\nhero villain");
+    wrapper.unmount();
+  });
+
+  it("names a chapter with a blank first line the way the explorer does", async () => {
+    useProjectStore().book!.chapters[1]!.source = "\nhero";
+    const wrapper = mount(SearchView, { global: { plugins: [createI18nPlugin("ru")] } });
+    await wrapper.get('input[type="search"]').setValue("hero");
+
+    // An empty first line used to leave both the group and its header nameless.
+    expect(resultGroup(wrapper, "Глава 2")).toBeTruthy();
+    expect(collapseTrigger(wrapper, "Глава 2")).toBeTruthy();
     wrapper.unmount();
   });
 
@@ -129,7 +138,7 @@ describe("SearchView review contracts", () => {
     await wrapper.get('input[placeholder="Replace"]').setValue("villain");
     await click(button(wrapper, "Show replace"));
 
-    for (const title of ["# First", "# Second"]) await click(collapseTrigger(wrapper, title));
+    for (const title of ["First", "Second"]) await click(collapseTrigger(wrapper, title));
 
     // Collapsing is a fold, not an exclusion.
     expect(button(wrapper, "Replace all")).toBeEnabled();
@@ -144,12 +153,13 @@ describe("SearchView review contracts", () => {
     await wrapper.get('input[placeholder="Replace"]').setValue("villain");
     await click(button(wrapper, "Show replace"));
     expect(within(wrapper.element as HTMLElement).getAllByText("villain")).toHaveLength(3);
-    await click(replaceChapterButton(wrapper, "# First"));
+    await click(replaceChapterButton(wrapper, "First"));
     expect(useProjectStore().book?.chapters[0]?.source).toContain("villain villain");
     window.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Enter", altKey: true, ctrlKey: true }),
     );
     await wrapper.vm.$nextTick();
     expect(useProjectStore().book?.chapters[1]?.source).toBe("# Second\nvillain");
+    wrapper.unmount();
   });
 });

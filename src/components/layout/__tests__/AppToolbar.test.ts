@@ -72,6 +72,16 @@ describe("AppToolbar", () => {
     expect(screen.getByLabelText("预览模式")).toBeInTheDocument();
   });
 
+  it("relabels the modes when the interface language changes live", async () => {
+    const i18n = createI18nPlugin("en");
+    render(AppToolbar, { global: { plugins: [pinia, i18n] } });
+    expect(screen.getByRole("radio", { name: /^Preview/ })).toBeInTheDocument();
+
+    i18n.global.locale.value = "ru";
+    await nextTick();
+    expect(screen.getByRole("radio", { name: /^Превью/ })).toBeInTheDocument();
+  });
+
   it("emits export from the export button", async () => {
     const { emitted } = render(AppToolbar, { global: { plugins: [pinia] } });
     await userEvent.click(screen.getByRole("button", { name: /export/i }));

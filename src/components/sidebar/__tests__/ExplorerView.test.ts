@@ -8,6 +8,7 @@ import { useProjectStore } from "@/stores/project";
 import { useDiagnosticsStore } from "@/stores/diagnostics";
 import { useLayoutStore } from "@/stores/layout";
 import ExplorerView from "@/components/sidebar/ExplorerView.vue";
+import { createI18nPlugin } from "@/plugins/i18n";
 
 function twoChapterBook() {
   const book = createBook({
@@ -26,6 +27,37 @@ describe("ExplorerView boundaries", () => {
   // render more than once; without cleanup the next render's query could
   // match a leftover menu from a previous test.
   afterEach(() => cleanup());
+
+  it("folds a section row from the keyboard as well as by click", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useProjectStore().setBook(twoChapterBook());
+    render(ExplorerView, { global: { plugins: [pinia] } });
+    const user = userEvent.setup();
+    const chapters = screen.getByRole("treeitem", { name: /^chapters/i });
+    expect(chapters).toHaveAttribute("aria-expanded", "true");
+
+    chapters.focus();
+    await user.keyboard("{Enter}");
+    expect(chapters).toHaveAttribute("aria-expanded", "false");
+    await user.keyboard(" ");
+    expect(chapters).toHaveAttribute("aria-expanded", "true");
+
+    // A click toggles once, not twice.
+    await user.click(chapters);
+    expect(chapters).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("names an untitled chapter with the localised fallback and its number", () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const book = twoChapterBook();
+    book.chapters[1]!.source = "no heading";
+    useProjectStore().setBook(book);
+    render(ExplorerView, { global: { plugins: [pinia, createI18nPlugin("ru")] } });
+
+    expect(screen.getByRole("treeitem", { name: /^2\. Глава 2/ })).toBeTruthy();
+  });
 
   it("does not dirty the project when moving the first/last chapter out of bounds", async () => {
     const project = useProjectStore();

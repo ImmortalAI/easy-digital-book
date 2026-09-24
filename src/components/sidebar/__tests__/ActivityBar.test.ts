@@ -1,7 +1,9 @@
 import { cleanup, render, screen } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { nextTick } from "vue";
 import ActivityBar from "@/components/sidebar/ActivityBar.vue";
+import { createI18nPlugin } from "@/plugins/i18n";
 
 describe("ActivityBar", () => {
   // ActivityBar renders more than once across these tests; without cleanup
@@ -31,5 +33,15 @@ describe("ActivityBar", () => {
       "aria-pressed",
       "true",
     );
+  });
+
+  it("relabels the activities when the interface language changes live", async () => {
+    const i18n = createI18nPlugin("en");
+    render(ActivityBar, { props: { active: "explorer" }, global: { plugins: [i18n] } });
+    expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
+
+    i18n.global.locale.value = "ru";
+    await nextTick();
+    expect(screen.getByRole("button", { name: "Настройки" })).toBeInTheDocument();
   });
 });

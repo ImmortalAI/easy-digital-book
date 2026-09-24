@@ -1,9 +1,11 @@
-import { render, screen } from "@testing-library/vue";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/vue";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import ErrorDetailsDialog from "@/components/common/ErrorDetailsDialog.vue";
 import type { ErrorActions } from "@/composables/use-error-actions";
 
 describe("ErrorDetailsDialog", () => {
+  afterEach(cleanup);
+
   it("uses a finite localized fallback instead of displaying an unknown raw error", async () => {
     const actions: ErrorActions = {
       copyDetails: vi.fn<ErrorActions["copyDetails"]>(),

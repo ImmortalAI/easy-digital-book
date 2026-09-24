@@ -23,7 +23,7 @@ const segments = computed<string[]>(() => {
   const index = project.book?.chapters.findIndex((chapter) => chapter.id === center.id) ?? -1;
   const chapter = project.book?.chapters[index];
   if (!chapter) return [t("breadcrumbs.chapters", "Chapters")];
-  const fallback = t("breadcrumbs.fallback", "Chapter {number}").replace(
+  const fallback = t("breadcrumbs.fallback", "Chapter {number}", { number: index + 1 }).replace(
     "{number}",
     String(index + 1),
   );

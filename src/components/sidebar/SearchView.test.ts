@@ -1,13 +1,15 @@
 import { createPinia, setActivePinia } from "pinia";
 import { mount } from "@vue/test-utils";
-import { render, screen } from "@testing-library/vue";
+import { cleanup, render, screen } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createBook } from "@/services/book/create";
 import { useProjectStore } from "@/stores/project";
 import SearchView from "@/components/sidebar/SearchView.vue";
 
 describe("SearchView", () => {
+  afterEach(cleanup);
+
   let pinia: ReturnType<typeof createPinia>;
 
   beforeEach(() => {

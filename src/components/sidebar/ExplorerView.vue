@@ -70,7 +70,10 @@ function chapterDisplayName(id: string): string {
   const chapter = index >= 0 ? book.value?.chapters[index] : undefined;
   return (
     (chapter && extractTitle(chapter.source)) ||
-    t("chapters.fallback", "Chapter {number}").replace("{number}", String(index + 1))
+    t("chapters.fallback", "Chapter {number}", { number: index + 1 }).replace(
+      "{number}",
+      String(index + 1),
+    )
   );
 }
 function imageUsageDetails(path: string): string {
@@ -285,6 +288,18 @@ function requestImport() {
   emit("import");
 }
 /**
+ * A section row is never selected; activating it folds it. A click already
+ * toggles on its own (Reka fires select and toggle for it), but Enter and
+ * Space only select, so for those the row toggles here.
+ */
+function selectSection(event: CustomEvent<{ originalEvent: Event }>, key: string) {
+  event.preventDefault();
+  if (!(event.detail.originalEvent instanceof KeyboardEvent)) return;
+  expanded.value = expanded.value.includes(key)
+    ? expanded.value.filter((item) => item !== key)
+    : [...expanded.value, key];
+}
+/**
  * Forwards the raw contextmenu event alongside the row's own ContextMenu —
  * consumers outside this component (e.g. a later task) still get to observe
  * the right click. This must not interfere with the menu opening: it never
@@ -296,7 +311,7 @@ function imageContextMenu(path: string, event: MouseEvent) {
 const emit = defineEmits<{ import: []; "image-context-menu": [path: string, event: MouseEvent] }>();
 </script>
 <template>
-  <div v-if="book" class="explorer-view flex flex-col gap-1 p-2">
+  <div v-if="book" class="flex flex-col gap-1 p-2">
     <h2 class="px-2 text-xs font-semibold uppercase text-muted-foreground">
       {{ t("explorer.title", "Explorer") }}
     </h2>
@@ -316,7 +331,7 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
           v-bind="item.bind"
           :aria-labelledby="`${labelPrefix}-${item.value.section}`"
           class="font-medium"
-          @select="$event.preventDefault()"
+          @select="selectSection($event, nodeKey(item.value))"
         >
           <IconChevronRight
             class="size-3.5 shrink-0 transition-transform"
@@ -386,7 +401,7 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
           :index="item.value.index"
           :warning-count="warningCounts.get(item.value.chapter.id) ?? 0"
           :fallback-title="
-            t('chapters.fallback', 'Chapter {number}').replace(
+            t('chapters.fallback', 'Chapter {number}', { number: item.value.index + 1 }).replace(
               '{number}',
               String(item.value.index + 1),
             )

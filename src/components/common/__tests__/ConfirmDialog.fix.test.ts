@@ -1,9 +1,11 @@
-import { render, screen } from "@testing-library/vue";
+import { cleanup, render, screen } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import ConfirmDialog from "@/components/common/ConfirmDialog.vue";
 
 describe("ConfirmDialog review contracts", () => {
+  afterEach(cleanup);
+
   it("focuses the destructive action, supports the ask-again choice, and cancels on Escape", async () => {
     const { emitted } = render(ConfirmDialog, {
       props: { open: true, title: "Delete", message: "Details", showAskAgain: true },

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { IconFiles, IconSearch, IconSettings } from "@tabler/icons-vue";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -10,11 +11,12 @@ const props = defineProps<{ active: Activity }>();
 const emit = defineEmits<{ select: [value: Activity] }>();
 const { t } = useSafeI18n();
 
-const items: Array<{ value: Activity; icon: typeof IconFiles; label: string }> = [
+// Computed so the labels follow a live locale switch from Settings.
+const items = computed<Array<{ value: Activity; icon: typeof IconFiles; label: string }>>(() => [
   { value: "explorer", icon: IconFiles, label: t("activity.explorer", "Explorer") },
   { value: "search", icon: IconSearch, label: t("activity.search", "Search") },
   { value: "settings", icon: IconSettings, label: t("activity.settings", "Settings") },
-];
+]);
 
 // ToggleGroup type="single" lets the user click the active item to deselect
 // it, which would report an empty model value. Re-report the active value
