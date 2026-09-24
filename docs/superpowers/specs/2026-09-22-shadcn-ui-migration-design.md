@@ -43,7 +43,7 @@ inset-0`, no portals or focus trap. Icons are text glyphs `📄 ⌕ ⚙ ▸ ▾ 
 | Global CSS         | `style.css` shrinks to tokens and `@layer base`, rest to utilities           |
 | Tests              | Translate to roles and accessible names (`@testing-library/vue`, Playwright) |
 | `UndoToast`        | To `Toast` primitive from Reka UI, progress bar visual stays custom          |
-| `ResizableSplit`   | To `Splitter` from Reka UI (component `resizable` from shadcn-vue)           |
+| `ResizableSplit`   | To `Splitter` from Reka UI, used directly (no shadcn-vue `resizable`)        |
 | `ExplorerView`     | To `Tree` primitive from Reka UI                                             |
 | `AppToolbar`, lang | To `Toolbar` and `Autocomplete` primitives from Reka UI                      |
 | Work order         | Vertical slices, each a commit with green `pnpm check`                       |
@@ -108,13 +108,14 @@ Each component after migration is checked in both themes.
 ### 5.1. From shadcn-vue (`shadcn-vue add`)
 
 `alert`, `alert-dialog`, `aspect-ratio`, `badge`, `breadcrumb`, `card`,
-`checkbox`, `collapsible`, `combobox`, `context-menu`, `dialog`, `empty`,
+`checkbox`, `collapsible`, `context-menu`, `dialog`, `empty`,
 `field`, `input`, `input-group`, `item`, `kbd`, `label`, `number-field`,
-`popover`, `progress`, `radio-group`, `resizable`, `scroll-area`, `select`,
+`popover`, `progress`, `radio-group`, `scroll-area`, `select`,
 `separator`, `spinner`, `switch`, `textarea`, `toggle-group`, `tooltip`.
 
-`button` already installed. `combobox` is installed not for the language field,
-but for its classes reused by `ui/autocomplete` (§5.2).
+`button` already installed. `combobox` and `resizable` were installed at first
+but removed after the migration: `ui/autocomplete` carries its own copy of the
+combobox classes (§5.2), and `ResizableSplit` uses Reka `Splitter*` directly (§6).
 
 ### 5.2. Written manually on top of Reka UI
 
@@ -149,8 +150,8 @@ with shadcn-vue CLI". Oxlint checks the directory as before.
 ## 6. Geometry
 
 `ResizableSplit` moves to `SplitterGroup` / `SplitterPanel` /
-`SplitterResizeHandle` (component `resizable` from shadcn-vue — wrapper over
-them exactly: its dependencies are `reka-ui` and `@vueuse/core`).
+`SplitterResizeHandle`, used directly from Reka UI. The shadcn-vue `resizable`
+wrapper over them is not used: the handle is styled in `ResizableSplit` itself.
 
 ### 6.1. Structure
 
@@ -242,7 +243,7 @@ never set it — animation is dead. `data-state="closed"` brings it to life.
 | `SearchResultItem`                       | `item` + icon `button`                                            |
 | `ActivityBar` (`📄 ⌕ ⚙`)                 | `toggle-group` + `tooltip`                                        |
 | `AppToolbar` (Text/Split/Preview)        | `ui/toolbar` + `kbd`                                              |
-| `ResizableSplit`                         | `resizable` (see §6)                                              |
+| `ResizableSplit`                         | Reka `Splitter*` (see §6)                                         |
 | `Breadcrumbs` (row with `›`)             | `breadcrumb`                                                      |
 | `StatusBadge`, chapter counters          | `badge`                                                           |
 | `WarningsPopover`                        | `popover` + `badge` + `scroll-area`                               |
