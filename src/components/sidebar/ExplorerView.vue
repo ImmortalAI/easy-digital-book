@@ -315,7 +315,6 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
           v-slot="{ isExpanded }"
           v-bind="item.bind"
           :aria-labelledby="`${labelPrefix}-${item.value.section}`"
-          :data-explorer-section="item.value.section"
           class="font-medium"
           @select="$event.preventDefault()"
         >
@@ -338,7 +337,6 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
               type="button"
               variant="ghost"
               size="icon-xs"
-              data-chapter-add
               :aria-label="t('explorer.newChapter', 'New chapter')"
               @click.stop="add()"
             >

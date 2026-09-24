@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it } from "vitest";
 import { nextTick } from "vue";
 import ResizableSplit from "@/components/layout/ResizableSplit.vue";
+import { createI18nPlugin } from "@/plugins/i18n";
 import { useLayoutStore } from "@/stores/layout";
 
 describe("ResizableSplit", () => {
@@ -123,16 +124,27 @@ describe("ResizableSplit", () => {
   it("retains pane slot elements while changing modes", async () => {
     const layout = useLayoutStore();
     const wrapper = mount(ResizableSplit, {
-      slots: { source: "source", preview: '<iframe data-preview-frame="true" />' },
+      slots: { source: "source", preview: '<iframe title="Preview" />' },
     });
-    const frame = wrapper.get("[data-preview-frame]").element;
+    const frame = wrapper.get("iframe").element;
 
     layout.mode = "text";
     await wrapper.vm.$nextTick();
     layout.mode = "preview";
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.get("[data-preview-frame]").element).toBe(frame);
+    expect(wrapper.get("iframe").element).toBe(frame);
     expect(wrapper.find('[data-pane="source"]').exists()).toBe(true);
+  });
+
+  it("names its resize handles in the interface language", () => {
+    const wrapper = mount(ResizableSplit, { global: { plugins: [createI18nPlugin("ru")] } });
+    const names = wrapper
+      .findAllComponents({ name: "SplitterResizeHandle" })
+      .map((handle) => handle.attributes("aria-label"));
+    expect(names).toEqual([
+      "Изменить ширину боковой панели",
+      "Изменить соотношение редактора и превью",
+    ]);
   });
 });

@@ -20,7 +20,6 @@ function viewportLabel(hotkey: string) {
   <UndoToast
     v-for="(notification, index) in notifications.items"
     :key="notification.id"
-    data-toast
     :notification="notification"
     :superseded="index < notifications.items.length - STACK_LIMIT"
     @close="notifications.remove(notification.id)"

@@ -3,43 +3,49 @@ import { test } from "./fixtures/platform";
 
 test("new book, save/open, search/replace, undo delete, and export", async ({ page }) => {
   await page.goto("/");
-  await page.locator('[data-action="new-project"]').click();
+  await page.getByRole("button", { name: "New project" }).click();
 
   const editor = page.locator(".cm-content");
   await editor.fill("# Chapter 1\nhero");
   await page.keyboard.press("Control+s");
-  await expect(page.locator("[data-editor-title]")).toContainText("book.edb");
+  await expect(page.getByText("/memory/book.edb")).toBeVisible();
 
   await page.keyboard.press("Control+o");
   await expect(editor).toContainText("hero");
 
   await page.keyboard.press("Control+Shift+f");
-  await page.locator("[data-search-input]").fill("hero");
-  await expect(page.locator("[data-search-group]")).toHaveCount(1);
-  await expect(page.locator("[data-search-count]")).toHaveText("1");
+  await page.getByRole("searchbox").fill("hero");
+  await expect(page.getByText("1 results in 1 chapters")).toBeVisible();
+  const group = page.getByRole("group", { name: "# Chapter 1" });
+  await expect(group.getByText("1", { exact: true })).toBeVisible();
 
-  await page.locator("[data-replace-toggle]").click();
-  await page.locator("[data-replace-input]").fill("champion");
-  await page.locator("[data-replace-all]").click();
+  await page.getByRole("button", { name: "Show replace" }).click();
+  await page.getByRole("textbox", { name: "Replace" }).fill("champion");
+  await page.getByRole("button", { name: "Replace all" }).click();
   await expect(editor).toContainText("champion");
 
   await page.locator('[data-activity="explorer"]').click();
-  await page.locator('[data-explorer-section="chapters"] [data-chapter-add]').click();
-  await expect(page.locator("[data-explorer-chapter]")).toHaveCount(2);
+  const chapters = page.getByRole("treeitem", { name: /^\d+\. / });
+  await page.getByRole("button", { name: "New chapter", exact: true }).click();
+  await expect(chapters).toHaveCount(2);
 
   await page
-    .locator('[data-explorer-chapter][data-chapter-index="1"]')
-    .locator("[data-chapter-delete]")
+    .getByRole("treeitem", { name: /^2\. / })
+    .getByRole("button", { name: "Delete" })
     .click();
-  await page.locator("[data-confirm-delete]").click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
   // Replace all registers an undo notification of its own, so the stack holds
-  // that one as well; the newest toast is the chapter deletion.
-  const deleteToast = page.locator("[data-toast]").last();
+  // that one as well; the chapter deletion is the one to undo.
+  const deleteToast = page
+    .getByRole("region", { name: /notifications/i })
+    .getByRole("listitem")
+    .filter({ hasText: "Chapter deleted" });
   await expect(deleteToast).toBeVisible();
-  await deleteToast.locator("[data-undo]").click();
-  await expect(page.locator("[data-explorer-chapter]")).toHaveCount(2);
+  await deleteToast.getByRole("button", { name: "Undo" }).click();
+  await expect(chapters).toHaveCount(2);
 
-  await page.locator("[data-export-button]").click();
-  await page.locator("[data-export-submit]").click();
-  await expect(page.locator("[data-export-success]")).toBeVisible();
+  await page.getByRole("button", { name: /export/i }).click();
+  const dialog = page.getByRole("dialog", { name: "Export EPUB" });
+  await dialog.getByRole("button", { name: /export/i }).click();
+  await expect(dialog.getByText("EPUB saved")).toBeVisible();
 });

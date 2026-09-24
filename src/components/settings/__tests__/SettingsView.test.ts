@@ -94,7 +94,6 @@ describe("SettingsView", () => {
     render(SettingsView, { props: { actions, settings } });
     const user = userEvent.setup();
     const check = screen.getByRole("button", { name: /check for updates/i });
-    expect(check).toHaveAttribute("data-check-updates");
     expect(settings.updates.lastCheckedAt).toBeNull();
 
     await user.click(check);

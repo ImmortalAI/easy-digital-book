@@ -23,16 +23,13 @@ const recentId = useId();
         <CardDescription>{{ t("welcome.subtitle") }}</CardDescription>
       </CardHeader>
       <CardContent class="flex flex-wrap gap-3">
+        <!-- data-action is the anchor the frozen e2e/layout.spec.ts opens the
+             editor with; everything else finds this button by its name. -->
         <Button data-action="new-project" type="button" @click="void files.newBook()">
           <IconFilePlus aria-hidden="true" />
           {{ t("welcome.newProject") }}
         </Button>
-        <Button
-          data-action="open-project"
-          type="button"
-          variant="outline"
-          @click="void files.open()"
-        >
+        <Button type="button" variant="outline" @click="void files.open()">
           <IconFolderOpen aria-hidden="true" />
           {{ t("welcome.openProject") }}
         </Button>
@@ -73,7 +70,6 @@ const recentId = useId();
               variant="outline"
               size="sm"
               class="text-left hover:bg-muted"
-              data-action="recent-project"
               :title="path"
               @click="void files.openPath(path)"
             >

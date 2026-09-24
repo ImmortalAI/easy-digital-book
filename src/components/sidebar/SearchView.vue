@@ -5,6 +5,7 @@ import {
   IconChevronDown,
   IconLetterCase,
   IconRegex,
+  IconReplace,
   IconSearch,
   IconX,
 } from "@tabler/icons-vue";
@@ -139,7 +140,7 @@ function hideResult(result: SearchResult) {
 </script>
 
 <template>
-  <section class="search-view flex flex-col gap-2 p-2" aria-label="Search">
+  <section class="search-view flex flex-col gap-2 p-2" :aria-label="t('activity.search', 'Search')">
     <InputGroup>
       <InputGroupAddon align="inline-start">
         <IconSearch class="size-4 text-muted-foreground" aria-hidden="true" />
@@ -147,7 +148,6 @@ function hideResult(result: SearchResult) {
       <InputGroupInput
         v-model="text"
         type="search"
-        data-search-input
         :aria-label="t('search.placeholder', 'Search')"
         :placeholder="t('search.placeholder', 'Search')"
         autofocus
@@ -171,7 +171,6 @@ function hideResult(result: SearchResult) {
           type="button"
           variant="ghost"
           size="icon-xs"
-          data-replace-toggle
           :aria-expanded="replacementOpen"
           :aria-label="t('search.showReplace', 'Show replace')"
           @click="replacementOpen = !replacementOpen"
@@ -188,7 +187,6 @@ function hideResult(result: SearchResult) {
       v-model="replacement"
       v-show="replacementOpen"
       type="text"
-      data-replace-input
       :aria-label="t('search.replacePlaceholder', 'Replace')"
       :placeholder="t('search.replacePlaceholder', 'Replace')"
       class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 py-1 text-sm outline-none placeholder:text-muted-foreground"
@@ -196,9 +194,12 @@ function hideResult(result: SearchResult) {
     <p v-if="error" class="search-error text-sm text-destructive" role="alert">
       {{ t(error.error, "Invalid regular expression") }}
     </p>
-    <p v-else data-search-summary class="text-xs text-muted-foreground">
+    <p v-else class="text-xs text-muted-foreground">
       {{
-        t("search.summary", "{results} results in {chapters} chapters")
+        t("search.summary", "{results} results in {chapters} chapters", {
+          results: resultCount,
+          chapters: chapterCount,
+        })
           .replace("{results}", String(resultCount))
           .replace("{chapters}", String(chapterCount))
       }}
@@ -208,7 +209,6 @@ function hideResult(result: SearchResult) {
       type="button"
       variant="secondary"
       size="sm"
-      data-replace-all
       :disabled="!includedResults.length"
       @click="replaceAll"
     >
@@ -217,7 +217,8 @@ function hideResult(result: SearchResult) {
     <template v-for="group in groups" :key="group.chapterId">
       <Collapsible
         v-if="!hiddenGroups.has(group.chapterId)"
-        :data-search-group="group.chapterId"
+        role="group"
+        :aria-label="group.title"
         :open="!collapsedGroups.has(group.chapterId)"
         @update:open="setGroupOpen(group.chapterId, $event)"
       >
@@ -227,7 +228,7 @@ function hideResult(result: SearchResult) {
           >
             <span class="truncate">{{ group.title }}</span>
           </CollapsibleTrigger>
-          <Badge variant="secondary" data-search-count>{{ group.results.length }}</Badge>
+          <Badge variant="secondary">{{ group.results.length }}</Badge>
           <Button
             type="button"
             variant="ghost"
@@ -237,14 +238,18 @@ function hideResult(result: SearchResult) {
           >
             <IconX aria-hidden="true" />
           </Button>
+          <!-- An icon, like the rows' replace: a text button here squeezed the
+               chapter title down to an ellipsis at the default sidebar width. -->
           <Button
             v-if="replacementOpen"
             type="button"
             variant="ghost"
-            size="xs"
+            size="icon-xs"
+            :aria-label="t('search.replaceChapter', 'Replace chapter')"
+            :title="t('search.replaceChapter', 'Replace chapter')"
             @click="replaceChapter(group.chapterId)"
           >
-            {{ t("search.replaceChapter", "Replace chapter") }}
+            <IconReplace aria-hidden="true" />
           </Button>
         </header>
         <CollapsibleContent>

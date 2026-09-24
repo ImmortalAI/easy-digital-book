@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from "pinia";
 import { DOMWrapper, mount, type VueWrapper } from "@vue/test-utils";
-import { screen } from "@testing-library/vue";
+import { screen, within } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createBook } from "@/services/book/create";
@@ -21,6 +21,11 @@ function confirmDialog(): DOMWrapper<HTMLElement> {
   const el = document.body.querySelector<HTMLElement>('[role="alertdialog"]');
   if (!el) throw new Error("Expected the confirm dialog to be open");
   return new DOMWrapper(el);
+}
+
+/** The dialog's destructive action, by role and name. */
+function confirmButton(): DOMWrapper<HTMLElement> {
+  return new DOMWrapper(within(confirmDialog().element).getByRole("button", { name: "Delete" }));
 }
 
 /** The explorer's tree row whose text contains `text`. */
@@ -87,7 +92,7 @@ describe("ExplorerView destructive actions", () => {
     expect(dialog.text()).toContain("unused-b.png");
     expect(dialog.text()).not.toContain("chapter1");
 
-    await dialog.get("[data-confirm-delete]").trigger("click");
+    await confirmButton().trigger("click");
     expect([...project.book!.resources.keys()]).toEqual(["images/used.png"]);
     wrapper.unmount();
   });
@@ -168,7 +173,7 @@ describe("ExplorerView destructive actions", () => {
     expect(wrapper.findComponent({ name: "ConfirmDialog" }).exists()).toBe(true);
     const dialog = confirmDialog();
     await dialog.get('[role="checkbox"]').trigger("click");
-    await dialog.get("[data-confirm-delete]").trigger("click");
+    await confirmButton().trigger("click");
     expect(settings.confirmDelete).toBe(false);
     expect(project.book?.chapters).toHaveLength(1);
     wrapper.unmount();

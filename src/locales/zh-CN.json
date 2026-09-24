@@ -13,24 +13,29 @@
     "close": "关闭",
     "delete": "删除",
     "undo": "撤销",
-    "doNotAskAgain": "不再询问"
+    "doNotAskAgain": "不再询问",
+    "loading": "加载中"
   },
   "toolbar": {
     "text": "文本",
     "split": "分栏",
-    "preview": "预览"
+    "preview": "预览",
+    "editorMode": "编辑器模式",
+    "previewMode": "预览模式"
   },
   "activity": {
     "explorer": "资源管理器",
     "search": "搜索",
-    "settings": "设置"
+    "settings": "设置",
+    "label": "活动栏"
   },
   "editor": {
     "unnamedBook": "未命名书籍",
     "selectChapter": "请选择章节",
     "chooseChapter": "请选择章节",
     "status": "{words} 个词 · {characters} 个字符",
-    "openProblems": "打开时发现 {count} 个问题"
+    "openProblems": "打开时发现 {count} 个问题",
+    "unsaved": "有未保存的更改"
   },
   "breadcrumbs": {
     "aria": "面包屑",
@@ -38,6 +43,10 @@
     "settings": "设置",
     "chapters": "章节",
     "fallback": "第 {number} 章"
+  },
+  "layout": {
+    "resizeSidebar": "调整侧边栏宽度",
+    "resizeSplit": "调整编辑器与预览的比例"
   },
   "warnings": {
     "count": "{count} 个警告",

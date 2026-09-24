@@ -50,7 +50,7 @@ const reportIssue = () => props.actions.reportIssue(props.report);
         </DialogDescription>
       </DialogHeader>
       <ScrollArea class="border-border max-h-64 rounded-md border">
-        <pre data-error-details class="p-3 text-xs whitespace-pre-wrap">{{ report.details }}</pre>
+        <pre class="p-3 text-xs whitespace-pre-wrap">{{ report.details }}</pre>
       </ScrollArea>
       <p v-if="copied" role="status" class="text-primary text-sm">
         {{ t("errors.copied", "Details copied") }}

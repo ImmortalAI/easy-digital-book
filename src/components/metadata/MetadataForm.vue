@@ -78,7 +78,7 @@ const coverPreview = computed(() => {
 onBeforeUnmount(releaseCover);
 </script>
 <template>
-  <form v-if="book" class="flex flex-col gap-6" @submit.prevent>
+  <form v-if="book" class="flex max-w-2xl flex-col gap-6 p-8" @submit.prevent>
     <h2 class="text-base font-semibold">{{ t("metadata.title", "Metadata") }}</h2>
 
     <Field>

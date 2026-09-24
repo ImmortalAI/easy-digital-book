@@ -240,5 +240,8 @@ defineExpose({ focusPosition: focusAtPosition, focusRange, syncSource });
 </script>
 
 <template>
-  <div ref="host" class="source-editor" />
+  <div ref="host" class="min-h-0 flex-1 overflow-hidden">
+    <!-- A host for CodeMirror. Scrolling belongs to .cm-scroller inside, so
+         this only needs to be a bounded box for it to fill. -->
+  </div>
 </template>

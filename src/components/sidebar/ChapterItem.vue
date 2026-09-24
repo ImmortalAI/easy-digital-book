@@ -26,7 +26,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [];
   move: [direction: -1 | 1];
-  /** Plain ↑/↓ opens the neighbouring chapter; Reka's roving focus moves onto its row. */
+  /** Plain Up/Down opens the neighbouring chapter; Reka's roving focus moves onto its row. */
   navigate: [direction: -1 | 1];
   remove: [];
   newAfter: [];
@@ -43,7 +43,7 @@ function select(event: Event) {
   emit("select");
 }
 /**
- * Alt+↑/↓ reorders. Reka's roving focus ignores Alt+Arrow, so the row keeps
+ * Alt+Up/Down reorders. Reka's roving focus ignores Alt+Arrow, so the row keeps
  * focus; re-focus it after the reorder in case the DOM move dropped it.
  */
 function move(direction: -1 | 1, event: KeyboardEvent) {
@@ -60,8 +60,6 @@ function move(direction: -1 | 1, event: KeyboardEvent) {
       <TreeItem
         v-bind="bind"
         :aria-labelledby="labelId"
-        data-explorer-chapter
-        :data-chapter-index="index"
         draggable="true"
         @select="select"
         @keydown.arrow-up.exact.self="emit('navigate', -1)"
@@ -91,7 +89,6 @@ function move(direction: -1 | 1, event: KeyboardEvent) {
             type="button"
             variant="ghost"
             size="icon-xs"
-            data-chapter-delete
             :aria-label="t('common.delete', 'Delete')"
             @click.stop="emit('remove')"
           >

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SearchResult } from "@/services/search/query";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
-import { IconReplace, IconX } from "@tabler/icons-vue";
+import { IconArrowNarrowRight, IconReplace, IconX } from "@tabler/icons-vue";
 import { Button } from "@/components/ui/button";
 import { Item, ItemActions, ItemContent } from "@/components/ui/item";
 defineProps<{ result: SearchResult; chapterTitle: string; replacementVisible?: boolean }>();
@@ -20,9 +20,11 @@ const { t } = useSafeI18n();
         <span class="truncate text-sm">{{ result.matched }}</span>
         <small
           v-if="replacementVisible && result.replacementPreview"
-          class="replacement-preview truncate text-xs text-muted-foreground"
-          >→ {{ result.replacementPreview }}</small
+          class="replacement-preview flex min-w-0 items-center gap-1 text-xs text-muted-foreground"
         >
+          <IconArrowNarrowRight class="size-3 shrink-0" aria-hidden="true" />
+          <span class="truncate">{{ result.replacementPreview }}</span>
+        </small>
       </button>
     </ItemContent>
     <ItemActions>

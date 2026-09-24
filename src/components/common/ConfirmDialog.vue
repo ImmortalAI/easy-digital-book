@@ -64,7 +64,6 @@ function focusConfirm(event: Event) {
         </AlertDialogCancel>
         <AlertDialogAction
           ref="confirmButton"
-          data-confirm-delete
           variant="destructive"
           @click="emit('confirm', { askAgain: askAgainChoice })"
         >

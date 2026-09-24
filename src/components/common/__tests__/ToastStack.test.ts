@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from "pinia";
 import { defineComponent, h, nextTick } from "vue";
-import { cleanup, render, screen, waitFor } from "@testing-library/vue";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ToastStack from "@/components/common/ToastStack.vue";
@@ -24,14 +24,15 @@ describe("ToastStack", () => {
 
   it("renders at most three notifications and closes the oldest", async () => {
     const notifications = useNotificationsStore();
-    const { container } = await renderStack();
+    await renderStack();
     for (const message of ["one", "two", "three", "four"]) {
       notifications.add({ message });
       await nextTick();
     }
 
     // The oldest closes through the primitive's presence, a few ticks later.
-    await waitFor(() => expect(container.querySelectorAll("[data-toast]")).toHaveLength(3));
+    const region = screen.getByRole("region", { name: /notifications/i });
+    await waitFor(() => expect(within(region).getAllByRole("listitem")).toHaveLength(3));
     expect(screen.queryByText("one")).not.toBeInTheDocument();
     expect(notifications.items.map((item) => item.message)).toEqual(["two", "three", "four"]);
   });

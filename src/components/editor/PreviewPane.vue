@@ -3,12 +3,14 @@ import { renderToHTML } from "novlang-js";
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from "vue";
 import { chapterParseResults } from "@/composables/use-novlang-parse";
 import { useProjectStore } from "@/stores/project";
+import { useSafeI18n } from "@/composables/use-safe-i18n";
 import { previewCss } from "@/assets/epub/preview.css";
 import { themeCss } from "@/assets/epub/theme.css";
 import { createResourceUrlCache, rewriteResourcePaths } from "./preview-resources";
 
 const props = defineProps<{ chapterId: string; sourceScroller?: HTMLElement | null }>();
 const project = useProjectStore();
+const { t } = useSafeI18n();
 const frame = ref<HTMLIFrameElement>();
 const cache = createResourceUrlCache();
 const currentResult = computed(() => chapterParseResults.get(props.chapterId));
@@ -85,11 +87,15 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="preview-pane">
+    <!-- The preview is a page of the book: the EPUB styles assume a light page,
+         so it stays paper-white under the dark theme instead of showing the
+         window through a transparent frame. -->
     <iframe
+      class="bg-white"
       ref="frame"
       :srcdoc="initialPreviewDocument"
       sandbox="allow-same-origin"
-      title="Preview"
+      :title="t('toolbar.preview', 'Preview')"
     />
   </div>
 </template>

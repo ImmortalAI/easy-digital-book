@@ -60,7 +60,7 @@ function updateOpen(value: boolean) {
   <Toast
     :open="open"
     :duration="notification.duration ?? 8000"
-    class="undo-toast flex items-center gap-2 overflow-hidden pr-2"
+    class="undo-toast flex items-center gap-2 pr-2"
     @pause="paused = true"
     @resume="paused = false"
     @update:open="updateOpen"
@@ -69,7 +69,6 @@ function updateOpen(value: boolean) {
     <ToastDescription class="min-w-0 flex-1">{{ notification.message }}</ToastDescription>
     <ToastAction v-if="notification.undo" as-child :alt-text="t('common.undo', 'Undo')">
       <Button
-        data-undo
         size="xs"
         variant="outline"
         :disabled="!notification.undoEnabled"
@@ -83,15 +82,19 @@ function updateOpen(value: boolean) {
         <IconX aria-hidden="true" />
       </Button>
     </ToastClose>
-    <!-- Presence unmounts the toast's content once the exit animation has
-         played; that is when the notification leaves the store. -->
-    <span
-      data-testid="undo-progress"
-      class="undo-progress"
-      :data-paused="paused || undefined"
-      :style="{ animationDuration: `${notification.duration ?? 8000}ms` }"
-      @vue:unmounted="emit('close')"
-    />
+    <!-- Only the bar is clipped to the toast's rounded corners; the dot's glow
+         spills past the bottom edge, so the toast itself must not clip. -->
+    <span class="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
+      <!-- Presence unmounts the toast's content once the exit animation has
+           played; that is when the notification leaves the store. -->
+      <span
+        data-testid="undo-progress"
+        class="undo-progress"
+        :data-paused="paused || undefined"
+        :style="{ animationDuration: `${notification.duration ?? 8000}ms` }"
+        @vue:unmounted="emit('close')"
+      />
+    </span>
     <span
       aria-hidden="true"
       class="undo-progress-dot"

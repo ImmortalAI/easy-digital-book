@@ -96,10 +96,10 @@ function requestClose(next: boolean) {
     <DialogContent :show-close-button="false" class="grid gap-4 sm:max-w-md">
       <DialogHeader>
         <DialogTitle>{{ t("export.title", "Export EPUB") }}</DialogTitle>
-        <DialogDescription data-export-filename>{{ controller.fileName.value }}</DialogDescription>
+        <DialogDescription>{{ controller.fileName.value }}</DialogDescription>
       </DialogHeader>
 
-      <Alert v-if="controller.warnings.value.length" variant="destructive" data-export-warnings>
+      <Alert v-if="controller.warnings.value.length" variant="destructive">
         <AlertDescription>
           <ul class="list-disc space-y-1 pl-4">
             <li
@@ -115,7 +115,7 @@ function requestClose(next: boolean) {
       <Field>
         <Label for="export-preset">{{ t("export.preset", "Image preset") }}</Label>
         <Select v-model="controller.options.value.imagePreset">
-          <SelectTrigger id="export-preset" data-export-preset class="w-full">
+          <SelectTrigger id="export-preset" class="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -138,14 +138,13 @@ function requestClose(next: boolean) {
       <div class="flex items-center gap-2">
         <Checkbox
           id="export-version"
-          data-export-version
           v-model="controller.options.value.versionInTitle"
           :disabled="!hasVersion"
         />
         <Label for="export-version">{{ t("export.versionInTitle", "Add version to title") }}</Label>
       </div>
 
-      <div v-if="controller.progress.value" class="grid gap-1.5" data-export-progress>
+      <div v-if="controller.progress.value" class="grid gap-1.5">
         <p class="text-muted-foreground text-sm">
           <span v-if="controller.progress.value.stage === 'images'">
             {{ t("export.progressImages", "Images {done}/{total}", controller.progress.value) }}
@@ -162,7 +161,7 @@ function requestClose(next: boolean) {
         <AlertDescription>{{ errorMessage }}</AlertDescription>
       </Alert>
 
-      <p v-if="success" class="text-primary text-sm" data-export-success role="status">
+      <p v-if="success" class="text-primary text-sm" role="status">
         {{ t("export.saved", "EPUB saved") }}
         <Button type="button" variant="link" class="h-auto p-0" @click="controller.revealOutput()">
           {{ t("export.showInFolder", "Show in folder") }}
@@ -178,11 +177,10 @@ function requestClose(next: boolean) {
         <Button
           v-if="!success"
           type="button"
-          data-export-submit
           :disabled="controller.exporting.value"
           @click="exportBook"
         >
-          <Spinner v-if="controller.exporting.value" />
+          <Spinner v-if="controller.exporting.value" :aria-label="t('common.loading', 'Loading')" />
           {{ t("export.action", "Export…") }}
         </Button>
       </DialogFooter>

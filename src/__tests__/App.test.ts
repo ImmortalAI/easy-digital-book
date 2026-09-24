@@ -12,7 +12,7 @@ describe("App shell", () => {
 
   it("switches from welcome to the editor and reflects center breadcrumbs", async () => {
     const wrapper = mount(App, { global: { plugins: [createI18nPlugin("en")] } });
-    expect(wrapper.find(".editor-shell").exists()).toBe(false);
+    expect(wrapper.find("[data-shell]").exists()).toBe(false);
 
     useProjectStore().setBook(
       createBook({
@@ -23,7 +23,7 @@ describe("App shell", () => {
       }),
     );
     await wrapper.vm.$nextTick();
-    expect(wrapper.find(".editor-shell").exists()).toBe(true);
+    expect(wrapper.find("[data-shell]").exists()).toBe(true);
 
     useLayoutStore().center = { kind: "metadata" };
     await wrapper.vm.$nextTick();

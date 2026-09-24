@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue";
 import { useElementSize } from "@vueuse/core";
 import { SplitterGroup, SplitterPanel, SplitterResizeHandle } from "reka-ui";
 import { useLayoutStore, type LayoutMode } from "@/stores/layout";
+import { useSafeI18n } from "@/composables/use-safe-i18n";
 
 const SIDEBAR_MIN = 160;
 const SIDEBAR_MAX = 400;
@@ -12,6 +13,7 @@ const HANDLE_WIDTH = 4;
 
 const props = defineProps<{ singlePane?: boolean }>();
 const layout = useLayoutStore();
+const { t } = useSafeI18n();
 
 const content = ref<InstanceType<typeof SplitterPanel>>();
 const sourcePanel = ref<InstanceType<typeof SplitterPanel>>();
@@ -126,14 +128,18 @@ function resetSplit() {
       <SplitterResizeHandle
         v-if="layout.sidebarVisible"
         class="w-1 shrink-0 hover:bg-ring focus-visible:bg-ring focus-visible:outline-none"
-        aria-label="Resize sidebar"
+        :aria-label="t('layout.resizeSidebar', 'Resize sidebar')"
         @dragging="sidebarResize.dragging"
         @keydown="sidebarResize.start"
         @keyup="sidebarResize.end"
         @blur="sidebarResize.end"
       />
       <SplitterPanel ref="content" :order="2" class="flex min-w-0">
-        <section v-if="props.singlePane" class="editor-single-pane" data-single-pane>
+        <section
+          v-if="props.singlePane"
+          class="flex h-full min-w-0 flex-1 flex-col"
+          data-single-pane
+        >
           <slot name="single" />
         </section>
         <SplitterGroup v-else direction="horizontal" class="flex" @layout="contentResize.report">
@@ -152,7 +158,7 @@ function resetSplit() {
           <SplitterResizeHandle
             v-show="layout.mode === 'split'"
             class="w-1 shrink-0 hover:bg-ring focus-visible:bg-ring focus-visible:outline-none"
-            aria-label="Resize editor and preview"
+            :aria-label="t('layout.resizeSplit', 'Resize editor and preview')"
             @dragging="contentResize.dragging"
             @keydown="contentResize.start"
             @keyup="contentResize.end"

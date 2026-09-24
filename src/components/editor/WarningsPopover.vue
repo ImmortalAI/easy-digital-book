@@ -60,7 +60,7 @@ function select(item: { chapterId?: string; position?: { line: number; column: n
 <template>
   <Popover v-model:open="open">
     <PopoverTrigger as-child>
-      <Button data-warnings-trigger variant="ghost" size="sm" :aria-label="countLabel">
+      <Button variant="ghost" size="sm" :aria-label="countLabel">
         <IconAlertTriangle aria-hidden="true" />
         <Badge :variant="count ? 'destructive' : 'secondary'" aria-hidden="true">{{ count }}</Badge>
       </Button>

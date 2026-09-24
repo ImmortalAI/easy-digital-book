@@ -1,5 +1,6 @@
 import { createPinia, setActivePinia } from "pinia";
-import { mount, type VueWrapper } from "@vue/test-utils";
+import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
+import { within } from "@testing-library/vue";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createI18nPlugin } from "@/plugins/i18n";
 import { createBook } from "@/services/book/create";
@@ -20,26 +21,31 @@ function installBook() {
   project.setBook(book);
 }
 
+/** A chapter's result group, named after the chapter's first line. */
+function resultGroup(wrapper: VueWrapper, title: string): HTMLElement {
+  return within(wrapper.element as HTMLElement).getByRole("group", { name: title });
+}
+/** The group header's collapse trigger carries the chapter title as its name. */
+function collapseTrigger(wrapper: VueWrapper, title: string): HTMLElement {
+  return within(resultGroup(wrapper, title)).getByRole("button", { name: title });
+}
 /**
- * The group header always renders the CollapsibleTrigger first, followed by
- * the count badge, the Hide button and (when replacement is open) the
- * "Replace chapter" button — so the collapse trigger is reliably the header's
- * first button regardless of which optional buttons are showing.
+ * Every result row has a Hide button of its own; the header's comes first in
+ * document order, ahead of the rows in the collapsible content.
  */
-function collapseTrigger(wrapper: VueWrapper, chapterId: string) {
-  const button = wrapper.findAll(`[data-search-group="${chapterId}"] header button`)[0];
-  if (!button) throw new Error(`Expected a collapse trigger in ${chapterId}`);
-  return button;
+function hideGroupButton(wrapper: VueWrapper, title: string): HTMLElement {
+  return within(resultGroup(wrapper, title)).getAllByRole("button", { name: "Hide" })[0]!;
 }
-function hideGroupButton(wrapper: VueWrapper, chapterId: string) {
-  return wrapper.get(`[data-search-group="${chapterId}"] header button[aria-label="Hide"]`);
+function replaceChapterButton(wrapper: VueWrapper, title: string): HTMLElement {
+  return within(resultGroup(wrapper, title)).getByRole("button", { name: "Replace chapter" });
 }
-function replaceChapterButton(wrapper: VueWrapper, chapterId: string) {
-  const button = wrapper
-    .findAll(`[data-search-group="${chapterId}"] header button`)
-    .find((el) => el.text().includes("Replace chapter"));
-  if (!button) throw new Error(`Expected a "Replace chapter" button in ${chapterId}`);
-  return button;
+/** Clicks and lets the collapsible's presence settle before the next query. */
+async function click(element: HTMLElement) {
+  element.click();
+  await flushPromises();
+}
+function button(wrapper: VueWrapper, name: string): HTMLElement {
+  return within(wrapper.element as HTMLElement).getByRole("button", { name });
 }
 
 describe("SearchView review contracts", () => {
@@ -56,7 +62,17 @@ describe("SearchView review contracts", () => {
     await wrapper.get('input[type="search"]').setValue("[");
     await wrapper.get('button[aria-label="Регулярное выражение"]').trigger("click");
 
-    expect(wrapper.find(".search-error").text()).toContain("Неверное регулярное выражение");
+    expect(within(wrapper.element as HTMLElement).getByRole("alert")).toHaveTextContent(
+      "Неверное регулярное выражение",
+    );
+    wrapper.unmount();
+  });
+
+  it("counts results and chapters in the translated summary", async () => {
+    const wrapper = mount(SearchView, { global: { plugins: [createI18nPlugin("en")] } });
+    await wrapper.get('input[type="search"]').setValue("hero");
+
+    expect(wrapper.text()).toContain("3 results in 2 chapters");
     wrapper.unmount();
   });
 
@@ -64,11 +80,13 @@ describe("SearchView review contracts", () => {
     const wrapper = mount(SearchView);
     await wrapper.get('input[type="search"]').setValue("hero");
 
-    expect(wrapper.findAll("[data-search-group]")).toHaveLength(2);
-    expect(wrapper.findAll("[data-search-count]").map((item) => item.text())).toEqual(["2", "1"]);
-    await collapseTrigger(wrapper, "chapter1").trigger("click");
-    expect(wrapper.findAll('[data-search-group="chapter1"] .search-result')).toHaveLength(0);
-    await wrapper.find('[data-search-group="chapter2"] .search-result button').trigger("click");
+    expect(within(resultGroup(wrapper, "# First")).getByText("2")).toBeTruthy();
+    expect(within(resultGroup(wrapper, "# Second")).getByText("1")).toBeTruthy();
+    await click(collapseTrigger(wrapper, "# First"));
+    expect(
+      within(resultGroup(wrapper, "# First")).queryAllByRole("button", { name: "Replace" }),
+    ).toHaveLength(0);
+    await click(within(resultGroup(wrapper, "# Second")).getByRole("button", { name: /hero/ }));
     expect(wrapper.emitted("select")?.[0]).toEqual(["chapter2", 9, 13]);
     wrapper.unmount();
   });
@@ -77,11 +95,11 @@ describe("SearchView review contracts", () => {
     const wrapper = mount(SearchView);
     await wrapper.get('input[type="search"]').setValue("hero");
 
-    await hideGroupButton(wrapper, "chapter1").trigger("click");
+    await click(hideGroupButton(wrapper, "# First"));
 
-    const hiddenGroup = wrapper.find('[data-search-group="chapter1"]');
-    expect(hiddenGroup.exists()).toBe(false);
-    expect(wrapper.find('[data-search-group="chapter2"]').exists()).toBe(true);
+    const groups = within(wrapper.element as HTMLElement);
+    expect(groups.queryByRole("group", { name: "# First" })).toBeNull();
+    expect(groups.getByRole("group", { name: "# Second" })).toBeTruthy();
     wrapper.unmount();
   });
 
@@ -89,14 +107,15 @@ describe("SearchView review contracts", () => {
     const wrapper = mount(SearchView);
     await wrapper.get('input[type="search"]').setValue("hero");
     await wrapper.get('input[placeholder="Replace"]').setValue("villain");
-    await wrapper.get("[data-replace-toggle]").trigger("click");
+    await click(button(wrapper, "Show replace"));
 
     // Hiding is the user excluding something from the operation.
-    await hideGroupButton(wrapper, "chapter2").trigger("click");
-    await wrapper
-      .find('[data-search-group="chapter1"] .search-result button[aria-label="Hide"]')
-      .trigger("click");
-    await wrapper.get("[data-replace-all]").trigger("click");
+    await click(hideGroupButton(wrapper, "# Second"));
+    // The first Hide is the header's; the second belongs to the first result.
+    await click(
+      within(resultGroup(wrapper, "# First")).getAllByRole("button", { name: "Hide" })[1]!,
+    );
+    await click(button(wrapper, "Replace all"));
 
     const chapters = useProjectStore().book!.chapters;
     expect(chapters[1]!.source).toBe("# Second\nhero");
@@ -108,13 +127,13 @@ describe("SearchView review contracts", () => {
     const wrapper = mount(SearchView);
     await wrapper.get('input[type="search"]').setValue("hero");
     await wrapper.get('input[placeholder="Replace"]').setValue("villain");
-    await wrapper.get("[data-replace-toggle]").trigger("click");
+    await click(button(wrapper, "Show replace"));
 
-    for (const id of ["chapter1", "chapter2"]) await collapseTrigger(wrapper, id).trigger("click");
+    for (const title of ["# First", "# Second"]) await click(collapseTrigger(wrapper, title));
 
     // Collapsing is a fold, not an exclusion.
-    expect(wrapper.get("[data-replace-all]").attributes("disabled")).toBeUndefined();
-    await wrapper.get("[data-replace-all]").trigger("click");
+    expect(button(wrapper, "Replace all")).toBeEnabled();
+    await click(button(wrapper, "Replace all"));
     expect(useProjectStore().book?.chapters[1]?.source).toBe("# Second\nvillain");
     wrapper.unmount();
   });
@@ -123,9 +142,9 @@ describe("SearchView review contracts", () => {
     const wrapper = mount(SearchView);
     await wrapper.get('input[type="search"]').setValue("hero");
     await wrapper.get('input[placeholder="Replace"]').setValue("villain");
-    await wrapper.get("[data-replace-toggle]").trigger("click");
-    expect(wrapper.findAll(".replacement-preview")).toHaveLength(3);
-    await replaceChapterButton(wrapper, "chapter1").trigger("click");
+    await click(button(wrapper, "Show replace"));
+    expect(within(wrapper.element as HTMLElement).getAllByText("villain")).toHaveLength(3);
+    await click(replaceChapterButton(wrapper, "# First"));
     expect(useProjectStore().book?.chapters[0]?.source).toContain("villain villain");
     window.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Enter", altKey: true, ctrlKey: true }),

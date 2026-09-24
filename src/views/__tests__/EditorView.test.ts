@@ -1,5 +1,6 @@
 import { createPinia, setActivePinia } from "pinia";
 import { mount } from "@vue/test-utils";
+import { within } from "@testing-library/vue";
 import { beforeEach, describe, expect, it } from "vitest";
 import { nextTick } from "vue";
 import { chapterParseResults, resetChapterParseResults } from "@/composables/use-novlang-parse";
@@ -151,7 +152,7 @@ describe("EditorView Task 13 integration", () => {
     ] as const) {
       layout.center = center;
       await wrapper.vm.$nextTick();
-      expect(wrapper.find(".editor-single-pane").exists()).toBe(true);
+      expect(wrapper.find("[data-single-pane]").exists()).toBe(true);
       expect(wrapper.find(".preview-pane").exists()).toBe(false);
     }
     wrapper.unmount();
@@ -177,6 +178,16 @@ describe("EditorView Task 13 integration", () => {
     wrapper.unmount();
   });
 
+  it("marks unsaved changes with a labelled indicator", () => {
+    useProjectStore().setBook(bookWithTwoChapters(), null, { dirty: true });
+    const wrapper = mount(EditorView);
+
+    expect(
+      within(wrapper.element as HTMLElement).getByRole("img", { name: "Unsaved changes" }),
+    ).toBeTruthy();
+    wrapper.unmount();
+  });
+
   it("shows a visible banner when opening reported problems", () => {
     useDiagnosticsStore().setReadWarnings([
       { code: "edb.missingChapter", message: "A chapter is missing" },
@@ -185,9 +196,10 @@ describe("EditorView Task 13 integration", () => {
 
     const wrapper = mount(EditorView);
 
-    const banner = wrapper.get("[data-open-problems-banner]");
-    expect(banner.text()).toContain("2");
-    expect(banner.attributes("role")).toBe("status");
+    const banner = within(wrapper.element as HTMLElement)
+      .getAllByRole("status")
+      .find((element) => element.textContent?.includes("problems found when opening"));
+    expect(banner).toHaveTextContent("2 problems found when opening");
     wrapper.unmount();
   });
 
@@ -203,7 +215,8 @@ describe("EditorView Task 13 integration", () => {
 
     // ExportDialog now teleports its content to document.body (Dialog's
     // portal), so it is no longer reachable through the mounted wrapper's tree.
-    expect(document.body.querySelector("[data-export-submit]")).not.toBeNull();
+    const dialog = within(document.body).getByRole("dialog", { name: "Export EPUB" });
+    expect(within(dialog).getByRole("button", { name: /export/i })).toBeInTheDocument();
     wrapper.unmount();
   });
 });

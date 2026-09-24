@@ -13,24 +13,29 @@
     "close": "Close",
     "delete": "Delete",
     "undo": "Undo",
-    "doNotAskAgain": "Do not ask again"
+    "doNotAskAgain": "Do not ask again",
+    "loading": "Loading"
   },
   "toolbar": {
     "text": "Text",
     "split": "Split",
-    "preview": "Preview"
+    "preview": "Preview",
+    "editorMode": "Editor mode",
+    "previewMode": "Preview mode"
   },
   "activity": {
     "explorer": "Explorer",
     "search": "Search",
-    "settings": "Settings"
+    "settings": "Settings",
+    "label": "Activity"
   },
   "editor": {
     "unnamedBook": "Untitled book",
     "selectChapter": "Select a chapter",
     "chooseChapter": "Select a chapter",
     "status": "{words} words · {characters} characters",
-    "openProblems": "{count} problems found when opening"
+    "openProblems": "{count} problems found when opening",
+    "unsaved": "Unsaved changes"
   },
   "breadcrumbs": {
     "aria": "Breadcrumbs",
@@ -38,6 +43,10 @@
     "settings": "Settings",
     "chapters": "Chapters",
     "fallback": "Chapter {number}"
+  },
+  "layout": {
+    "resizeSidebar": "Resize sidebar",
+    "resizeSplit": "Resize editor and preview"
   },
   "warnings": {
     "count": "{count} warning | {count} warnings",

@@ -6,7 +6,7 @@ test("switching the interface language does not raise an error", async ({ page }
   page.on("pageerror", (error) => crashes.push(String(error)));
 
   await page.goto("/");
-  await page.locator('[data-action="new-project"]').click();
+  await page.getByRole("button", { name: "New project" }).click();
   await page.locator('[data-activity="settings"]').click();
   await page.locator("[data-settings-view]").waitFor();
 
@@ -19,13 +19,13 @@ test("switching the interface language does not raise an error", async ({ page }
   await expect(page.locator("#settings-title")).toHaveText("设置");
 
   // The crash dialog is what the user actually saw.
-  await expect(page.locator("[data-error-details]")).toHaveCount(0);
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
   expect(crashes).toEqual([]);
 });
 
 test("the theme switcher darkens the window", async ({ page }) => {
   await page.goto("/");
-  await page.locator('[data-action="new-project"]').click();
+  await page.getByRole("button", { name: "New project" }).click();
   await page.locator('[data-activity="settings"]').click();
 
   await page.getByRole("combobox", { name: /theme/i }).click();

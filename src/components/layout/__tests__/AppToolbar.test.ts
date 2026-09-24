@@ -1,9 +1,10 @@
 import { cleanup, render, screen } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
-import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia, type Pinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { nextTick } from "vue";
 import AppToolbar from "@/components/layout/AppToolbar.vue";
+import { createI18nPlugin } from "@/plugins/i18n";
 import { useLayoutStore } from "@/stores/layout";
 
 describe("AppToolbar", () => {
@@ -17,13 +18,14 @@ describe("AppToolbar", () => {
 
   it("switches modes and disables them outside chapter and css views", async () => {
     const layout = useLayoutStore();
-    const wrapper = mount(AppToolbar);
-    await wrapper.get('[data-mode="text"]').trigger("click");
+    render(AppToolbar, { global: { plugins: [pinia] } });
+    const text = screen.getByRole("radio", { name: /text/i });
+    await userEvent.click(text);
     expect(layout.mode).toBe("text");
 
     layout.center = { kind: "metadata" };
-    await wrapper.vm.$nextTick();
-    expect(wrapper.get('[data-mode="text"]').attributes("disabled")).toBeDefined();
+    await nextTick();
+    expect(text).toBeDisabled();
   });
 
   it("moves between modes with the arrow keys", async () => {
@@ -62,6 +64,12 @@ describe("AppToolbar", () => {
       ["ArrowRight", false],
     ]);
     expect(document.activeElement).toHaveAccessibleName(/text/i);
+  });
+
+  it("names the toolbar and the mode group in the interface language", () => {
+    render(AppToolbar, { global: { plugins: [pinia, createI18nPlugin("zh-CN")] } });
+    expect(screen.getByRole("toolbar", { name: "编辑器模式" })).toBeInTheDocument();
+    expect(screen.getByLabelText("预览模式")).toBeInTheDocument();
   });
 
   it("emits export from the export button", async () => {

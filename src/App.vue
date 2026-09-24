@@ -60,10 +60,17 @@ function chooseUnsaved(value: "save" | "discard" | "cancel") {
       @decision="chooseUnsaved"
     />
     <ToastStack>
-      <Alert v-if="availableUpdate" role="status" class="w-auto max-w-sm shadow-lg">
+      <!-- A third grid column keeps the action in flow: the registry pins it
+           absolutely over a fixed right padding, which a longer title or a
+           translated button label would run underneath. -->
+      <Alert
+        v-if="availableUpdate"
+        role="status"
+        class="w-auto max-w-sm items-center shadow-lg has-[>svg]:grid-cols-[auto_1fr_auto] has-data-[slot=alert-action]:pr-2.5 *:[svg]:translate-y-0"
+      >
         <IconDownload aria-hidden="true" />
         <AlertTitle>{{ t("settings.updateAvailable", "A new version is available") }}</AlertTitle>
-        <AlertAction>
+        <AlertAction class="static col-start-3 row-start-1">
           <Button size="xs" @click="files.settingsActions.openUpdate(availableUpdate!.url)">
             {{ t("settings.openUpdate", "Open release") }}
           </Button>

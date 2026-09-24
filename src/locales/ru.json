@@ -13,24 +13,29 @@
     "close": "Закрыть",
     "delete": "Удалить",
     "undo": "Отменить",
-    "doNotAskAgain": "Больше не спрашивать"
+    "doNotAskAgain": "Больше не спрашивать",
+    "loading": "Загрузка"
   },
   "toolbar": {
     "text": "Текст",
     "split": "Сплит",
-    "preview": "Превью"
+    "preview": "Превью",
+    "editorMode": "Режим редактора",
+    "previewMode": "Режим превью"
   },
   "activity": {
     "explorer": "Проводник",
     "search": "Поиск",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "label": "Разделы"
   },
   "editor": {
     "unnamedBook": "Безымянная книга",
     "selectChapter": "Выберите главу",
     "chooseChapter": "Выберите главу",
     "status": "{words} слов · {characters} символов",
-    "openProblems": "При открытии обнаружено проблем: {count}"
+    "openProblems": "При открытии обнаружено проблем: {count}",
+    "unsaved": "Есть несохранённые изменения"
   },
   "breadcrumbs": {
     "aria": "Хлебные крошки",
@@ -38,6 +43,10 @@
     "settings": "Настройки",
     "chapters": "Главы",
     "fallback": "Глава {number}"
+  },
+  "layout": {
+    "resizeSidebar": "Изменить ширину боковой панели",
+    "resizeSplit": "Изменить соотношение редактора и превью"
   },
   "warnings": {
     "count": "{count} предупреждение | {count} предупреждения | {count} предупреждений",

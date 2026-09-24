@@ -33,7 +33,7 @@ function onUpdate(value: unknown) {
       type="single"
       orientation="vertical"
       :model-value="active"
-      aria-label="Activity"
+      :aria-label="t('activity.label', 'Activity')"
       class="flex h-full flex-col items-center gap-3 rounded-none bg-transparent py-3"
       @update:model-value="onUpdate"
     >

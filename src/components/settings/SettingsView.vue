@@ -121,7 +121,7 @@ const openLogs = () => props.actions.openLogs();
       </CardHeader>
       <CardContent>
         <FieldGroup>
-          <Field orientation="horizontal" data-setting="locale">
+          <Field orientation="horizontal">
             <Label for="settings-locale" class="flex-auto">
               {{ t("settings.language", "Interface language") }}
             </Label>
@@ -139,7 +139,7 @@ const openLogs = () => props.actions.openLogs();
               </SelectContent>
             </Select>
           </Field>
-          <Field orientation="horizontal" data-setting="theme">
+          <Field orientation="horizontal">
             <Label for="settings-theme" class="flex-auto">
               {{ t("settings.theme", "Theme") }}
             </Label>
@@ -220,7 +220,7 @@ const openLogs = () => props.actions.openLogs();
       <CardContent>
         <FieldGroup>
           <Field orientation="horizontal" class="flex-wrap">
-            <Button variant="outline" data-check-updates @click="checkUpdates">
+            <Button variant="outline" @click="checkUpdates">
               <IconRefresh aria-hidden="true" />
               {{ t("settings.checkUpdates", "Check for updates") }}
             </Button>
@@ -235,7 +235,7 @@ const openLogs = () => props.actions.openLogs();
             </Button>
           </Field>
           <Field orientation="horizontal">
-            <Button variant="outline" data-open-logs @click="openLogs">
+            <Button variant="outline" @click="openLogs">
               <IconFolderOpen aria-hidden="true" />
               {{ t("settings.openLogs", "Open log folder") }}
             </Button>

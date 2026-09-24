@@ -49,11 +49,13 @@ describe("release workflow", () => {
 });
 
 describe("e2e selectors", () => {
-  it("pins the locale and avoids placeholder/positional selectors", () => {
+  it("pins the locale and addresses controls by role, not placeholder/positional selectors", () => {
     expect(e2eConfig).toContain('locale: "en-US"');
-    expect(e2eSpec).toContain('[data-action="new-project"]');
-    expect(e2eSpec).toContain("data-search-input");
-    expect(e2eSpec).toContain("data-replace-input");
+    expect(e2eSpec).toContain('getByRole("button", { name: "New project" })');
+    expect(e2eSpec).toContain('getByRole("searchbox")');
+    expect(e2eSpec).toContain('getByRole("textbox", { name: "Replace" })');
+    // Only the structural activity anchor survives; interaction hooks are retired.
+    expect(e2eSpec).not.toMatch(/data-(?!activity\b)[a-z-]+/);
     expect(e2eSpec).not.toContain('placeholder="Search"');
     expect(e2eSpec).not.toContain('.nth(1).getByRole("button").nth(2)');
   });

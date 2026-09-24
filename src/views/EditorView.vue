@@ -24,7 +24,7 @@ import { createSettingsActions } from "@/composables/use-settings-actions";
 import { useSettingsStore } from "@/stores/settings";
 import { useDiagnosticsStore } from "@/stores/diagnostics";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
-import { IconAlertTriangle } from "@tabler/icons-vue";
+import { IconAlertTriangle, IconPointFilled } from "@tabler/icons-vue";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import {
   captureImageImportIdentity,
@@ -225,18 +225,27 @@ onMounted(findSourceScroller);
 </script>
 
 <template>
-  <main ref="shell" class="editor-shell" data-shell>
-    <header class="editor-shell__header">
-      <div class="editor-shell__title" data-editor-title>
-        {{ project.filePath ?? t("editor.unnamedBook", "Untitled book")
-        }}<span v-if="project.dirty"> •</span>
+  <main ref="shell" class="flex h-dvh flex-col overflow-hidden" data-shell>
+    <!-- The shell owns the window exactly: a `min-height` here would let tall
+         chapters push it past the viewport and scroll the whole document,
+         header included, instead of scrolling the pane that holds the text. -->
+    <header class="flex min-h-13 items-center justify-between gap-4 border-b px-4">
+      <div class="flex min-w-0 items-center gap-1 text-sm">
+        <span class="truncate">{{
+          project.filePath ?? t("editor.unnamedBook", "Untitled book")
+        }}</span>
+        <IconPointFilled
+          v-if="project.dirty"
+          role="img"
+          :aria-label="t('editor.unsaved', 'Unsaved changes')"
+          class="size-3 shrink-0"
+        />
       </div>
       <AppToolbar @export="exportOpen = true" />
     </header>
     <!-- `shrink-0` keeps the strip from being squeezed away when a chapter is tall. -->
     <Alert
       v-if="diagnostics.read.length"
-      data-open-problems-banner
       role="status"
       class="shrink-0 rounded-none border-x-0 border-t-0 py-1.5 text-xs"
     >
@@ -249,20 +258,26 @@ onMounted(findSourceScroller);
         }}
       </AlertTitle>
     </Alert>
-    <div class="editor-shell__body" data-shell-body>
+    <!-- The body is both a flex item of the shell and the flex container that
+         lets the split's `flex-1` resolve. Without it the split falls back to
+         auto height and the window is left empty below the content. -->
+    <div class="flex min-h-0 flex-1 flex-col" data-shell-body>
       <ResizableSplit :single-pane="singlePane">
         <template #activity>
           <ActivityBar :active="activeActivity" @select="selectActivity" />
         </template>
         <template #sidebar>
-          <div class="editor-sidebar__content">
+          <div class="min-w-0 flex-1 overflow-auto p-3 text-xs">
             <ExplorerView v-if="layout.activeView === 'explorer'" @import="importImage" />
             <SearchView v-else @select="selectSearchResult" />
           </div>
         </template>
         <template #single>
           <Breadcrumbs />
-          <div class="editor-single-pane__content" data-single-pane-content>
+          <!-- Breadcrumbs stay pinned; the view below them scrolls. Without this,
+               metadata and settings taller than the window are clipped by the
+               pane's overflow. -->
+          <div class="flex min-h-0 flex-1 flex-col overflow-auto" data-single-pane-content>
             <MetadataForm
               v-if="layout.center.kind === 'metadata'"
               :on-pick-cover="pickCover"
@@ -274,13 +289,13 @@ onMounted(findSourceScroller);
               :settings="settings"
               :actions="settingsActions"
             />
-            <div v-else class="editor-placeholder">
+            <div v-else class="grid flex-1 place-items-center text-muted-foreground">
               {{ t("editor.selectChapter", "Select a chapter") }}
             </div>
           </div>
         </template>
         <template #source>
-          <div class="editor-pane">
+          <div class="relative flex h-full flex-col">
             <Breadcrumbs />
             <SourceEditor
               ref="sourceEditor"
@@ -291,10 +306,10 @@ onMounted(findSourceScroller);
               :import-image="importImageAt"
             />
             <CssEditor v-else-if="layout.center.kind === 'css'" />
-            <div v-else class="editor-placeholder">
+            <div v-else class="grid flex-1 place-items-center text-muted-foreground">
               {{ t("editor.chooseChapter", "Select a chapter") }}
             </div>
-            <div class="editor-pane__status">
+            <div class="absolute right-3 bottom-3 flex items-center gap-2">
               <WarningsPopover
                 v-if="!singlePane"
                 :chapter-id="selectedChapterId || previewChapterId"

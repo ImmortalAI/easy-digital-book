@@ -38,12 +38,12 @@ function setMode(mode: unknown) {
 </script>
 
 <template>
-  <Toolbar aria-label="Editor mode">
+  <Toolbar :aria-label="t('toolbar.editorMode', 'Editor mode')">
     <ToolbarToggleGroup
       type="single"
       variant="outline"
       size="sm"
-      aria-label="Preview mode"
+      :aria-label="t('toolbar.previewMode', 'Preview mode')"
       :model-value="layout.mode"
       @update:model-value="setMode"
     >
@@ -51,7 +51,6 @@ function setMode(mode: unknown) {
         v-for="item in modes"
         :key="item.value"
         :value="item.value"
-        :data-mode="item.value"
         :disabled="disabled"
       >
         {{ item.label }}
@@ -60,7 +59,7 @@ function setMode(mode: unknown) {
     </ToolbarToggleGroup>
     <ToolbarSeparator class="my-1" />
     <ToolbarButton as-child>
-      <Button variant="ghost" size="sm" data-export-button @click="emit('export')">
+      <Button variant="ghost" size="sm" @click="emit('export')">
         <IconFileExport data-icon="inline-start" aria-hidden="true" />
         {{ t("export.action", "Export…") }}
       </Button>
