@@ -198,5 +198,9 @@
       "failed": "Could not export EPUB",
       "invalidXhtml": "Chapter {chapter} “{title}” produced invalid XHTML"
     }
+  },
+  "notifications": {
+    "label": "Notification",
+    "region": "Notifications ({hotkey})"
   }
 }

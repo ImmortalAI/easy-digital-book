@@ -1,57 +1,103 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { useDocumentVisibility, useWindowFocus } from "@vueuse/core";
+import { onMounted, ref, watch } from "vue";
+import { IconX } from "@tabler/icons-vue";
 import type { Notification } from "@/stores/notifications";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
+import { Button } from "@/components/ui/button";
+import {
+  injectToastProviderContext,
+  Toast,
+  ToastAction,
+  ToastClose,
+  ToastDescription,
+} from "@/components/ui/toast";
 
-const props = defineProps<{ notification: Notification }>();
+const props = defineProps<{
+  notification: Notification;
+  /** Pushed out of the stack by newer toasts: close it. */
+  superseded?: boolean;
+}>();
 const emit = defineEmits<{ close: []; undo: [] }>();
-const hovered = ref(false);
-const isVisible = useDocumentVisibility();
-const isFocused = useWindowFocus();
 const { t } = useSafeI18n();
-const paused = computed(() => hovered.value || isVisible.value !== "visible" || !isFocused.value);
+const provider = injectToastProviderContext();
+
+const open = ref(!props.superseded);
+// The primitive owns the timer and pauses it for the whole viewport (hover,
+// focus inside, window blur). A toast born into a paused viewport starts
+// paused; later changes arrive as pause / resume.
+const paused = ref(provider.isClosePausedRef.value);
+
+watch(
+  () => props.superseded,
+  (superseded) => {
+    if (superseded) open.value = false;
+  },
+);
+// Superseded before it ever showed: there is no exit to wait for.
+onMounted(() => {
+  if (!open.value) emit("close");
+});
+
+// Reka listens for Escape on the whole window; only close when the key was
+// pressed inside the notifications, not while a dialog or the editor has focus.
+function keepEscapeOutside(event: KeyboardEvent) {
+  const target = event.target instanceof Node ? event.target : null;
+  if (!provider.viewport.value?.contains(target)) event.preventDefault();
+}
 </script>
 
 <template>
-  <article
-    class="undo-toast undo-toast--enter"
-    role="status"
-    @mouseenter="hovered = true"
-    @mouseleave="hovered = false"
+  <Toast
+    v-model:open="open"
+    :duration="notification.duration ?? 8000"
+    class="undo-toast flex items-center gap-2 overflow-hidden pr-2"
+    @pause="paused = true"
+    @resume="paused = false"
+    @escape-key-down="keepEscapeOutside"
   >
-    <span>{{ props.notification.message }}</span>
-    <button
-      v-if="props.notification.undo"
-      data-undo
-      type="button"
-      :disabled="!props.notification.undoEnabled"
-      @click="emit('undo')"
-    >
-      {{ t("common.undo", "Undo") }}
-    </button>
-    <button type="button" :aria-label="t('common.close', 'Close')" @click="emit('close')">×</button>
+    <ToastDescription class="min-w-0 flex-1">{{ notification.message }}</ToastDescription>
+    <ToastAction v-if="notification.undo" as-child :alt-text="t('common.undo', 'Undo')">
+      <Button
+        data-undo
+        size="xs"
+        variant="outline"
+        :disabled="!notification.undoEnabled"
+        @click="emit('undo')"
+      >
+        {{ t("common.undo", "Undo") }}
+      </Button>
+    </ToastAction>
+    <ToastClose as-child>
+      <Button size="icon-xs" variant="ghost" :aria-label="t('common.close', 'Close')">
+        <IconX aria-hidden="true" />
+      </Button>
+    </ToastClose>
+    <!-- Presence unmounts the toast's content once the exit animation has
+         played; that is when the notification leaves the store. -->
     <span
+      data-testid="undo-progress"
       class="undo-progress"
-      :class="{ 'is-paused': paused }"
-      :style="{ animationDuration: `${props.notification.duration ?? 8000}ms` }"
-      @animationend="emit('close')"
+      :data-paused="paused || undefined"
+      :style="{ animationDuration: `${notification.duration ?? 8000}ms` }"
+      @vue:unmounted="emit('close')"
     />
-  </article>
+    <span
+      aria-hidden="true"
+      class="undo-progress-dot"
+      :data-paused="paused || undefined"
+      :style="{ animationDuration: `${notification.duration ?? 8000}ms` }"
+    />
+  </Toast>
 </template>
 
 <style scoped>
-.undo-toast {
-  position: relative;
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  padding: 0.75rem;
-  overflow: hidden;
-  border: 1px solid currentColor;
-  border-radius: 0.5rem;
-  background: canvas;
+/* The toast element is teleported by the primitive and does not carry this
+   component's scope attribute, hence :global for the root rules. */
+:global(.undo-toast[data-state="open"]) {
   animation: toast-enter 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+:global(.undo-toast[data-state="closed"]) {
+  animation: toast-exit 160ms cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
 }
 .undo-progress {
   position: absolute;
@@ -60,10 +106,24 @@ const paused = computed(() => hovered.value || isVisible.value !== "visible" || 
   left: 0;
   height: 2px;
   transform-origin: left;
-  background: currentColor;
+  background: var(--primary);
   animation: undo-progress linear forwards;
 }
-.undo-progress.is-paused {
+/* Rides the end of the bar, fading and shrinking as time runs out. */
+.undo-progress-dot {
+  position: absolute;
+  bottom: 1px;
+  left: 100%;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--primary);
+  box-shadow: 0 0 0.5rem 0.125rem var(--primary);
+  transform: translate(-50%, 50%);
+  animation: undo-progress-dot linear forwards;
+}
+.undo-progress[data-paused],
+.undo-progress-dot[data-paused] {
   animation-play-state: paused;
 }
 @keyframes undo-progress {
@@ -72,6 +132,18 @@ const paused = computed(() => hovered.value || isVisible.value !== "visible" || 
   }
   to {
     transform: scaleX(0);
+  }
+}
+@keyframes undo-progress-dot {
+  from {
+    left: 100%;
+    opacity: 1;
+    transform: translate(-50%, 50%) scale(1);
+  }
+  to {
+    left: 0;
+    opacity: 0;
+    transform: translate(-50%, 50%) scale(0.25);
   }
 }
 @keyframes toast-enter {
@@ -94,25 +166,28 @@ const paused = computed(() => hovered.value || isVisible.value !== "visible" || 
     transform: translateY(0.5rem) scale(0.96);
   }
 }
-.undo-toast--exit {
-  animation: toast-exit 160ms cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
-}
 @media (prefers-reduced-motion: reduce) {
-  .undo-toast,
-  .undo-toast--exit {
-    animation: fade-toast 160ms ease-out;
+  :global(.undo-toast[data-state="open"]) {
+    animation: fade-toast-in 160ms ease-out;
   }
-  .undo-progress {
-    animation-duration: 8s !important;
-    transition: opacity 8s linear;
+  :global(.undo-toast[data-state="closed"]) {
+    animation: fade-toast-out 160ms ease-in forwards;
   }
 }
-@keyframes fade-toast {
+@keyframes fade-toast-in {
   from {
     opacity: 0;
   }
   to {
     opacity: 1;
+  }
+}
+@keyframes fade-toast-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }
 </style>

@@ -49,14 +49,17 @@ describe("application stores", () => {
     expect(project.recoveryDelta.changedChapters).toContain("chapter1");
   });
 
-  it("caps notifications at three items", () => {
+  it("keeps notifications until removed; the toast stack owns the three-toast limit", () => {
     setActivePinia(createPinia());
     const notifications = useNotificationsStore();
-    notifications.add({ message: "one" });
-    notifications.add({ message: "two" });
-    notifications.add({ message: "three" });
-    notifications.add({ message: "four" });
-    expect(notifications.items).toHaveLength(3);
+    const ids = ["one", "two", "three", "four"].map((message) => notifications.add({ message }));
+    expect(notifications.items.map((item) => item.message)).toEqual([
+      "one",
+      "two",
+      "three",
+      "four",
+    ]);
+    notifications.remove(ids[0]!);
     expect(notifications.items.map((item) => item.message)).toEqual(["two", "three", "four"]);
   });
 

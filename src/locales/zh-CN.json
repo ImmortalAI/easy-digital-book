@@ -198,5 +198,9 @@
       "failed": "无法导出 EPUB",
       "invalidXhtml": "第 {chapter} 章《{title}》生成了无效的 XHTML"
     }
+  },
+  "notifications": {
+    "label": "通知",
+    "region": "通知（{hotkey}）"
   }
 }

@@ -198,5 +198,9 @@
       "failed": "Не удалось экспортировать EPUB",
       "invalidXhtml": "Глава {chapter} «{title}»: некорректный XHTML"
     }
+  },
+  "notifications": {
+    "label": "Уведомление",
+    "region": "Уведомления ({hotkey})"
   }
 }

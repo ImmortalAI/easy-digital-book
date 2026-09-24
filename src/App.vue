@@ -13,6 +13,7 @@ import { useSafeI18n } from "@/composables/use-safe-i18n";
 import { IconDownload } from "@tabler/icons-vue";
 import { Alert, AlertAction, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { ToastProvider } from "@/components/ui/toast";
 
 const files = useProjectFiles();
 const project = files.project;
@@ -46,31 +47,37 @@ function chooseUnsaved(value: "save" | "discard" | "cancel") {
 </script>
 
 <template>
-  <EditorView v-if="project.book" />
-  <WelcomeView v-else />
-  <UnsavedChangesDialog
-    v-if="files.prompt"
-    :action="files.prompt.pending.value"
-    @decision="chooseUnsaved"
-  />
-  <ToastStack />
-  <Alert
-    v-if="availableUpdate"
-    role="status"
-    class="fixed right-4 bottom-4 z-5 w-auto max-w-sm shadow-lg"
+  <ToastProvider
+    :duration="8000"
+    swipe-direction="right"
+    :label="t('notifications.label', 'Notification')"
   >
-    <IconDownload aria-hidden="true" />
-    <AlertTitle>{{ t("settings.updateAvailable", "A new version is available") }}</AlertTitle>
-    <AlertAction>
-      <Button size="xs" @click="files.settingsActions.openUpdate(availableUpdate!.url)">
-        {{ t("settings.openUpdate", "Open release") }}
-      </Button>
-    </AlertAction>
-  </Alert>
-  <ErrorDetailsDialog
-    v-if="unexpectedError"
-    :report="unexpectedError"
-    :actions="files.errorActions"
-    @close="unexpectedError = null"
-  />
+    <EditorView v-if="project.book" />
+    <WelcomeView v-else />
+    <UnsavedChangesDialog
+      v-if="files.prompt"
+      :action="files.prompt.pending.value"
+      @decision="chooseUnsaved"
+    />
+    <ToastStack />
+    <Alert
+      v-if="availableUpdate"
+      role="status"
+      class="fixed right-4 bottom-4 z-5 w-auto max-w-sm shadow-lg"
+    >
+      <IconDownload aria-hidden="true" />
+      <AlertTitle>{{ t("settings.updateAvailable", "A new version is available") }}</AlertTitle>
+      <AlertAction>
+        <Button size="xs" @click="files.settingsActions.openUpdate(availableUpdate!.url)">
+          {{ t("settings.openUpdate", "Open release") }}
+        </Button>
+      </AlertAction>
+    </Alert>
+    <ErrorDetailsDialog
+      v-if="unexpectedError"
+      :report="unexpectedError"
+      :actions="files.errorActions"
+      @close="unexpectedError = null"
+    />
+  </ToastProvider>
 </template>
