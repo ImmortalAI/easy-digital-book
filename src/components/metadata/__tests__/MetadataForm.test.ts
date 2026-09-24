@@ -1,6 +1,7 @@
 import { createPinia, setActivePinia } from "pinia";
 import { mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/vue";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createBook } from "@/services/book/create";
 import { useProjectStore } from "@/stores/project";
 import MetadataForm from "@/components/metadata/MetadataForm.vue";
@@ -71,5 +72,23 @@ describe("MetadataForm cover preview", () => {
 
     expect(revoke).toHaveBeenCalled();
     revoke.mockRestore();
+  });
+});
+
+describe("MetadataForm language field", () => {
+  beforeEach(() => setActivePinia(createPinia()));
+  // @testing-library/vue's auto-cleanup needs a global `afterEach`, which
+  // this project's vitest config (no `globals: true`) doesn't provide.
+  afterEach(cleanup);
+
+  it("labels the language field exactly once, with no duplicated text", () => {
+    installBook();
+    render(MetadataForm);
+
+    // The field's own Field+Label is the single source of the "Language"
+    // text and the combobox's accessible name — MetadataForm no longer
+    // wraps LanguageCombobox in a second <label>Language…</label>.
+    expect(screen.getAllByText("Language")).toHaveLength(1);
+    expect(screen.getByRole("combobox", { name: "Language" })).toBeInTheDocument();
   });
 });

@@ -88,13 +88,11 @@ onBeforeUnmount(releaseCover);
         :placeholder="t('metadata.versionHint', 'e.g. ch. 1–150')"
         @input="patch({ version: ($event.target as HTMLInputElement).value || null })"
     /></label>
-    <label
-      >{{ t("metadata.language", "Language")
-      }}<LanguageCombobox
-        :model-value="book.metadata.language"
-        :error="languageError"
-        @update:model-value="updateLanguage"
-    /></label>
+    <LanguageCombobox
+      :model-value="book.metadata.language"
+      :error="languageError"
+      @update:model-value="updateLanguage"
+    />
     <ContributorsList
       :model-value="book.metadata.authors"
       :label="t('metadata.authors', 'Authors')"
