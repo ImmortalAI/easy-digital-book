@@ -200,4 +200,29 @@ describe("ExplorerView boundaries", () => {
       "false",
     );
   });
+
+  it("opens the neighbouring chapter with plain arrows and focuses its row", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const project = useProjectStore();
+    project.setBook(twoChapterBook());
+    const layout = useLayoutStore();
+    render(ExplorerView, { global: { plugins: [pinia] } });
+
+    screen.getByRole("treeitem", { name: /1\. Chapter 1/ }).focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(layout.center).toEqual({ kind: "chapter", id: "chapter2" });
+    expect(document.activeElement).toBe(screen.getByRole("treeitem", { name: /2\. Chapter 2/ }));
+    expect(project.book!.chapters.map((chapter) => chapter.id)).toEqual(["chapter1", "chapter2"]);
+
+    // At the boundary nothing opens, as before; roving focus moves on as usual.
+    await userEvent.keyboard("{ArrowDown}");
+    expect(layout.center).toEqual({ kind: "chapter", id: "chapter2" });
+    expect(document.activeElement).toHaveAccessibleName(/^images$/i);
+
+    screen.getByRole("treeitem", { name: /2\. Chapter 2/ }).focus();
+    await userEvent.keyboard("{ArrowUp}");
+    expect(layout.center).toEqual({ kind: "chapter", id: "chapter1" });
+    expect(document.activeElement).toBe(screen.getByRole("treeitem", { name: /1\. Chapter 1/ }));
+  });
 });

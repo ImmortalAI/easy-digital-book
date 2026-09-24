@@ -12,6 +12,8 @@ import { useSafeI18n } from "@/composables/use-safe-i18n";
 import type { Chapter } from "@/types/book";
 import { IconChevronRight, IconPlus, IconX } from "@tabler/icons-vue";
 import { Tree, TreeItem } from "@/components/ui/tree";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import ChapterItem from "./ChapterItem.vue";
 import ImageItem from "./ImageItem.vue";
 import ConfirmDialog from "@/components/common/ConfirmDialog.vue";
@@ -194,6 +196,10 @@ function move(index: number, direction: -1 | 1) {
     if (mutation.book !== book.value) project.applyMutation(mutation);
   }
 }
+function navigate(index: number, direction: -1 | 1) {
+  const target = book.value?.chapters[index + direction];
+  if (target) selectChapter(target.id);
+}
 function removeChapterAt(id: string) {
   if (!book.value) return;
   if (!settings.confirmDelete) {
@@ -321,45 +327,46 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
           <span :id="`${labelPrefix}-${item.value.section}`" class="min-w-0 flex-1 truncate">{{
             sectionTitle(item.value.section)
           }}</span>
-          <small
-            v-if="sectionCount(item.value.section) !== undefined"
-            class="text-muted-foreground"
-            >{{ sectionCount(item.value.section) }}</small
-          >
+          <Badge v-if="sectionCount(item.value.section) !== undefined" variant="secondary">{{
+            sectionCount(item.value.section)
+          }}</Badge>
           <span
             v-if="item.value.section === 'chapters'"
             class="flex shrink-0 text-muted-foreground"
           >
-            <button
+            <Button
               type="button"
-              class="rounded-sm p-0.5 hover:bg-background"
+              variant="ghost"
+              size="icon-xs"
               data-chapter-add
               :aria-label="t('explorer.newChapter', 'New chapter')"
               @click.stop="add()"
             >
-              <IconPlus class="size-3.5" aria-hidden="true" />
-            </button>
+              <IconPlus aria-hidden="true" />
+            </Button>
           </span>
           <span
             v-else-if="item.value.section === 'images'"
             class="flex shrink-0 text-muted-foreground"
           >
-            <button
+            <Button
               type="button"
-              class="rounded-sm p-0.5 hover:bg-background"
+              variant="ghost"
+              size="icon-xs"
               :aria-label="t('files.importImage', 'Import image')"
               @click.stop="requestImport"
             >
-              <IconPlus class="size-3.5" aria-hidden="true" />
-            </button>
-            <button
+              <IconPlus aria-hidden="true" />
+            </Button>
+            <Button
               type="button"
-              class="rounded-sm p-0.5 hover:bg-background"
+              variant="ghost"
+              size="icon-xs"
               :aria-label="t('delete.unusedTitle', 'Delete unused images')"
               @click.stop="requestDelete({ kind: 'unused' })"
             >
-              <IconX class="size-3.5" aria-hidden="true" />
-            </button>
+              <IconX aria-hidden="true" />
+            </Button>
           </span>
         </TreeItem>
         <TreeItem
@@ -388,6 +395,7 @@ const emit = defineEmits<{ import: []; "image-context-menu": [path: string, even
           "
           @select="selectChapter(item.value.chapter.id)"
           @move="move(item.value.index, $event)"
+          @navigate="navigate(item.value.index, $event)"
           @remove="removeChapterAt(item.value.chapter.id)"
           @context-action="
             selectContextAction($event, { kind: 'chapter', id: item.value.chapter.id })

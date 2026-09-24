@@ -27,10 +27,12 @@ describe("ChapterItem", () => {
   // match a leftover menu from a previous test.
   afterEach(() => cleanup());
 
-  it("emits select, reorder and HTML5 DnD events from its tree row", async () => {
+  it("emits select, navigate, reorder and HTML5 DnD events from its tree row", async () => {
     const wrapper = mount(inTree({ index: 1 }));
     const item = wrapper.findComponent(ChapterItem);
     const row = wrapper.get('[role="treeitem"]');
+    await row.trigger("keydown", { key: "ArrowUp" });
+    await row.trigger("keydown", { key: "ArrowDown" });
     await row.trigger("keydown", { key: "Enter" });
     await row.trigger("keydown", { key: "ArrowUp", altKey: true });
     await row.trigger("keydown", { key: "ArrowDown", altKey: true });
@@ -39,6 +41,8 @@ describe("ChapterItem", () => {
     await row.trigger("drop", { dataTransfer: new DataTransfer() });
     expect(item.emitted("select")).toHaveLength(1);
     expect(item.emitted("move")?.map(([direction]) => direction)).toEqual([-1, 1]);
+    // Plain arrows navigate; Alt+arrows only reorder.
+    expect(item.emitted("navigate")?.map(([direction]) => direction)).toEqual([-1, 1]);
     expect(item.emitted("drag-start")).toHaveLength(1);
     expect(item.emitted("drop")).toHaveLength(1);
     // Selection belongs to the explorer (layout.center), so the tree's own

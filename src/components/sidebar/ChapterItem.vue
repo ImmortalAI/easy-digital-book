@@ -12,6 +12,8 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { TreeItem } from "@/components/ui/tree";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 const { t } = useSafeI18n();
 const props = defineProps<{
   /** The flattened tree node's bindings (value, level, aria-setsize/posinset). */
@@ -24,6 +26,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [];
   move: [direction: -1 | 1];
+  /** Plain ↑/↓ opens the neighbouring chapter; Reka's roving focus moves onto its row. */
+  navigate: [direction: -1 | 1];
   remove: [];
   newAfter: [];
   "context-action": [value: string];
@@ -60,6 +64,8 @@ function move(direction: -1 | 1, event: KeyboardEvent) {
         :data-chapter-index="index"
         draggable="true"
         @select="select"
+        @keydown.arrow-up.exact.self="emit('navigate', -1)"
+        @keydown.arrow-down.exact.self="emit('navigate', 1)"
         @keydown.alt.up.prevent="move(-1, $event)"
         @keydown.alt.down.prevent="move(1, $event)"
         @dragstart="emit('drag-start', $event)"
@@ -69,28 +75,28 @@ function move(direction: -1 | 1, event: KeyboardEvent) {
         <span :id="labelId" class="min-w-0 flex-1 truncate">
           <span>{{ index + 1 }}. </span
           ><span :class="{ italic: !extractTitle(chapter.source) }">{{ title() }}</span>
-          <small v-if="warningCount" class="ms-1 text-amber-600 dark:text-amber-400">{{
-            warningCount
-          }}</small>
         </span>
+        <Badge v-if="warningCount" variant="secondary">{{ warningCount }}</Badge>
         <span class="flex shrink-0 text-muted-foreground">
-          <button
+          <Button
             type="button"
-            class="rounded-sm p-0.5 hover:bg-background"
+            variant="ghost"
+            size="icon-xs"
             :aria-label="t('chapters.newAfter', 'New chapter after')"
             @click.stop="emit('newAfter')"
           >
-            <IconPlus class="size-3.5" aria-hidden="true" />
-          </button>
-          <button
+            <IconPlus aria-hidden="true" />
+          </Button>
+          <Button
             type="button"
-            class="rounded-sm p-0.5 hover:bg-background"
+            variant="ghost"
+            size="icon-xs"
             data-chapter-delete
             :aria-label="t('common.delete', 'Delete')"
             @click.stop="emit('remove')"
           >
-            <IconX class="size-3.5" aria-hidden="true" />
-          </button>
+            <IconX aria-hidden="true" />
+          </Button>
         </span>
       </TreeItem>
     </ContextMenuTrigger>
