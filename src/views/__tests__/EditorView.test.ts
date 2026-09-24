@@ -185,7 +185,9 @@ describe("EditorView Task 13 integration", () => {
 
     const wrapper = mount(EditorView);
 
-    expect(wrapper.get("[data-open-problems-banner]").text()).toContain("2");
+    const banner = wrapper.get("[data-open-problems-banner]");
+    expect(banner.text()).toContain("2");
+    expect(banner.attributes("role")).toBe("status");
     wrapper.unmount();
   });
 

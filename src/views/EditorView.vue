@@ -24,6 +24,8 @@ import { createSettingsActions } from "@/composables/use-settings-actions";
 import { useSettingsStore } from "@/stores/settings";
 import { useDiagnosticsStore } from "@/stores/diagnostics";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
+import { IconAlertTriangle } from "@tabler/icons-vue";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 import {
   captureImageImportIdentity,
   imageCursorPosition,
@@ -231,18 +233,22 @@ onMounted(findSourceScroller);
       </div>
       <AppToolbar @export="exportOpen = true" />
     </header>
-    <div
+    <!-- `shrink-0` keeps the strip from being squeezed away when a chapter is tall. -->
+    <Alert
       v-if="diagnostics.read.length"
-      class="open-problems-banner"
       data-open-problems-banner
       role="status"
+      class="shrink-0 rounded-none border-x-0 border-t-0 py-1.5 text-xs"
     >
-      {{
-        t("editor.openProblems", "{count} problems found when opening", {
-          count: diagnostics.read.length,
-        }).replace("{count}", String(diagnostics.read.length))
-      }}
-    </div>
+      <IconAlertTriangle aria-hidden="true" />
+      <AlertTitle>
+        {{
+          t("editor.openProblems", "{count} problems found when opening", {
+            count: diagnostics.read.length,
+          }).replace("{count}", String(diagnostics.read.length))
+        }}
+      </AlertTitle>
+    </Alert>
     <div class="editor-shell__body" data-shell-body>
       <ResizableSplit :single-pane="singlePane">
         <template #activity>

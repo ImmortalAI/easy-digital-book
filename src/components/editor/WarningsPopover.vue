@@ -4,6 +4,11 @@ import { checkBook } from "@/services/checks/book-checks";
 import { useDiagnosticsStore } from "@/stores/diagnostics";
 import { useProjectStore } from "@/stores/project";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
+import { IconAlertTriangle } from "@tabler/icons-vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const props = defineProps<{ chapterId?: string }>();
 const emit = defineEmits<{
@@ -34,6 +39,17 @@ const parseCount = computed(() =>
   [...diagnostics.parse.values()].reduce((total, items) => total + items.length, 0),
 );
 const count = computed(() => parseCount.value + bookItems.value.length);
+// A number as the params argument selects the plural form and fills `{count}`.
+const countLabel = computed(() => t("warnings.count", `${count.value} warnings`, count.value));
+
+const groups = computed(() => [
+  {
+    key: "chapter",
+    title: t("warnings.currentChapter", "Current chapter"),
+    items: chapterItems.value,
+  },
+  { key: "book", title: t("warnings.book", "Book"), items: bookItems.value },
+]);
 
 function select(item: { chapterId?: string; position?: { line: number; column: number } }) {
   emit("select", item);
@@ -42,40 +58,40 @@ function select(item: { chapterId?: string; position?: { line: number; column: n
 </script>
 
 <template>
-  <div class="warnings-popover">
-    <button
-      data-warnings-trigger
-      class="status-badge status-badge--warning"
-      type="button"
-      @click="open = !open"
-    >
-      ⚠ {{ count }}
-    </button>
-    <div v-if="open" class="warnings-popover__panel" role="dialog">
-      <section>
-        <h3>{{ t("warnings.currentChapter", "Current chapter") }}</h3>
-        <button
-          v-for="(item, index) in chapterItems"
-          :key="`chapter-${index}`"
-          type="button"
-          @click="select(item)"
-        >
-          {{ item.message }}
-        </button>
-        <p v-if="chapterItems.length === 0">{{ t("warnings.none", "No warnings") }}</p>
-      </section>
-      <section>
-        <h3>{{ t("warnings.book", "Book") }}</h3>
-        <button
-          v-for="(item, index) in bookItems"
-          :key="`book-${index}`"
-          type="button"
-          @click="select(item)"
-        >
-          {{ item.message }}
-        </button>
-        <p v-if="bookItems.length === 0">{{ t("warnings.none", "No warnings") }}</p>
-      </section>
-    </div>
-  </div>
+  <Popover v-model:open="open">
+    <PopoverTrigger as-child>
+      <Button data-warnings-trigger variant="ghost" size="sm" :aria-label="countLabel">
+        <IconAlertTriangle aria-hidden="true" />
+        <Badge :variant="count ? 'destructive' : 'secondary'" aria-hidden="true">{{ count }}</Badge>
+      </Button>
+    </PopoverTrigger>
+    <PopoverContent side="top" align="end" class="w-80 p-0">
+      <!-- The viewport carries the cap: the root's height is indefinite, so a
+           max-height on the root alone would clip instead of scroll. -->
+      <ScrollArea class="[&>[data-slot=scroll-area-viewport]]:max-h-80">
+        <div class="flex flex-col gap-3 p-3">
+          <section
+            v-for="group in groups"
+            :key="group.key"
+            class="flex flex-col gap-1 border-t pt-3 first:border-t-0 first:pt-0"
+          >
+            <h3 class="text-xs font-medium">{{ group.title }}</h3>
+            <Button
+              v-for="(item, index) in group.items"
+              :key="`${group.key}-${index}`"
+              variant="ghost"
+              size="sm"
+              class="h-auto justify-start whitespace-normal px-1 py-1 text-left text-xs font-normal"
+              @click="select(item)"
+            >
+              {{ item.message }}
+            </Button>
+            <p v-if="group.items.length === 0" class="text-xs text-muted-foreground">
+              {{ t("warnings.none", "No warnings") }}
+            </p>
+          </section>
+        </div>
+      </ScrollArea>
+    </PopoverContent>
+  </Popover>
 </template>

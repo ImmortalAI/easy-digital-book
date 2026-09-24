@@ -40,6 +40,7 @@
     "fallback": "Глава {number}"
   },
   "warnings": {
+    "count": "{count} предупреждение | {count} предупреждения | {count} предупреждений",
     "currentChapter": "Эта глава",
     "book": "Книга",
     "none": "Нет предупреждений"

@@ -10,6 +10,9 @@ import ErrorDetailsDialog from "@/components/common/ErrorDetailsDialog.vue";
 import type { UnexpectedErrorReport } from "@/services/platform/error-reporting";
 import type { UpdateInfo } from "@/types/platform";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
+import { IconDownload } from "@tabler/icons-vue";
+import { Alert, AlertAction, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 const files = useProjectFiles();
 const project = files.project;
@@ -51,12 +54,19 @@ function chooseUnsaved(value: "save" | "discard" | "cancel") {
     @decision="chooseUnsaved"
   />
   <ToastStack />
-  <div v-if="availableUpdate" class="update-notice" role="status">
-    {{ t("settings.updateAvailable", "A new version is available") }}
-    <button type="button" @click="files.settingsActions.openUpdate(availableUpdate!.url)">
-      {{ t("settings.openUpdate", "Open release") }}
-    </button>
-  </div>
+  <Alert
+    v-if="availableUpdate"
+    role="status"
+    class="fixed right-4 bottom-4 z-5 w-auto max-w-sm shadow-lg"
+  >
+    <IconDownload aria-hidden="true" />
+    <AlertTitle>{{ t("settings.updateAvailable", "A new version is available") }}</AlertTitle>
+    <AlertAction>
+      <Button size="xs" @click="files.settingsActions.openUpdate(availableUpdate!.url)">
+        {{ t("settings.openUpdate", "Open release") }}
+      </Button>
+    </AlertAction>
+  </Alert>
   <ErrorDetailsDialog
     v-if="unexpectedError"
     :report="unexpectedError"

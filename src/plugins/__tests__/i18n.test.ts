@@ -30,6 +30,7 @@ it("contains the localized keys required by the final editor shell", () => {
       "warnings.currentChapter",
       "warnings.book",
       "warnings.none",
+      "warnings.count",
       "files.openTitle",
       "files.saveTitle",
       "files.importImage",

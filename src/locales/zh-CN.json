@@ -40,6 +40,7 @@
     "fallback": "第 {number} 章"
   },
   "warnings": {
+    "count": "{count} 个警告",
     "currentChapter": "当前章节",
     "book": "书籍",
     "none": "没有警告"
