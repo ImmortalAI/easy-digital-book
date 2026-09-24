@@ -54,6 +54,26 @@ describe("ExplorerView boundaries", () => {
     expect(project.book?.metadata.cover).toBeNull();
   });
 
+  it("forwards image contextmenu with its path alongside opening the menu", async () => {
+    const project = useProjectStore();
+    const book = createBook({
+      locale: "en",
+      now: new Date(),
+      newUuid: () => "550e8400-e29b-41d4-a716-446655440000",
+      newChapterId: () => "chapter1",
+    });
+    book.resources.set("images/a.png", { bytes: new Uint8Array([1]), mediaType: "image/png" });
+    project.setBook(book);
+    const wrapper = mount(ExplorerView);
+
+    await wrapper.get(".explorer-image").trigger("contextmenu");
+
+    expect(wrapper.emitted("image-context-menu")?.[0]?.[0]).toBe("images/a.png");
+    expect(await screen.findByRole("menuitem", { name: /make cover/i })).toBeVisible();
+    expect(project.book?.metadata.cover).toBeNull();
+    wrapper.unmount();
+  });
+
   it("offers the chapter actions from a right click", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);

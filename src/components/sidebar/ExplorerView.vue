@@ -210,7 +210,16 @@ function dropChapter(index: number) {
 function requestImport() {
   emit("import");
 }
-const emit = defineEmits<{ import: [] }>();
+/**
+ * Forwards the raw contextmenu event alongside the row's own ContextMenu —
+ * consumers outside this component (e.g. a later task) still get to observe
+ * the right click. This must not interfere with the menu opening: it never
+ * calls preventDefault, so ImageItem's ContextMenuTrigger still does.
+ */
+function imageContextMenu(path: string, event: MouseEvent) {
+  emit("image-context-menu", path, event);
+}
+const emit = defineEmits<{ import: []; "image-context-menu": [path: string, event: MouseEvent] }>();
 </script>
 <template>
   <div v-if="book" class="explorer-view">
@@ -269,6 +278,7 @@ const emit = defineEmits<{ import: [] }>();
         :cover="book.metadata.cover === path"
         :unused="!usedImages.has(path)"
         @select="layout.center = { kind: 'image', path }"
+        @contextmenu="imageContextMenu(path, $event)"
         @context-action="selectContextAction($event, { kind: 'image', id: path })"
     /></ExplorerSection>
     <ConfirmDialog

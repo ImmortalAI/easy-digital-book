@@ -8,12 +8,22 @@ import {
 } from "@/components/ui/context-menu";
 const { t } = useSafeI18n();
 defineProps<{ path: string; cover: boolean; unused: boolean }>();
-const emit = defineEmits<{ select: []; "context-action": [value: string] }>();
+const emit = defineEmits<{
+  select: [];
+  contextmenu: [event: MouseEvent];
+  "context-action": [value: string];
+}>();
 </script>
 <template>
   <ContextMenu>
     <ContextMenuTrigger as-child>
-      <button class="explorer-image" :class="{ unused }" type="button" @click="emit('select')">
+      <button
+        class="explorer-image"
+        :class="{ unused }"
+        type="button"
+        @click="emit('select')"
+        @contextmenu="emit('contextmenu', $event)"
+      >
         {{ path.replace(/^images\//, "") }} <small v-if="cover">★</small
         ><small v-if="unused"> — {{ t("images.unused", "not used") }}</small>
       </button>
