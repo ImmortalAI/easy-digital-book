@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from "pinia";
-import { mount } from "@vue/test-utils";
+import { mount, type VueWrapper } from "@vue/test-utils";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createI18nPlugin } from "@/plugins/i18n";
 import { createBook } from "@/services/book/create";
@@ -20,6 +20,28 @@ function installBook() {
   project.setBook(book);
 }
 
+/**
+ * The group header always renders the CollapsibleTrigger first, followed by
+ * the count badge, the Hide button and (when replacement is open) the
+ * "Replace chapter" button — so the collapse trigger is reliably the header's
+ * first button regardless of which optional buttons are showing.
+ */
+function collapseTrigger(wrapper: VueWrapper, chapterId: string) {
+  const button = wrapper.findAll(`[data-search-group="${chapterId}"] header button`)[0];
+  if (!button) throw new Error(`Expected a collapse trigger in ${chapterId}`);
+  return button;
+}
+function hideGroupButton(wrapper: VueWrapper, chapterId: string) {
+  return wrapper.get(`[data-search-group="${chapterId}"] header button[aria-label="Hide"]`);
+}
+function replaceChapterButton(wrapper: VueWrapper, chapterId: string) {
+  const button = wrapper
+    .findAll(`[data-search-group="${chapterId}"] header button`)
+    .find((el) => el.text().includes("Replace chapter"));
+  if (!button) throw new Error(`Expected a "Replace chapter" button in ${chapterId}`);
+  return button;
+}
+
 describe("SearchView review contracts", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -32,7 +54,7 @@ describe("SearchView review contracts", () => {
   it("keeps an invalid regex error visible and localized", async () => {
     const wrapper = mount(SearchView, { global: { plugins: [createI18nPlugin("ru")] } });
     await wrapper.get('input[type="search"]').setValue("[");
-    await wrapper.get('[data-search-option="regex"]').setValue(true);
+    await wrapper.get('button[aria-label="Регулярное выражение"]').trigger("click");
 
     expect(wrapper.find(".search-error").text()).toContain("Неверное регулярное выражение");
     wrapper.unmount();
@@ -44,7 +66,7 @@ describe("SearchView review contracts", () => {
 
     expect(wrapper.findAll("[data-search-group]")).toHaveLength(2);
     expect(wrapper.findAll("[data-search-count]").map((item) => item.text())).toEqual(["2", "1"]);
-    await wrapper.find('[data-search-group="chapter1"] [data-search-collapse]').trigger("click");
+    await collapseTrigger(wrapper, "chapter1").trigger("click");
     expect(wrapper.findAll('[data-search-group="chapter1"] .search-result')).toHaveLength(0);
     await wrapper.find('[data-search-group="chapter2"] .search-result button').trigger("click");
     expect(wrapper.emitted("select")?.[0]).toEqual(["chapter2", 9, 13]);
@@ -55,11 +77,11 @@ describe("SearchView review contracts", () => {
     const wrapper = mount(SearchView);
     await wrapper.get('input[type="search"]').setValue("hero");
 
-    await wrapper.find('[data-search-group="chapter1"] [data-search-hide]').trigger("click");
+    await hideGroupButton(wrapper, "chapter1").trigger("click");
 
     const hiddenGroup = wrapper.find('[data-search-group="chapter1"]');
     expect(hiddenGroup.exists()).toBe(false);
-    expect(wrapper.find('[data-search-group="chapter2"] [data-search-hide]').exists()).toBe(true);
+    expect(wrapper.find('[data-search-group="chapter2"]').exists()).toBe(true);
     wrapper.unmount();
   });
 
@@ -70,7 +92,7 @@ describe("SearchView review contracts", () => {
     await wrapper.get("[data-replace-toggle]").trigger("click");
 
     // Hiding is the user excluding something from the operation.
-    await wrapper.find('[data-search-group="chapter2"] [data-search-hide]').trigger("click");
+    await hideGroupButton(wrapper, "chapter2").trigger("click");
     await wrapper
       .find('[data-search-group="chapter1"] .search-result button[aria-label="Hide"]')
       .trigger("click");
@@ -88,8 +110,7 @@ describe("SearchView review contracts", () => {
     await wrapper.get('input[placeholder="Replace"]').setValue("villain");
     await wrapper.get("[data-replace-toggle]").trigger("click");
 
-    for (const id of ["chapter1", "chapter2"])
-      await wrapper.find(`[data-search-group="${id}"] [data-search-collapse]`).trigger("click");
+    for (const id of ["chapter1", "chapter2"]) await collapseTrigger(wrapper, id).trigger("click");
 
     // Collapsing is a fold, not an exclusion.
     expect(wrapper.get("[data-replace-all]").attributes("disabled")).toBeUndefined();
@@ -104,7 +125,7 @@ describe("SearchView review contracts", () => {
     await wrapper.get('input[placeholder="Replace"]').setValue("villain");
     await wrapper.get("[data-replace-toggle]").trigger("click");
     expect(wrapper.findAll(".replacement-preview")).toHaveLength(3);
-    await wrapper.get('[data-replace-chapter="chapter1"]').trigger("click");
+    await replaceChapterButton(wrapper, "chapter1").trigger("click");
     expect(useProjectStore().book?.chapters[0]?.source).toContain("villain villain");
     window.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Enter", altKey: true, ctrlKey: true }),

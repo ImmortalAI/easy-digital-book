@@ -1,5 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import {
+  IconAbc,
+  IconChevronDown,
+  IconLetterCase,
+  IconRegex,
+  IconSearch,
+  IconX,
+} from "@tabler/icons-vue";
 import { findInBook } from "@/services/search/find";
 import { replaceMatches } from "@/services/search/replace";
 import type { SearchError, SearchQuery, SearchResult } from "@/services/search/query";
@@ -8,6 +16,11 @@ import { useProjectStore } from "@/stores/project";
 import { useBookSearch } from "@/composables/use-book-search";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
 import { useShortcuts } from "@/composables/use-shortcuts";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import SearchResultItem from "./SearchResultItem.vue";
 
 const emit = defineEmits<{ select: [chapterId: string, from: number, to: number] }>();
@@ -24,6 +37,21 @@ const regex = ref(false);
 const collapsedGroups = ref(new Set<string>());
 const hiddenGroups = ref(new Set<string>());
 const hiddenResults = ref(new Set<string>());
+
+/** The query-row toggles as one `multiple` ToggleGroup selection. */
+const activeOptions = computed<string[]>({
+  get: () => [
+    ...(caseSensitive.value ? ["case"] : []),
+    ...(wholeWord.value ? ["whole-word"] : []),
+    ...(regex.value ? ["regex"] : []),
+  ],
+  set: (values) => {
+    caseSensitive.value = values.includes("case");
+    wholeWord.value = values.includes("whole-word");
+    regex.value = values.includes("regex");
+  },
+});
+
 const query = computed<SearchQuery>(() => ({
   text: text.value,
   caseSensitive: caseSensitive.value,
@@ -92,9 +120,9 @@ function replaceAll() {
   );
 }
 useShortcuts({ replaceAll });
-function toggleGroup(chapterId: string) {
+function setGroupOpen(chapterId: string, open: boolean) {
   const next = new Set(collapsedGroups.value);
-  if (next.has(chapterId)) next.delete(chapterId);
+  if (open) next.delete(chapterId);
   else next.add(chapterId);
   collapsedGroups.value = next;
 }
@@ -111,84 +139,115 @@ function hideResult(result: SearchResult) {
 </script>
 
 <template>
-  <section class="search-view" aria-label="Search">
-    <div class="search-view__query">
-      <input
+  <section class="search-view flex flex-col gap-2 p-2" aria-label="Search">
+    <InputGroup>
+      <InputGroupAddon align="inline-start">
+        <IconSearch class="size-4 text-muted-foreground" aria-hidden="true" />
+      </InputGroupAddon>
+      <InputGroupInput
         v-model="text"
         type="search"
         data-search-input
+        :aria-label="t('search.placeholder', 'Search')"
         :placeholder="t('search.placeholder', 'Search')"
         autofocus
       />
-      <button
-        type="button"
-        data-replace-toggle
-        :aria-pressed="replacementOpen"
-        @click="replacementOpen = !replacementOpen"
-      >
-        ⌄
-      </button>
-    </div>
+      <InputGroupAddon align="inline-end" class="gap-1">
+        <ToggleGroup v-model="activeOptions" type="multiple" size="sm">
+          <ToggleGroupItem value="case" :aria-label="t('search.matchCase', 'Match case')">
+            <IconLetterCase class="size-4" aria-hidden="true" />
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="whole-word"
+            :aria-label="t('search.wholeWordLabel', 'Whole word')"
+          >
+            <IconAbc class="size-4" aria-hidden="true" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="regex" :aria-label="t('search.regexLabel', 'Regular expression')">
+            <IconRegex class="size-4" aria-hidden="true" />
+          </ToggleGroupItem>
+        </ToggleGroup>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          data-replace-toggle
+          :aria-expanded="replacementOpen"
+          :aria-label="t('search.showReplace', 'Show replace')"
+          @click="replacementOpen = !replacementOpen"
+        >
+          <IconChevronDown
+            class="size-4 transition-transform"
+            :class="{ 'rotate-180': replacementOpen }"
+            aria-hidden="true"
+          />
+        </Button>
+      </InputGroupAddon>
+    </InputGroup>
     <input
       v-model="replacement"
+      v-show="replacementOpen"
       type="text"
       data-replace-input
-      :aria-hidden="!replacementOpen"
+      :aria-label="t('search.replacePlaceholder', 'Replace')"
       :placeholder="t('search.replacePlaceholder', 'Replace')"
+      class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 py-1 text-sm outline-none placeholder:text-muted-foreground"
     />
-    <div class="search-view__options">
-      <label
-        ><input v-model="caseSensitive" type="checkbox" data-search-option="case" />
-        {{ t("search.caseSensitive", "Aa") }}</label
-      >
-      <label
-        ><input v-model="wholeWord" type="checkbox" data-search-option="whole-word" />
-        {{ t("search.wholeWord", "Whole word") }}</label
-      >
-      <label
-        ><input v-model="regex" type="checkbox" data-search-option="regex" />
-        {{ t("search.regex", ".*") }}</label
-      >
-    </div>
-    <p v-if="error" class="search-error" role="alert">
+    <p v-if="error" class="search-error text-sm text-destructive" role="alert">
       {{ t(error.error, "Invalid regular expression") }}
     </p>
-    <p v-else data-search-summary>
+    <p v-else data-search-summary class="text-xs text-muted-foreground">
       {{
         t("search.summary", "{results} results in {chapters} chapters")
           .replace("{results}", String(resultCount))
           .replace("{chapters}", String(chapterCount))
       }}
     </p>
-    <button
+    <Button
       v-if="replacementOpen"
       type="button"
+      variant="secondary"
+      size="sm"
       data-replace-all
       :disabled="!includedResults.length"
       @click="replaceAll"
     >
       {{ t("search.replaceAll", "Replace all") }}
-    </button>
+    </Button>
     <template v-for="group in groups" :key="group.chapterId">
-      <div v-if="!hiddenGroups.has(group.chapterId)" :data-search-group="group.chapterId">
-        <header class="search-group__header">
-          <button type="button" data-search-collapse @click="toggleGroup(group.chapterId)">
-            {{ group.title }}
-          </button>
-          <span data-search-count>{{ group.results.length }}</span>
-          <button type="button" data-search-hide @click="hideGroup(group.chapterId)">
-            {{ t("search.hide", "Hide") }}
-          </button>
-          <button
+      <Collapsible
+        v-if="!hiddenGroups.has(group.chapterId)"
+        :data-search-group="group.chapterId"
+        :open="!collapsedGroups.has(group.chapterId)"
+        @update:open="setGroupOpen(group.chapterId, $event)"
+      >
+        <header class="flex items-center gap-1">
+          <CollapsibleTrigger
+            class="flex min-w-0 flex-1 items-center truncate rounded-md px-1 text-left text-xs font-medium hover:bg-muted"
+          >
+            <span class="truncate">{{ group.title }}</span>
+          </CollapsibleTrigger>
+          <Badge variant="secondary" data-search-count>{{ group.results.length }}</Badge>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            :aria-label="t('search.hide', 'Hide')"
+            @click="hideGroup(group.chapterId)"
+          >
+            <IconX aria-hidden="true" />
+          </Button>
+          <Button
             v-if="replacementOpen"
             type="button"
-            :data-replace-chapter="group.chapterId"
+            variant="ghost"
+            size="xs"
             @click="replaceChapter(group.chapterId)"
           >
             {{ t("search.replaceChapter", "Replace chapter") }}
-          </button>
+          </Button>
         </header>
-        <div v-if="!collapsedGroups.has(group.chapterId)">
+        <CollapsibleContent>
           <SearchResultItem
             v-for="result in group.results.filter((item) => !hiddenResults.has(resultKey(item)))"
             :key="resultKey(result)"
@@ -199,8 +258,8 @@ function hideResult(result: SearchResult) {
             @replace="replaceOne(result)"
             @hide="hideResult(result)"
           />
-        </div>
-      </div>
+        </CollapsibleContent>
+      </Collapsible>
     </template>
   </section>
 </template>
