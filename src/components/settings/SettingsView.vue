@@ -8,7 +8,7 @@ import {
   IconSun,
 } from "@tabler/icons-vue";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
-import { useTheme, type Theme } from "@/composables/use-theme";
+import type { Theme } from "@/composables/use-theme";
 import type { ExportSettings, useSettingsStore } from "@/stores/settings";
 import type { SupportedLocale } from "@/plugins/i18n";
 import type { SettingsActions } from "@/composables/use-settings-actions";
@@ -31,8 +31,7 @@ const props = defineProps<{
   actions: SettingsActions;
 }>();
 const { currentLocale, t, setLocale } = useSafeI18n();
-// Applies the resolved theme to <html>; the store holds the choice itself.
-useTheme();
+// Only the stored choice changes here; main.ts applies it to <html> via useTheme().
 const update = ref<{ version: string; url: string } | null>(null);
 const updateMessage = ref("");
 
@@ -178,8 +177,11 @@ const openLogs = () => props.actions.openLogs();
       <CardContent>
         <FieldGroup>
           <FieldSet>
-            <FieldLegend variant="label">{{ t("export.preset", "Image preset") }}</FieldLegend>
+            <FieldLegend id="settings-preset-legend" variant="label">
+              {{ t("export.preset", "Image preset") }}
+            </FieldLegend>
             <RadioGroup
+              aria-labelledby="settings-preset-legend"
               :model-value="settings.exportSettings.imagePreset"
               @update:model-value="changePreset"
             >

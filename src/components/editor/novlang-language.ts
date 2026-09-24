@@ -31,15 +31,18 @@ const novlangParser = {
 export const novlangLanguage = StreamLanguage.define(novlangParser);
 export const novlangStreamLanguage = novlangLanguage;
 
-/** Muted styling for NovLang markers; token classes are supplied by CodeMirror. */
+/**
+ * Muted styling for NovLang markers; token classes are supplied by CodeMirror.
+ * Colours are theme tokens so the markers stay readable in light and dark.
+ */
 export const novlangHighlightStyle = HighlightStyle.define([
-  { tag: tags.heading, color: "#6b7280", fontWeight: "600" },
-  { tag: tags.quote, color: "#6b7280", fontStyle: "italic" },
-  { tag: tags.meta, color: "#9ca3af" },
-  { tag: tags.link, color: "#6b7280", textDecoration: "underline" },
-  { tag: tags.atom, color: "#6b7280" },
-  { tag: tags.emphasis, color: "#6b7280", fontStyle: "italic" },
-  { tag: tags.monospace, color: "#6b7280", fontFamily: "monospace" },
+  { tag: tags.heading, color: "var(--muted-foreground)", fontWeight: "600" },
+  { tag: tags.quote, color: "var(--muted-foreground)", fontStyle: "italic" },
+  { tag: tags.meta, color: "color-mix(in oklch, var(--muted-foreground) 70%, transparent)" },
+  { tag: tags.link, color: "var(--muted-foreground)", textDecoration: "underline" },
+  { tag: tags.atom, color: "var(--muted-foreground)" },
+  { tag: tags.emphasis, color: "var(--muted-foreground)", fontStyle: "italic" },
+  { tag: tags.monospace, color: "var(--muted-foreground)", fontFamily: "monospace" },
 ]);
 
 export function diagnosticRange(

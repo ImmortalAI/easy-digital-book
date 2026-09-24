@@ -35,7 +35,9 @@
     "chooseChapter": "Select a chapter",
     "status": "{words} words · {characters} characters",
     "openProblems": "{count} problems found when opening",
-    "unsaved": "Unsaved changes"
+    "unsaved": "Unsaved changes",
+    "sourceLabel": "Chapter text",
+    "cssLabel": "Custom CSS"
   },
   "breadcrumbs": {
     "aria": "Breadcrumbs",
@@ -98,7 +100,8 @@
     "remove": "Remove",
     "created": "Created",
     "modified": "Modified",
-    "bytes": "bytes"
+    "bytes": "bytes",
+    "contributorName": "{label} {number}"
   },
   "explorer": {
     "title": "Explorer",
@@ -125,11 +128,8 @@
   "search": {
     "placeholder": "Search",
     "replacePlaceholder": "Replace",
-    "caseSensitive": "Aa",
     "matchCase": "Match case",
-    "wholeWord": "Whole word",
     "wholeWordLabel": "Whole word",
-    "regex": ".*",
     "regexLabel": "Regular expression",
     "showReplace": "Show replace",
     "summary": "{results} results in {chapters} chapters",

@@ -12,6 +12,8 @@ import {
 } from "@/components/editor/editor-commands";
 import { chapterParseResults, resetChapterParseResults } from "@/composables/use-novlang-parse";
 import { EditorView } from "@codemirror/view";
+import { createI18nPlugin } from "@/plugins/i18n";
+import { useSettingsStore } from "@/stores/settings";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
 function deferredImageFile(name: string) {
@@ -118,6 +120,33 @@ describe("SourceEditor lifecycle", () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".cm-content").attributes("lang")).toBe("ru");
+    wrapper.unmount();
+  });
+
+  it("names its text box in the interface language and follows a live locale switch", async () => {
+    const i18n = createI18nPlugin("ru");
+    const wrapper = mount(SourceEditor, {
+      props: { chapterId: "chapter1" },
+      global: { plugins: [i18n] },
+    });
+    expect(wrapper.find(".cm-content").attributes("aria-label")).toBe("Текст главы");
+
+    i18n.global.locale.value = "zh-CN";
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find(".cm-content").attributes("aria-label")).toBe("章节文本");
+    wrapper.unmount();
+  });
+
+  it("switches CodeMirror to its dark palette with the app theme", async () => {
+    const settings = useSettingsStore();
+    settings.theme = "light";
+    const wrapper = mount(SourceEditor, { props: { chapterId: "chapter1" } });
+    const view = EditorView.findFromDOM(wrapper.find(".cm-editor").element as HTMLElement)!;
+    expect(view.state.facet(EditorView.darkTheme)).toBe(false);
+
+    settings.theme = "dark";
+    await wrapper.vm.$nextTick();
+    expect(view.state.facet(EditorView.darkTheme)).toBe(true);
     wrapper.unmount();
   });
 

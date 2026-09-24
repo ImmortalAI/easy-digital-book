@@ -4,21 +4,23 @@ import { useSettingsStore } from "@/stores/settings";
 
 export type Theme = "light" | "dark" | "system";
 
-export function useTheme() {
+/** The theme in effect: the stored choice, or the OS preference for "system". */
+export function useResolvedTheme() {
   const settings = useSettingsStore();
   const prefersDark = useMediaQuery("(prefers-color-scheme: dark)");
-  const resolved = computed<"light" | "dark">(() =>
+  return computed<"light" | "dark">(() =>
     settings.theme === "system" ? (prefersDark.value ? "dark" : "light") : settings.theme,
   );
+}
+
+/** Applies the resolved theme to <html>. Called once, at app start-up. */
+export function useTheme() {
+  const settings = useSettingsStore();
+  const resolved = useResolvedTheme();
 
   watchEffect(() => {
     document.documentElement.classList.toggle("dark", resolved.value === "dark");
   });
 
-  async function setTheme(value: Theme) {
-    settings.theme = value;
-    await settings.persist();
-  }
-
-  return { theme: computed(() => settings.theme), resolved, setTheme };
+  return { theme: computed(() => settings.theme), resolved };
 }

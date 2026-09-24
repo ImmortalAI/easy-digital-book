@@ -6,6 +6,7 @@ import SettingsView from "@/components/settings/SettingsView.vue";
 import { useSettingsStore } from "@/stores/settings";
 import type { SettingsActions } from "@/composables/use-settings-actions";
 import { createI18nPlugin } from "@/plugins/i18n";
+import { useTheme } from "@/composables/use-theme";
 
 function createActions(overrides: Partial<SettingsActions> = {}): SettingsActions {
   return {
@@ -58,6 +59,8 @@ describe("SettingsView", () => {
   it("switches the theme and persists the choice", async () => {
     const settings = useSettingsStore();
     const actions = createActions();
+    // The app applies the theme once at start-up (main.ts); stand in for it.
+    useTheme();
     render(SettingsView, { props: { settings, actions } });
 
     await choose(/theme/i, "Dark");
@@ -75,6 +78,7 @@ describe("SettingsView", () => {
 
     await user.click(screen.getByRole("switch", { name: /grayscale/i }));
     await user.click(screen.getByRole("switch", { name: /confirm deletions/i }));
+    expect(screen.getByRole("radiogroup", { name: "Image preset" })).toBeTruthy();
     await user.click(screen.getByRole("radio", { name: /without changes/i }));
 
     expect(settings.exportSettings.grayscale).toBe(true);

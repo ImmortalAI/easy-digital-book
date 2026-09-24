@@ -35,7 +35,9 @@
     "chooseChapter": "请选择章节",
     "status": "{words} 个词 · {characters} 个字符",
     "openProblems": "打开时发现 {count} 个问题",
-    "unsaved": "有未保存的更改"
+    "unsaved": "有未保存的更改",
+    "sourceLabel": "章节文本",
+    "cssLabel": "自定义 CSS"
   },
   "breadcrumbs": {
     "aria": "面包屑",
@@ -98,7 +100,8 @@
     "remove": "移除",
     "created": "创建时间",
     "modified": "修改时间",
-    "bytes": "字节"
+    "bytes": "字节",
+    "contributorName": "{label} {number}"
   },
   "explorer": {
     "title": "资源管理器",
@@ -125,11 +128,8 @@
   "search": {
     "placeholder": "搜索",
     "replacePlaceholder": "替换",
-    "caseSensitive": "Aa",
     "matchCase": "区分大小写",
-    "wholeWord": "全字匹配",
     "wholeWordLabel": "全字匹配",
-    "regex": ".*",
     "regexLabel": "正则表达式",
     "showReplace": "显示替换",
     "summary": "{chapters} 个章节中的 {results} 个结果",

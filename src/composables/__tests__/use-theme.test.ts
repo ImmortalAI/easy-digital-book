@@ -19,10 +19,10 @@ describe("useTheme", () => {
     expect(theme.resolved.value).toBe("dark");
     expect(document.documentElement.classList.contains("dark")).toBe(true);
 
-    await theme.setTheme("light");
+    // The settings store holds the choice; the class follows it.
+    useSettingsStore().theme = "light";
     await nextTick();
     expect(theme.resolved.value).toBe("light");
     expect(document.documentElement.classList.contains("dark")).toBe(false);
-    expect(useSettingsStore().theme).toBe("light");
   });
 });

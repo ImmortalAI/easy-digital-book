@@ -35,7 +35,9 @@
     "chooseChapter": "Выберите главу",
     "status": "{words} слов · {characters} символов",
     "openProblems": "При открытии обнаружено проблем: {count}",
-    "unsaved": "Есть несохранённые изменения"
+    "unsaved": "Есть несохранённые изменения",
+    "sourceLabel": "Текст главы",
+    "cssLabel": "Пользовательский CSS"
   },
   "breadcrumbs": {
     "aria": "Хлебные крошки",
@@ -98,7 +100,8 @@
     "remove": "Убрать",
     "created": "Создана",
     "modified": "Изменена",
-    "bytes": "байт"
+    "bytes": "байт",
+    "contributorName": "{label} {number}"
   },
   "explorer": {
     "title": "Проводник",
@@ -125,11 +128,8 @@
   "search": {
     "placeholder": "Поиск",
     "replacePlaceholder": "Замена",
-    "caseSensitive": "Aa",
     "matchCase": "Учитывать регистр",
-    "wholeWord": "Слово целиком",
     "wholeWordLabel": "Слово целиком",
-    "regex": ".*",
     "regexLabel": "Регулярное выражение",
     "showReplace": "Показать замену",
     "summary": "Результатов: {results} в {chapters} главах",

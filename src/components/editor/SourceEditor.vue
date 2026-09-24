@@ -4,7 +4,7 @@ import { openSearchPanel, searchKeymap } from "@codemirror/search";
 import { setDiagnostics } from "@codemirror/lint";
 import { syntaxHighlighting } from "@codemirror/language";
 import { keymap, EditorView } from "@codemirror/view";
-import { onBeforeUnmount, onMounted, ref, toRef, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from "vue";
 import {
   chapterEditorStates,
   createChapterEditor,
@@ -17,6 +17,9 @@ import {
   toggleMarkup,
 } from "./editor-commands";
 import { diagnosticRange, novlangHighlightStyle, novlangLanguage } from "./novlang-language";
+import { editorColorScheme, editorColorTheme } from "./editor-theme";
+import { useResolvedTheme } from "@/composables/use-theme";
+import { useSafeI18n } from "@/composables/use-safe-i18n";
 import { chapterParseResults, useNovlangParse } from "@/composables/use-novlang-parse";
 import { useProjectStore } from "@/stores/project";
 import {
@@ -39,6 +42,9 @@ const props = defineProps<{
 const host = ref<HTMLElement>();
 const project = useProjectStore();
 const parser = useNovlangParse(toRef(props, "chapterId"));
+const resolvedTheme = useResolvedTheme();
+const { t } = useSafeI18n();
+const contentLabel = computed(() => t("editor.sourceLabel", "Chapter text"));
 let view: EditorView | undefined;
 // props.chapterId has already advanced by the time the watcher runs, so the id
 // the current view was registered under has to be remembered separately.
@@ -63,8 +69,14 @@ function editorExtensions(chapterId: string) {
     novlangLanguage,
     syntaxHighlighting(novlangHighlightStyle),
     editorTheme,
+    editorColorTheme,
+    editorColorScheme(resolvedTheme.value),
     EditorView.lineWrapping,
-    EditorView.contentAttributes.of({ spellcheck: "true", lang: language }),
+    EditorView.contentAttributes.of({
+      spellcheck: "true",
+      lang: language,
+      "aria-label": contentLabel.value,
+    }),
     keymap.of([
       {
         key: "Mod-b",
@@ -212,7 +224,7 @@ watch(
 );
 
 watch(
-  () => project.book?.metadata.language,
+  () => [project.book?.metadata.language, resolvedTheme.value, contentLabel.value],
   () => {
     if (!view) return;
     const effect = reconfigureChapterEditor(props.chapterId, editorExtensions(props.chapterId));
