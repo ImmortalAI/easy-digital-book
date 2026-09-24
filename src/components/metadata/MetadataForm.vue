@@ -108,12 +108,14 @@ onBeforeUnmount(releaseCover);
 
     <ContributorsList
       :model-value="book.metadata.authors"
-      :label="t('metadata.authors', 'Author')"
+      :label="t('metadata.authors', 'Authors')"
+      :item-label="t('metadata.author', 'Author')"
       @update:model-value="updatePeople('authors', $event)"
     />
     <ContributorsList
       :model-value="book.metadata.translators"
-      :label="t('metadata.translators', 'Translator')"
+      :label="t('metadata.translators', 'Translators')"
+      :item-label="t('metadata.translator', 'Translator')"
       @update:model-value="updatePeople('translators', $event)"
     />
 

@@ -5,18 +5,22 @@ import { FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
 
-const props = defineProps<{ modelValue: string[]; label: string }>();
+const props = defineProps<{ modelValue: string[]; label: string; itemLabel: string }>();
 const emit = defineEmits<{ "update:modelValue": [value: string[]] }>();
 const { t } = useSafeI18n();
 
 /**
+ * `label` (plural, e.g. "Authors") titles the fieldset; `itemLabel`
+ * (singular, e.g. "Author") names each row's controls, so a screen reader
+ * hears "Move author up", not "Move authors up".
+ *
  * `t()` only interpolates `{label}` when a real i18n instance resolved the
  * key; its fallback path returns the literal fallback string untouched. The
  * trailing replace() covers that fallback path the same way EditorView does
  * for its interpolated status line.
  */
 function named(key: string, fallback: string) {
-  return t(key, fallback, { label: props.label }).replace("{label}", props.label);
+  return t(key, fallback, { label: props.itemLabel }).replace("{label}", props.itemLabel);
 }
 
 function update(index: number, value: string) {

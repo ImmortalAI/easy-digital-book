@@ -72,6 +72,8 @@
     "invalidLanguage": "无效的语言标签",
     "authors": "作者",
     "translators": "译者",
+    "author": "作者",
+    "translator": "译者",
     "series": "系列",
     "seriesName": "系列名称",
     "seriesIndex": "卷",
