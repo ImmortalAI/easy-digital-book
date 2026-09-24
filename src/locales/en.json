@@ -173,7 +173,13 @@
     "openUpdate": "Open release",
     "upToDate": "You are up to date",
     "updateCheckFailed": "Could not check for updates",
-    "openLogs": "Open log folder"
+    "openLogs": "Open log folder",
+    "appearance": "Appearance",
+    "maintenance": "Maintenance",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System"
   },
   "errors": {
     "title": "An unexpected error occurred",
