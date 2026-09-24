@@ -1,0 +1,56 @@
+import { createPinia, setActivePinia } from "pinia";
+import { cleanup, render, screen, within } from "@testing-library/vue";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import ImageView from "@/components/editor/ImageView.vue";
+import { createI18nPlugin } from "@/plugins/i18n";
+import { createBook } from "@/services/book/create";
+import { useLayoutStore } from "@/stores/layout";
+import { useProjectStore } from "@/stores/project";
+
+function openBook(source: string) {
+  const book = createBook({
+    locale: "en",
+    now: "2026-01-01T00:00:00.000Z",
+    newUuid: () => "550e8400-e29b-41d4-a716-446655440000",
+    newChapterId: () => "chapter1",
+  });
+  book.chapters[0]!.source = source;
+  book.resources.set("images/cover.png", {
+    bytes: new Uint8Array([1, 2, 3]),
+    mediaType: "image/png",
+  });
+  useProjectStore().setBook(book);
+}
+
+function renderImage() {
+  return render(ImageView, {
+    props: { path: "images/cover.png" },
+    global: { plugins: [createI18nPlugin("en")] },
+  });
+}
+
+describe("ImageView", () => {
+  beforeEach(() => setActivePinia(createPinia()));
+  afterEach(cleanup);
+
+  it("names the image and links to the chapters that use it", async () => {
+    openBook("# Chapter 1\n\n![](images/cover.png)");
+    renderImage();
+
+    expect(screen.getByRole("img", { name: "images/cover.png" })).toBeVisible();
+    expect(screen.getByText("3 bytes")).toBeVisible();
+    const usedIn = screen.getByRole("list", { name: /used in/i });
+    await userEvent.click(within(usedIn).getByRole("button", { name: /chapter 1/i }));
+    expect(useLayoutStore().center).toEqual({ kind: "chapter", id: "chapter1" });
+  });
+
+  it("says so when no chapter uses the image", () => {
+    openBook("# Chapter 1");
+    renderImage();
+
+    expect(screen.getByText("not used")).toBeVisible();
+    expect(screen.queryByRole("list", { name: /used in/i })).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+});
