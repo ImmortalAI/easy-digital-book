@@ -133,4 +133,14 @@ describe("MetadataForm field labelling", () => {
     await userEvent.click(screen.getByRole("button", { name: "Добавить Автор" }));
     expect(screen.getByRole("textbox", { name: "Автор 2" })).toHaveValue("");
   });
+
+  it("keeps focus in a contributor's text box across several keystrokes", async () => {
+    render(MetadataForm, { global: { plugins: [pinia] } });
+
+    const box = screen.getByRole("textbox", { name: "Author 1" });
+    await userEvent.type(box, "xyz");
+
+    expect(useProjectStore().book!.metadata.authors).toEqual(["Annxyz"]);
+    expect(screen.getByRole("textbox", { name: "Author 1" })).toHaveFocus();
+  });
 });

@@ -52,7 +52,7 @@ function add() {
     <FieldLegend>{{ label }}</FieldLegend>
     <div
       v-for="(person, index) in modelValue"
-      :key="`${index}-${person}`"
+      :key="index"
       class="flex items-center gap-2"
     >
       <Input
