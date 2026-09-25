@@ -66,7 +66,6 @@ function chooseUnsaved(value: "save" | "discard" | "cancel") {
       />
     </ToastStack>
     <ErrorDetailsDialog
-      v-if="unexpectedError"
       :report="unexpectedError"
       :actions="files.errorActions"
       @close="unexpectedError = null"
