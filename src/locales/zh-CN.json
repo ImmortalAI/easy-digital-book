@@ -211,6 +211,7 @@
   },
   "notifications": {
     "label": "通知",
-    "region": "通知（{hotkey}）"
+    "region": "通知（{hotkey}）",
+    "autosaveFailed": "自动保存失败"
   }
 }

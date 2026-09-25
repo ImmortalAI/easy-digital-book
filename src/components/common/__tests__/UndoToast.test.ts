@@ -153,4 +153,18 @@ describe("UndoToast", () => {
       expect(screen.queryByTestId("undo-progress")).not.toBeInTheDocument();
     });
   });
+
+  it("styles an error apart from an ordinary notification", async () => {
+    await render(UndoToast, {
+      props: { notification: { id: 2, message: "Autosave failed", kind: "error" } },
+    });
+    const toast = screen.getByText("Autosave failed").closest('[data-slot="toast"]');
+    expect(toast).toHaveClass("text-destructive");
+  });
+
+  it("keeps ordinary notifications in the default style", async () => {
+    await render(UndoToast, { props: { notification } });
+    const toast = screen.getByText("Removed").closest('[data-slot="toast"]');
+    expect(toast).not.toHaveClass("text-destructive");
+  });
 });
