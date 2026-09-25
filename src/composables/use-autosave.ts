@@ -2,6 +2,7 @@ import { useDebounceFn } from "@vueuse/core";
 import { onScopeDispose, watch } from "vue";
 import type { PlatformServices } from "@/types/platform";
 import { useNotificationsStore } from "@/stores/notifications";
+import { useSafeI18n } from "@/composables/use-safe-i18n";
 import { snapshotBook, useProjectStore } from "@/stores/project";
 import type { ProjectFilesController } from "@/composables/use-project-files";
 
@@ -15,6 +16,7 @@ export interface AutosaveOptions {
 export function createAutosave(options: AutosaveOptions) {
   const project = options.project ?? useProjectStore();
   const notifications = useNotificationsStore();
+  const { t } = useSafeI18n();
   let bookId: string | null = null;
   let persistedBookId: string | null = null;
   let writing = false;
@@ -82,7 +84,10 @@ export function createAutosave(options: AutosaveOptions) {
         project.recoveryGeneration === recoveryGenerationAtStart &&
         errorNotifiedFor !== currentBookId
       ) {
-        notifications.add({ message: "Autosave failed", kind: "error" });
+        notifications.add({
+          message: t("notifications.autosaveFailed", "Autosave failed"),
+          kind: "error",
+        });
         errorNotifiedFor = currentBookId;
       }
     } finally {

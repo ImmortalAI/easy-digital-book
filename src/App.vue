@@ -7,12 +7,10 @@ import { useProjectAutosave } from "@/composables/use-autosave";
 import { projectFilesKey, useProjectFiles } from "@/composables/use-project-files";
 import ToastStack from "@/components/common/ToastStack.vue";
 import ErrorDetailsDialog from "@/components/common/ErrorDetailsDialog.vue";
+import UpdateNotice from "@/components/common/UpdateNotice.vue";
 import type { UnexpectedErrorReport } from "@/services/platform/error-reporting";
 import type { UpdateInfo } from "@/types/platform";
 import { useSafeI18n } from "@/composables/use-safe-i18n";
-import { IconDownload } from "@tabler/icons-vue";
-import { Alert, AlertAction, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { ToastProvider } from "@/components/ui/toast";
 
 const files = useProjectFiles();
@@ -60,25 +58,14 @@ function chooseUnsaved(value: "save" | "discard" | "cancel") {
       @decision="chooseUnsaved"
     />
     <ToastStack>
-      <!-- A third grid column keeps the action in flow: the registry pins it
-           absolutely over a fixed right padding, which a longer title or a
-           translated button label would run underneath. -->
-      <Alert
+      <UpdateNotice
         v-if="availableUpdate"
-        role="status"
-        class="w-auto max-w-sm items-center shadow-lg has-[>svg]:grid-cols-[auto_1fr_auto] has-data-[slot=alert-action]:pr-2.5 *:[svg]:translate-y-0"
-      >
-        <IconDownload aria-hidden="true" />
-        <AlertTitle>{{ t("settings.updateAvailable", "A new version is available") }}</AlertTitle>
-        <AlertAction class="static col-start-3 row-start-1">
-          <Button size="xs" @click="files.settingsActions.openUpdate(availableUpdate!.url)">
-            {{ t("settings.openUpdate", "Open release") }}
-          </Button>
-        </AlertAction>
-      </Alert>
+        :update="availableUpdate"
+        @open="files.settingsActions.openUpdate"
+        @dismiss="availableUpdate = null"
+      />
     </ToastStack>
     <ErrorDetailsDialog
-      v-if="unexpectedError"
       :report="unexpectedError"
       :actions="files.errorActions"
       @close="unexpectedError = null"

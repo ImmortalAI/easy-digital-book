@@ -1,6 +1,9 @@
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick } from "vue";
+import { defineComponent, nextTick } from "vue";
+import { mount } from "@vue/test-utils";
+import { createI18nPlugin } from "@/plugins/i18n";
+import { useNotificationsStore } from "@/stores/notifications";
 import { createBook } from "@/services/book/create";
 import { createInMemoryPlatformServices } from "@/services/platform";
 import { useProjectStore } from "@/stores/project";
@@ -106,5 +109,33 @@ describe("autosave", () => {
 
     expect(await services.recovery.restore(original.metadata.id)).toBeNull();
     autosave.stop();
+  });
+
+  it("reports a failed write as an error in the interface language", async () => {
+    const services = createInMemoryPlatformServices();
+    services.recovery.writeChanges = async () => {
+      throw new Error("disk full");
+    };
+    const project = useProjectStore();
+    project.configure(services);
+    project.setBook(makeBook(), null, { dirty: true });
+    let autosave!: ReturnType<typeof createAutosave>;
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          autosave = createAutosave({ project, services });
+          return () => null;
+        },
+      }),
+      { global: { plugins: [createI18nPlugin("ru")] } },
+    );
+
+    await autosave.persist();
+
+    expect(useNotificationsStore().items).toEqual([
+      expect.objectContaining({ message: "Не удалось выполнить автосохранение", kind: "error" }),
+    ]);
+    autosave.stop();
+    wrapper.unmount();
   });
 });

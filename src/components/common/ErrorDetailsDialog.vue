@@ -17,32 +17,50 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 
-const props = defineProps<{ report: UnexpectedErrorReport; actions: ErrorActions }>();
+const props = defineProps<{ report: UnexpectedErrorReport | null; actions: ErrorActions }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useSafeI18n();
 const copied = ref(false);
-const open = ref(true);
+const open = ref(false);
+// The parent clears `report` as soon as the dialog asks to close; the last one
+// stays on screen while the exit animation plays, so the dialog stays mounted.
+const shown = ref<UnexpectedErrorReport | null>(null);
 
+watch(
+  () => props.report,
+  (report) => {
+    if (!report) return;
+    shown.value = report;
+    copied.value = false;
+    open.value = true;
+  },
+  { immediate: true },
+);
 watch(open, (value) => {
   if (!value) emit("close");
 });
 
 async function copyDetails() {
-  await props.actions.copyDetails(props.report);
+  await props.actions.copyDetails(shown.value!);
   copied.value = true;
 }
 
 const openLogs = () => props.actions.openLogs();
-const reportIssue = () => props.actions.reportIssue(props.report);
+const reportIssue = () => props.actions.reportIssue(shown.value!);
 </script>
 
 <template>
   <Dialog v-model:open="open">
-    <DialogContent role="alertdialog" :show-close-button="false" class="grid gap-3 sm:max-w-lg">
+    <DialogContent
+      v-if="shown"
+      role="alertdialog"
+      :show-close-button="false"
+      class="grid gap-3 sm:max-w-lg"
+    >
       <DialogHeader>
         <DialogTitle>
           {{
-            t(errorTranslationKey(report.code), t("errors.title", "An unexpected error occurred"))
+            t(errorTranslationKey(shown.code), t("errors.title", "An unexpected error occurred"))
           }}
         </DialogTitle>
         <DialogDescription>
@@ -50,7 +68,7 @@ const reportIssue = () => props.actions.reportIssue(props.report);
         </DialogDescription>
       </DialogHeader>
       <ScrollArea class="border-border max-h-64 rounded-md border">
-        <pre class="p-3 text-xs whitespace-pre-wrap">{{ report.details }}</pre>
+        <pre class="p-3 text-xs whitespace-pre-wrap">{{ shown.details }}</pre>
       </ScrollArea>
       <p v-if="copied" role="status" class="text-primary text-sm">
         {{ t("errors.copied", "Details copied") }}

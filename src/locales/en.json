@@ -181,6 +181,7 @@
     "updateAlreadyChecked": "Updates were checked within the last day",
     "updateAvailable": "A new version is available",
     "openUpdate": "Open release",
+    "dismissUpdate": "Dismiss update notice",
     "upToDate": "You are up to date",
     "updateCheckFailed": "Could not check for updates",
     "openLogs": "Open log folder",
@@ -210,6 +211,7 @@
   },
   "notifications": {
     "label": "Notification",
-    "region": "Notifications ({hotkey})"
+    "region": "Notifications ({hotkey})",
+    "autosaveFailed": "Autosave failed"
   }
 }

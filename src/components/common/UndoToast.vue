@@ -60,6 +60,7 @@ function updateOpen(value: boolean) {
   <Toast
     :open="open"
     :duration="notification.duration ?? 8000"
+    :variant="notification.kind === 'error' ? 'destructive' : 'default'"
     class="undo-toast flex items-center gap-2 pr-2"
     @pause="paused = true"
     @resume="paused = false"
