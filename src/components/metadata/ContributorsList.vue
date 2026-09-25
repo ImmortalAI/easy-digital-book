@@ -50,11 +50,7 @@ function add() {
 <template>
   <FieldSet>
     <FieldLegend>{{ label }}</FieldLegend>
-    <div
-      v-for="(person, index) in modelValue"
-      :key="index"
-      class="flex items-center gap-2"
-    >
+    <div v-for="(person, index) in modelValue" :key="index" class="flex items-center gap-2">
       <Input
         :model-value="person"
         :aria-label="named('metadata.contributorName', '{label} {number}', index + 1)"
